@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+:where(.css-dev-only-do-not-override-1v28nim).ant-menu-light .ant-menu-item, :where(.css-dev-only-do-not-override-1v28nim).ant-menu-light .ant-menu-submenu-title{
+  color: #fff
+}
+
+:where(.css-dev-only-do-not-override-1v28nim).ant-layout-header{
+  padding: 0 20px;
+}
+
+:where(.css-dev-only-do-not-override-1v28nim).ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):not(.ant-menu-submenu-selected):hover{
+  color: #1664ca
+}

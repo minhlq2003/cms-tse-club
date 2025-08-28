@@ -1,103 +1,203 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { Card, Avatar, Button, Select } from "antd";
+import {
+  DoubleLeftOutlined,
+  DoubleRightOutlined,
+  LeftOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
+import { useState } from "react";
+import { eventUpcomming } from "@/constant/data";
+
+export default function Dashboard() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const prevMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentDate(newDate);
+  };
+
+  const nextMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentDate(newDate);
+  };
+
+  const prevYear = () => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(newDate.getFullYear() - 1);
+    setCurrentDate(newDate);
+  };
+
+  const nextYear = () => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(newDate.getFullYear() + 1);
+    setCurrentDate(newDate);
+  };
+
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const getDaysInMonth = (year: number, month: number): number => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  // Dữ liệu cho Select tháng và năm
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: i,
+    label: `Tháng ${i + 1}`,
+  }));
+
+  const years = Array.from({ length: 20 }, (_, i) => {
+    const year = new Date().getFullYear() - 10 + i;
+    return { value: year, label: year };
+  });
+
+  const renderCalendar = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = new Date(year, month, 1).getDay();
+
+    const eventsInMonth = eventUpcomming.filter((event) => {
+      const eventDate = new Date(event.date);
+      return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+    });
+
+    const weeks = [];
+    let day = 1;
+    for (let i = 0; i < 6; i++) {
+      const week = [];
+      for (let j = 0; j < 7; j++) {
+        if (
+          (i === 0 && j < (firstDay === 0 ? 6 : firstDay - 1)) ||
+          day > daysInMonth
+        ) {
+          week.push(<td key={`${i}-${j}`} className="h-20 border"></td>);
+        } else {
+          const eventsForDay = eventsInMonth.filter(
+            (event) => new Date(event.date).getDate() === day
+          );
+
+          week.push(
+            <td
+              key={`${i}-${j}`}
+              className="h-20 border text-center align-top p-1"
+            >
+              <div className="font-medium">{day}</div>
+              <div className="text-xs text-left space-y-1">
+                {eventsForDay.map((event) => (
+                  <div
+                    key={event.id}
+                    className="bg-blue-100 text-blue-800 rounded p-1"
+                    title={event.title}
+                  >
+                    {event.title}
+                  </div>
+                ))}
+              </div>
+            </td>
+          );
+          day++;
+        }
+      }
+      weeks.push(<tr key={i}>{week}</tr>);
+    }
+    return weeks;
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="p-6 space-y-6">
+      {/* Thông tin sinh viên */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="shadow col-span-2 rounded-2xl">
+          <div className="flex items-center space-x-4">
+            <Avatar size={64} icon={<i className="fas fa-user-graduate"></i>} />
+            <div className="pl-3 w-3/4">
+              <h3 className="font-bold text-blue-900">THÔNG TIN SINH VIÊN</h3>
+              <div className="flex justify-between">
+                <div>
+                  <p>
+                    Họ và tên: <b>Lý Quốc Minh</b>
+                  </p>
+                  <p>
+                    Lớp: <b>DHKTPM17BTT</b>
+                  </p>
+                  <p>Giới tính: Nam</p>
+                </div>
+                <div>
+                  <p>
+                    Điểm tích cực: <b>150</b>
+                  </p>
+                  <p>
+                    Điểm đóng góp: <b>100</b>
+                  </p>
+                  <p>Danh hiệu: chưa có</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+        <Card className="shadow rounded-2xl">
+          <h3 className="font-bold text-blue-900">SỰ KIỆN TRONG TUẦN</h3>
+          <p className="text-gray-500">Đang cập nhật sau.</p>
+          <a href="#" className="text-blue-600 text-sm">
+            Xem chi tiết
+          </a>
+        </Card>
+      </div>
+
+      {/* Quản lý sự kiện */}
+      <Card className="shadow rounded-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-blue-900">QUẢN LÝ SỰ KIỆN</h3>
+          <div className="flex items-center gap-2">
+            <Select
+              value={currentDate.getMonth()}
+              onChange={(val) =>
+                setCurrentDate(new Date(currentDate.getFullYear(), val, 1))
+              }
+              options={months}
+              style={{ width: 100 }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <Select
+              value={currentDate.getFullYear()}
+              onChange={(val) =>
+                setCurrentDate(new Date(val, currentDate.getMonth(), 1))
+              }
+              options={years}
+              style={{ width: 100 }}
+            />
+            <Button onClick={prevYear} icon={<DoubleLeftOutlined />}></Button>
+            <Button onClick={prevMonth} icon={<LeftOutlined />} />
+
+            <Button onClick={nextMonth} icon={<RightOutlined />} />
+            <Button onClick={nextYear} icon={<DoubleRightOutlined />}></Button>
+            <Button type="default" onClick={goToday}>
+              Hôm nay
+            </Button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border p-2">Th 2</th>
+              <th className="border p-2">Th 3</th>
+              <th className="border p-2">Th 4</th>
+              <th className="border p-2">Th 5</th>
+              <th className="border p-2">Th 6</th>
+              <th className="border p-2">Th 7</th>
+              <th className="border p-2">CN</th>
+            </tr>
+          </thead>
+          <tbody>{renderCalendar()}</tbody>
+        </table>
+      </Card>
     </div>
   );
 }
