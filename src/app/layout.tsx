@@ -22,16 +22,16 @@ export default function RootLayout({
   const [userAvatar, setUserAvatar] = useState<string>("");
   const router = useRouter();
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!user || !user.id) {
-        router.push("/signin");
-      } else if (user.role !== "admin") {
-        router.push("/signin");
-      }
-    }
-  }, [router]);
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const user = JSON.parse(localStorage.getItem("user") || "{}");
+  //     if (!user || !user.id) {
+  //       router.push("/signin");
+  //     } else if (user.role !== "admin") {
+  //       router.push("/signin");
+  //     }
+  //   }
+  // }, [router]);
 
   return (
     <html lang={"en"}>
