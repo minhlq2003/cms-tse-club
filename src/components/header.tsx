@@ -1,8 +1,9 @@
 import { Images } from "@/constant/image";
 import { isLogin } from "@/lib/actions/auth";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { Button, Image, Menu, notification, Select } from "antd";
+import { Button, Menu, notification, Select } from "antd";
 import { Header } from "antd/es/layout/layout";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -86,25 +87,24 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
   }, []);
 
   return (
-    <Header className="!bg-white p-0 flex justify-between">
+    <Header className="!bg-white !p-2 flex justify-between">
       <div className="flex items-center">
         <Button
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           onClick={() => setCollapsed(!collapsed)}
-          className="!text-[20px] w-[64px] h-[64px] p-3"
+          className="!text-[20px] w-[64px] h-[64px] p-3 md:!inline-flex !hidden"
         />
         <Image
           src={Images.logoIUH.src}
           alt=""
           width={120}
           height={50}
-          preview={false}
-          className="pl-3"
+          className="md:pl-3 pl-0 md:w-[120px] md:h-[50px] w-[60px] h-[25px]"
         />
       </div>
       <div
-        className="relative flex items-center pr-[30px] gap-4"
+        className="relative flex items-center pr-0 md:pr-[30px] gap-4"
         ref={userMenuRef}
       >
         <Select
@@ -117,10 +117,17 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
           <Select.Option value="en">English</Select.Option>
         </Select>
         <Image
-          preview={false}
-          className="w-8 h-8 rounded-full border-2 border-indigo-400 cursor-pointer"
+          className="w-8 h-8 md:block hidden rounded-full border-2 border-indigo-400 cursor-pointer"
           src={`/default-image.jpg`}
           alt="User Avatar"
+          onClick={handleUserMenuClick}
+          width={32}
+          height={32}
+        />
+        <Image
+          className="w-8 h-8 md:hidden block rounded-full cursor-pointer"
+          src={Images.logoTSE2.src}
+          alt="Logo TSE"
           onClick={handleUserMenuClick}
           width={32}
           height={32}

@@ -7,11 +7,7 @@ import { useEffect, useState } from "react";
 import { Images } from "../constant/image";
 import { useTranslation } from "react-i18next";
 import { getFilteredMenuItems } from "./menuItems";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronCircleLeft,
-  faChevronLeft,
-} from "@fortawesome/free-solid-svg-icons";
+
 interface MenuItem {
   key: string;
   label: string;
@@ -60,7 +56,7 @@ export const LayoutSider = ({
       width={300}
       collapsible
       collapsed={collapsed}
-      className="!bg-[#120e31]"
+      className="!bg-[#120e31] md:block hidden"
     >
       <div
         style={{
@@ -123,7 +119,7 @@ export const LayoutSider = ({
         theme="light"
         items={menuItems}
         onClick={(info) => {
-          route.push(`/admin/${info.key}`);
+          route.push(`/${info.key}`);
         }}
         selectedKeys={[`/${pathname.split("/")?.slice(2).join("/")}`]}
         style={{

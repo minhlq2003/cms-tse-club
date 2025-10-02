@@ -85,7 +85,7 @@ export default function Dashboard() {
           week.push(
             <td
               key={`${i}-${j}`}
-              className="h-20 border text-center align-top p-1"
+              className="h-20 border text-right align-top p-1"
             >
               <div className="font-medium">{day}</div>
               <div className="text-xs text-left space-y-1">
@@ -112,19 +112,25 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       {/* Thông tin sinh viên */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="shadow col-span-2 rounded-2xl">
-          <div className="flex items-center space-x-4">
-            <Avatar size={64} icon={<i className="fas fa-user-graduate"></i>} />
-            <div className="pl-3 w-3/4">
-              <h3 className="font-bold text-blue-900">THÔNG TIN SINH VIÊN</h3>
-              <div className="flex justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="shadow md:col-span-2 rounded-2xl">
+          <div className="flex flex-col md:flex-row items-start md:items-center space-y-3 md:space-y-0 md:space-x-4">
+            <Avatar
+              size={64}
+              icon={<i className="fas fa-user-graduate"></i>}
+              className=" !md:mb-0 !mb-[10px]"
+            />
+            <div className="pl-0 md:pl-3 w-full">
+              <h3 className="font-bold text-blue-900 mb-2">
+                THÔNG TIN SINH VIÊN
+              </h3>
+              <div className="flex flex-col md:flex-row justify-between gap-3">
                 <div>
                   <p>
                     Họ và tên: <b>Lý Quốc Minh</b>
                   </p>
                   <p>
-                    Lớp: <b>DHKTPM17BTT</b>
+                    Mã sinh viên: <b>21105601</b>
                   </p>
                   <p>Giới tính: Nam</p>
                 </div>
@@ -135,7 +141,7 @@ export default function Dashboard() {
                   <p>
                     Điểm đóng góp: <b>100</b>
                   </p>
-                  <p>Danh hiệu: chưa có</p>
+                  <p>Vai trò: thành viên</p>
                 </div>
               </div>
             </div>
@@ -153,9 +159,9 @@ export default function Dashboard() {
 
       {/* Quản lý sự kiện */}
       <Card className="shadow rounded-2xl">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 gap-3">
           <h3 className="font-bold text-blue-900">QUẢN LÝ SỰ KIỆN</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={currentDate.getMonth()}
               onChange={(val) =>
@@ -174,7 +180,6 @@ export default function Dashboard() {
             />
             <Button onClick={prevYear} icon={<DoubleLeftOutlined />}></Button>
             <Button onClick={prevMonth} icon={<LeftOutlined />} />
-
             <Button onClick={nextMonth} icon={<RightOutlined />} />
             <Button onClick={nextYear} icon={<DoubleRightOutlined />}></Button>
             <Button type="default" onClick={goToday}>
@@ -183,20 +188,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border p-2">Th 2</th>
-              <th className="border p-2">Th 3</th>
-              <th className="border p-2">Th 4</th>
-              <th className="border p-2">Th 5</th>
-              <th className="border p-2">Th 6</th>
-              <th className="border p-2">Th 7</th>
-              <th className="border p-2">CN</th>
-            </tr>
-          </thead>
-          <tbody>{renderCalendar()}</tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[600px]">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Th 2</th>
+                <th className="border p-2">Th 3</th>
+                <th className="border p-2">Th 4</th>
+                <th className="border p-2">Th 5</th>
+                <th className="border p-2">Th 6</th>
+                <th className="border p-2">Th 7</th>
+                <th className="border p-2">CN</th>
+              </tr>
+            </thead>
+            <tbody>{renderCalendar()}</tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

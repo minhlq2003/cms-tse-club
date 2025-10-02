@@ -62,15 +62,11 @@ export const mediaItems: CustomMenuItem[] = [
 
 export const eventItems: CustomMenuItem[] = [
   {
-    key: "/seminars",
-    label: "Seminars",
+    key: "events",
+    label: "Events",
   },
   {
-    key: "/contests",
-    label: "Contests",
-  },
-  {
-    key: "/trainings",
+    key: "training",
     label: "Training Courses",
   },
 ];
@@ -123,8 +119,8 @@ export const menuItems: Array<CustomMenuItem> = [
   },
 
   {
-    label: "Attachments",
-    key: "attachments",
+    label: "Media",
+    key: "media",
     icon: <FileImageOutlined />,
   },
 

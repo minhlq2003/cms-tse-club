@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #171717;
+  --foreground: #ffffff
 }
 
 @theme inline {
@@ -14,8 +14,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #120e31;
     --foreground: #ededed;
+  }
+}
+
+
+
+@media screen and (max-width: 768px) {
+  :where(.css-dev-only-do-not-override-1v28nim).ant-select-single .ant-select-selector, :where(.css-dev-only-do-not-override-1v28nim).ant-select-dropdown .ant-select-item {
+    font-size: 11px;
+    line-height: 20px;
+  }
+
+  :where(.css-dev-only-do-not-override-1v28nim).ant-drawer .ant-drawer-close{
+    color: #fff
   }
 }
 
@@ -35,4 +48,24 @@ body {
 
 :where(.css-dev-only-do-not-override-1v28nim).ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):not(.ant-menu-submenu-selected):hover{
   color: #1664ca
+}
+
+
+.ck-content .image-align-left {
+  float: left;
+  margin-right: 1rem;
+}
+
+.ck-content .image-align-center {
+  display: block;
+  margin: 0 auto;
+}
+
+.ck-content .image-align-right {
+  float: right;
+  margin-left: 1rem;
+}
+
+.ck-editor__editable_inline {
+  min-height: 400px;
 }
