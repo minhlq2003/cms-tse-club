@@ -3,19 +3,23 @@
 import { Button, Form } from "antd";
 import { useState } from "react";
 import { Event, Organizer } from "@/constant/types";
-import { createEvent } from "@/modules/services/eventService";
+import {
+  createEvent,
+  updateStatusEventByLeader,
+} from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import EventForm from "@/modules/event/EventForm";
 import EventOrganizers from "@/modules/event/EventOrganizers";
 import { toast } from "sonner";
 import Publish from "@/components/Publish";
+import { isLeader } from "@/lib/utils";
 
 export default function AddEvent() {
   const { t } = useTranslation("common");
   const [form] = Form.useForm();
   const [uploadedImage, setUploadedImage] = useState<string>(""); // giữ lại nếu sau này cần featured image
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [status, setStatus] = useState<string>("draft");
+  const [status, setStatus] = useState<string>("PENDING");
 
   const onFinish = async (values: Event) => {
     const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
@@ -27,6 +31,7 @@ export default function AddEvent() {
       status: status,
       category: values.category,
       multiple: Number(values.multiple),
+      limitRegister: Number(values.multiple),
       location: values.location,
       organizers: organizers.map((org) => ({
         organizerId: org.organizerId,
@@ -36,10 +41,18 @@ export default function AddEvent() {
     };
 
     try {
-      await createEvent(dataPayload);
-      toast.success(t("Event added successfully!"));
-      form.resetFields();
-      setOrganizers([]);
+      const response = await createEvent(dataPayload);
+      if (response && response.id) {
+        if (isLeader() && dataPayload.status === "PENDING") {
+          await updateStatusEventByLeader(response.id, "ACCEPTED");
+        }
+
+        toast.success(t("Event added successfully!"));
+        form.resetFields();
+        setOrganizers([]);
+      } else {
+        toast.error(t("Failed to add event. Please try again."));
+      }
     } catch {
       toast.error(t("Failed to add event. Please try again."));
     }
@@ -52,21 +65,22 @@ export default function AddEvent() {
           {t("Create Event")}
         </h1>
 
-        <div className="flex justify-between w-full">
-          <EventForm
-            form={form}
-            onFinish={onFinish}
-            uploadedImages={uploadedImage}
-            setUploadedImages={setUploadedImage}
-          />
+        <div className="flex flex-col lg:flex-row justify-between w-full gap-6">
+          <div className="w-full lg:w-[78%]">
+            <EventForm
+              form={form}
+              onFinish={onFinish}
+              uploadedImages={uploadedImage}
+              setUploadedImages={setUploadedImage}
+            />
+          </div>
 
-          <div className="w-[22%] pl-5">
+          <div className="w-full lg:w-[22%] lg:pl-5">
             <Publish
               onSubmit={() => onFinish(form.getFieldsValue())}
               setStatus={setStatus}
               status={status}
             />
-
             <EventOrganizers
               organizers={organizers}
               onChangeOrganizers={setOrganizers}

@@ -1,18 +1,27 @@
 "use client";
 
 import { Post } from "@/constant/types";
-import { deletePost, getPosts } from "@/modules/services/postService";
-import { Button, Table, Modal } from "antd";
+import { getRoleUser, getUser } from "@/lib/utils";
+import {
+  approvePostByLeader,
+  deletePost,
+  getPosts,
+  rejectPostByLeader,
+} from "@/modules/services/postService";
+import { Button, Table, Modal, Tag } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ListPostProps {
   searchTerm: string;
+  status: string;
 }
 
-export default function ListPost({ searchTerm }: ListPostProps) {
+export default function ListPost({ searchTerm, status }: ListPostProps) {
+  const { t } = useTranslation("common");
   const [data, setData] = useState<Post[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
@@ -27,6 +36,40 @@ export default function ListPost({ searchTerm }: ListPostProps) {
     setIsModalVisible(true);
   };
 
+  const approvePost = (record: Post) => {
+    Modal.confirm({
+      title: "Xác nhận duyệt bài viết",
+      content: "Bạn có chắc chắn muốn duyệt bài viết này không?",
+      okText: "Duyệt",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          approvePostByLeader(String(record.id));
+          fetchPosts(currentPage, pageSize);
+        } catch (error) {
+          console.error("Failed to approve post:", error);
+        }
+      },
+    });
+  };
+
+  const rejectPost = (record: Post) => {
+    Modal.confirm({
+      title: "Xác nhận từ chối bài viết",
+      content: "Bạn có chắc chắn muốn từ chối bài viết này không?",
+      okText: "Từ chối",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          rejectPostByLeader(String(record.id));
+          fetchPosts(currentPage, pageSize);
+        } catch (error) {
+          console.error("Failed to reject post:", error);
+        }
+      },
+    });
+  };
+
   const fetchPosts = async (
     pageNo: number,
     pageSize: number,
@@ -38,6 +81,7 @@ export default function ListPost({ searchTerm }: ListPostProps) {
       size: pageSize,
       sort: sortBy,
       title: searchTerm,
+      status: status,
     });
 
     if (Array.isArray(response._embedded.postWrapperDtoList)) {
@@ -48,7 +92,7 @@ export default function ListPost({ searchTerm }: ListPostProps) {
 
   useEffect(() => {
     fetchPosts(currentPage, pageSize, sortBy, sortOrder);
-  }, [currentPage, pageSize, sortBy, sortOrder, searchTerm]);
+  }, [currentPage, pageSize, sortBy, sortOrder, searchTerm, status]);
 
   const handleDelete = () => {
     if (!postToDelete?.id) return;
@@ -99,23 +143,22 @@ export default function ListPost({ searchTerm }: ListPostProps) {
       width: 400,
     },
     {
-      title: "Slug",
-      dataIndex: "slug",
-      key: "slug",
-      width: 400,
-      render: (value, record, index) => <p className="break-all">{value}</p>,
-    },
-    { title: "Danh mục", dataIndex: "category", key: "category" },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: boolean | undefined) => (status ? "Công khai" : "Nháp"),
+      render: (status: string) => {
+        let color = "default";
+        if (status === "ACCEPTED") color = "green";
+        if (status === "PENDING") color = "orange";
+        if (status === "REJECTED") color = "red";
+        if (status === "DISABLED") color = "gray";
+        return <Tag color={color}>{t(status)}</Tag>;
+      },
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "created_at",
-      key: "created_at",
+      title: "Ngày tạo (MM/DD/YYYY)",
+      dataIndex: "postTime",
+      key: "postTime",
       sorter: true,
       render: (date: string | undefined) =>
         date ? new Date(date).toLocaleString() : "",
@@ -132,9 +175,29 @@ export default function ListPost({ searchTerm }: ListPostProps) {
           >
             Xóa
           </Button>
-          <Button type="primary">
-            <a href={`/posts/edit?id=${record.id}`}>Sửa</a>
-          </Button>
+          {getUser().id === record.writer?.id && (
+            <Button type="primary">
+              <a href={`/posts/edit?id=${record.id}`}>Sửa</a>
+            </Button>
+          )}
+
+          {(getRoleUser() === "ADMIN" || getRoleUser() === "LEADER") &&
+            record.status === "PENDING" && (
+              <div>
+                <Button
+                  onClick={() => approvePost(record)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Duyệt
+                </Button>
+                <Button
+                  onClick={() => rejectPost(record)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Từ chối
+                </Button>
+              </div>
+            )}
         </>
       ),
     },

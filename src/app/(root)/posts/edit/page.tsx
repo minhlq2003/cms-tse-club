@@ -22,13 +22,13 @@ const EditPost = () => {
   const [post, setPost] = useState<Post | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<string>("draft");
+  const [status, setStatus] = useState<string>("PENDING");
   const fetchPost = useCallback(
     async (id: string) => {
       setLoading(true);
       try {
         const res = await getPostById(id);
-        const data = res?.data;
+        const data = res;
         if (data) {
           setPost(data);
           form.setFieldsValue(data);
@@ -67,7 +67,7 @@ const EditPost = () => {
         await updatePost(id, dataPayload);
         toast.success(t("Post updated successfully!"));
         form.resetFields();
-        router.push("/admin/posts");
+        router.push("/posts");
       } else {
         toast.error(t("Invalid post ID."));
       }

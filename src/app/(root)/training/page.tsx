@@ -1,7 +1,7 @@
 "use client";
 
 import ListTraining from "@/modules/training/ListTraining";
-import { Button, Input } from "antd";
+import { Button, Input, Select } from "antd";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

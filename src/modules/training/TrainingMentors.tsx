@@ -7,21 +7,10 @@ import {
   CaretUpOutlined,
   EditOutlined,
 } from "@ant-design/icons";
-import {
-  Button,
-  Modal,
-  Input,
-  Typography,
-  Form,
-  message,
-  Table,
-  Row,
-  Col,
-  Checkbox,
-} from "antd";
-import React, { useState } from "react";
+import { Button, Modal, Typography, message, Table, Row, Col } from "antd";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getUser } from "../services/userService"; // API lấy danh sách member
+import { getUser } from "../services/userService";
 import { modifyTrainingMembers } from "../services/trainingService";
 import { Member } from "@/constant/types";
 
@@ -43,15 +32,18 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [form] = Form.useForm();
 
-  // Lấy danh sách member
+  // ✅ Lấy danh sách member (lọc bỏ mentor)
   const fetchMembers = async () => {
     try {
       setLoadingMembers(true);
       const res = await getUser({ keyword: "" });
-      if (Array.isArray(res)) setMembers(res);
+      if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
+        const filtered = res._embedded.userShortInfoResponseDtoList.filter(
+          (m: Member) => !mentors.some((mt) => mt.id === m.id)
+        );
+        setMembers(filtered);
+      }
     } catch {
       message.error(t("Failed to fetch members"));
     } finally {
@@ -59,10 +51,15 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     }
   };
 
+  // ✅ Mỗi khi danh sách mentor thay đổi, cập nhật lại list member
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchMembers();
+    }
+  }, [mentors, isModalOpen]);
+
   const handleOpenModal = () => {
     setIsModalOpen(true);
-    setSelectedMember(null);
-    form.resetFields();
     fetchMembers();
   };
 
@@ -70,44 +67,32 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     setIsModalOpen(false);
   };
 
-  const handleAddMentor = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        if (!selectedMember) {
-          message.error(t("Please select a member"));
-          return;
-        }
+  const handleSelectMentor = (member: Member) => {
+    if (mentors.some((m) => m.id === member.id)) {
+      message.warning(t("This member is already a mentor"));
+      return;
+    }
 
-        const newMentor: Member = {
-          id: selectedMember.id,
-          fullName: selectedMember.fullName,
-          username: selectedMember.username,
-          email: selectedMember.email,
-        };
-
-        if (mentors.some((m) => m.id === selectedMember.id)) {
-          message.warning(t("This member is already a mentor"));
-          return;
-        }
-
-        onChangeMentors([...mentors, newMentor]);
-        message.success(t("Mentor added successfully"));
-        form.resetFields();
-        setSelectedMember(null);
-      })
-      .catch(() => {
-        message.error(t("Please fill all required fields"));
-      });
+    const newMentors = [...mentors, member];
+    onChangeMentors(newMentors);
+    message.success(t("Mentor added successfully"));
   };
 
   const handleDelete = (id: string) => {
-    onChangeMentors(mentors.filter((m) => m.id !== id));
+    const removed = mentors.find((m) => m.id === id);
+    const updated = mentors.filter((m) => m.id !== id);
+    onChangeMentors(updated);
     message.success(t("Mentor removed"));
+
+    // ✅ Thêm lại người bị xóa vào danh sách member
+    if (removed) {
+      setMembers((prev) => [...prev, removed]);
+    }
   };
 
+  // ✅ Gọi API cập nhật (nếu có trainingId)
   const updateMentors = () => {
-    const payload = mentors.map((m) => ({}));
+    const payload = mentors.map((m) => ({ id: m.id }));
     modifyTrainingMembers(trainingId!, { mentors: payload })
       .then(() => {
         message.success(t("Mentors updated successfully"));
@@ -118,7 +103,7 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
       });
   };
 
-  // Table member (bên trái)
+  // 🔹 Cột member (bên trái)
   const memberColumns = [
     {
       title: t("Full Name"),
@@ -140,50 +125,33 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
       title: "",
       key: "action",
       render: (_: any, record: Member) => (
-        <Button
-          type="link"
-          onClick={() => {
-            setSelectedMember(record);
-            form.setFieldsValue({
-              fullName: record.fullName,
-              username: record.username,
-              email: record.email,
-            });
-          }}
-        >
+        <Button type="link" onClick={() => handleSelectMentor(record)}>
           {t("Select")}
         </Button>
       ),
     },
   ];
 
-  // Table mentor (bên phải, không header)
+  // 🔹 Cột mentor (bên phải) — ✅ có header
   const mentorColumnsModal = [
     {
+      title: t("Full Name"),
       dataIndex: "fullName",
       key: "fullName",
       render: (text: string) => <span className="font-semibold">{text}</span>,
     },
     {
+      title: t("Username"),
       dataIndex: "username",
       key: "username",
     },
     {
+      title: t("Email"),
       dataIndex: "email",
       key: "email",
     },
     {
-      dataIndex: "roleContent",
-      key: "roleContent",
-    },
-    {
-      dataIndex: "roles",
-      key: "roles",
-      render: (roles: string[]) => (
-        <span>{roles.map((r) => t(r)).join(", ")}</span>
-      ),
-    },
-    {
+      title: t("Action"),
       key: "actions",
       render: (_: any, record: Member) => (
         <Button
@@ -198,6 +166,7 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     },
   ];
 
+  // 🔹 Cột mentor hiển thị ngoài card
   const mentorColumns = [
     {
       dataIndex: "fullName",
@@ -205,11 +174,8 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
       render: (text: string) => <span className="font-semibold">{text}</span>,
     },
     {
-      dataIndex: "roles",
-      key: "roles",
-      render: (roles: string[]) => (
-        <span>{roles.map((r) => t(r)).join(", ")}</span>
-      ),
+      dataIndex: "email",
+      key: "email",
     },
   ];
 
@@ -251,12 +217,11 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
         </div>
       )}
 
-      {/* Modal thêm mentor */}
       <Modal
         title={<p className="pb-4 text-2xl">{t("Training Mentors")}</p>}
         open={isModalOpen}
         onCancel={handleCloseModal}
-        width={1400}
+        width={1300}
         footer={
           trainingId && (
             <Button type="primary" onClick={updateMentors}>
@@ -275,77 +240,18 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
               dataSource={members}
               loading={loadingMembers}
               pagination={{ pageSize: 5 }}
+              showHeader={true}
             />
           </Col>
 
-          {/* RIGHT: Form + List Mentor */}
+          {/* RIGHT: Current Mentors */}
           <Col span={12}>
-            <Title level={5}>{t("Mentor Info")}</Title>
-            <Form form={form} layout="vertical" className="mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Form.Item
-                  name="fullName"
-                  label={t("Full Name")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
-                </Form.Item>
-                <Form.Item
-                  name="username"
-                  label={t("Username")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
-                </Form.Item>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Form.Item
-                  name="email"
-                  label={t("Email")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
-                </Form.Item>
-                <Form.Item
-                  name="roleContent"
-                  label={t("Role Content")}
-                  rules={[
-                    { required: true, message: t("Please enter role content") },
-                  ]}
-                >
-                  <Input placeholder={t("Enter role content")} />
-                </Form.Item>
-              </div>
-
-              <Form.Item name="roles" label={t("Roles")}>
-                <Checkbox.Group>
-                  <Checkbox value="MODIFY">{t("Modify")}</Checkbox>
-                  <Checkbox value="CHECK_IN">{t("Check In")}</Checkbox>
-                  <Checkbox value="REGISTER">{t("Register")}</Checkbox>
-                  <Checkbox value="BAN">{t("Ban")}</Checkbox>
-                </Checkbox.Group>
-              </Form.Item>
-
-              <div className="flex justify-end">
-                <Button type="primary" onClick={handleAddMentor}>
-                  {t("Add to Mentor")}
-                </Button>
-              </div>
-            </Form>
-
             <Title level={5}>{t("Current Mentors")}</Title>
             <Table
               rowKey="id"
               columns={mentorColumnsModal}
               dataSource={mentors}
-              showHeader={false}
+              showHeader={true} // ✅ hiển thị header
               pagination={false}
             />
           </Col>

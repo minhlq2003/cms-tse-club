@@ -7,11 +7,47 @@ import {
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { useState } from "react";
-import { eventUpcomming } from "@/constant/data";
+import { useEffect, useState } from "react";
+import { getInfoUser } from "@/modules/services/userService";
+import { getRegisteredEvents } from "@/modules/services/eventService";
+import { set } from "lodash";
+import { Event } from "@/constant/types";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@/lib/utils";
 
 export default function Dashboard() {
+  const { t } = useTranslation("common");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
+  interface UserInfo {
+    username: string;
+    email: string;
+    nickname?: string;
+    dateOfBirth?: string;
+    role: string;
+    attendancePoint: number;
+    contributionPoint: number;
+  }
+
+  const [info, setInfo] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    getInfoUser()
+      .then((res) => {
+        setInfo(res);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch user info:", error);
+      });
+
+    getRegisteredEvents()
+      .then((res) => {
+        setRegisteredEvents(res);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch registered events:", error);
+      });
+  }, []);
 
   const prevMonth = () => {
     const newDate = new Date(currentDate);
@@ -62,8 +98,8 @@ export default function Dashboard() {
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = new Date(year, month, 1).getDay();
 
-    const eventsInMonth = eventUpcomming.filter((event) => {
-      const eventDate = new Date(event.date);
+    const eventsInMonth = registeredEvents.filter((event) => {
+      const eventDate = new Date(event.location.startTime);
       return eventDate.getFullYear() === year && eventDate.getMonth() === month;
     });
 
@@ -79,7 +115,7 @@ export default function Dashboard() {
           week.push(<td key={`${i}-${j}`} className="h-20 border"></td>);
         } else {
           const eventsForDay = eventsInMonth.filter(
-            (event) => new Date(event.date).getDate() === day
+            (event) => new Date(event.location.startTime).getDate() === day
           );
 
           week.push(
@@ -111,7 +147,6 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Thông tin sinh viên */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow md:col-span-2 rounded-2xl">
           <div className="flex flex-col md:flex-row items-start md:items-center space-y-3 md:space-y-0 md:space-x-4">
@@ -122,26 +157,31 @@ export default function Dashboard() {
             />
             <div className="pl-0 md:pl-3 w-full">
               <h3 className="font-bold text-blue-900 mb-2">
-                THÔNG TIN SINH VIÊN
+                {t("THÔNG TIN CÁ NHÂN")}
               </h3>
               <div className="flex flex-col md:flex-row justify-between gap-3">
                 <div>
                   <p>
-                    Họ và tên: <b>Lý Quốc Minh</b>
+                    Username: <b>{info?.username}</b>
                   </p>
                   <p>
-                    Mã sinh viên: <b>21105601</b>
+                    Nickname: <b>{info?.nickname}</b>
                   </p>
-                  <p>Giới tính: Nam</p>
+                  <p>
+                    {t("Date of birth")}:{" "}
+                    {formatDate(info?.dateOfBirth || "")?.formattedDate || ""}
+                  </p>
                 </div>
                 <div>
                   <p>
-                    Điểm tích cực: <b>150</b>
+                    {t("Attendance Point")}: <b>{info?.attendancePoint}</b>
                   </p>
                   <p>
-                    Điểm đóng góp: <b>100</b>
+                    {t("Contribution Point")}: <b>{info?.contributionPoint}</b>
                   </p>
-                  <p>Vai trò: thành viên</p>
+                  <p>
+                    {t("Role")}: {info?.role}
+                  </p>
                 </div>
               </div>
             </div>
@@ -149,10 +189,10 @@ export default function Dashboard() {
         </Card>
 
         <Card className="shadow rounded-2xl">
-          <h3 className="font-bold text-blue-900">SỰ KIỆN TRONG TUẦN</h3>
-          <p className="text-gray-500">Đang cập nhật sau.</p>
+          <h3 className="font-bold text-blue-900">{t("EVENT THIS WEEK")}</h3>
+          <p className="text-gray-500">{t("Updating...")}</p>
           <a href="#" className="text-blue-600 text-sm">
-            Xem chi tiết
+            {t("View all events")}
           </a>
         </Card>
       </div>

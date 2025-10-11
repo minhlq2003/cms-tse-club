@@ -96,58 +96,19 @@ const EventForm: React.FC<EventFormProps> = ({
       form={form}
       className="flex flex-col w-full"
       name="eventForm"
-      initialValues={{ remember: true }}
       onFinish={handleSubmit}
-      autoComplete="off"
       layout="vertical"
+      autoComplete="off"
     >
-      <div className="border border-[#d9d9d9] p-4 rounded-md mb-4">
-        {/* Title */}
+      <div className="border border-gray-300 p-2 md:p-4 rounded-md mb-4">
         <Form.Item
           name="title"
           label={t("Title")}
           rules={[{ required: true, message: t("Please enter event title!") }]}
-          className="mt-4"
         >
-          <Input
-            placeholder={t("Title")}
-            className="custom-input"
-            onBlur={handleTitleBlur}
-          />
+          <Input placeholder={t("Enter event title")} />
         </Form.Item>
 
-        {/* Slug */}
-        <div className="flex w-full">
-          <Form.Item
-            className="w-1/2 mr-4"
-            name="slug"
-            label={t("Slug")}
-            extra={
-              <span className="text-sm">
-                {t(
-                  "May not need to be entered (automatically render by title)"
-                )}
-              </span>
-            }
-          >
-            <Input
-              disabled={isEditableSlug}
-              placeholder={t("slug")}
-              className="custom-input"
-            />
-          </Form.Item>
-          <Button
-            className="self-start mt-7"
-            icon={<EditOutlined />}
-            color={!isEditableSlug ? "primary" : "default"}
-            variant="outlined"
-            onClick={() => setIsEditableSlug(!isEditableSlug)}
-          >
-            {t("Edit")}
-          </Button>
-        </div>
-
-        {/* Location */}
         <Form.Item
           name={["location", "destination"]}
           label={t("Destination")}
@@ -156,14 +117,14 @@ const EventForm: React.FC<EventFormProps> = ({
           <Input placeholder={t("Enter destination")} />
         </Form.Item>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-0 md:gap-4">
           <Form.Item
             name={["location", "startTime"]}
             label={t("Start Time")}
             rules={[
               { required: true, message: t("Please select start time!") },
             ]}
-            className="w-1/2"
+            className="w-full md:w-1/3"
           >
             <DatePicker className="w-full" showTime format="YYYY-MM-DD HH:mm" />
           </Form.Item>
@@ -172,13 +133,13 @@ const EventForm: React.FC<EventFormProps> = ({
             name={["location", "endTime"]}
             label={t("End Time")}
             rules={[{ required: true, message: t("Please select end time!") }]}
-            className="w-1/2"
+            className="w-full md:w-1/3"
           >
             <DatePicker className="w-full" showTime format="YYYY-MM-DD HH:mm" />
           </Form.Item>
 
           <Form.Item
-            className="w-1/5"
+            className="w-full md:w-1/3"
             name="category"
             label={t("Event Type")}
             rules={[
@@ -193,9 +154,16 @@ const EventForm: React.FC<EventFormProps> = ({
               ]}
             />
           </Form.Item>
+          <Form.Item
+            className="w-full md:w-1/4"
+            name="multiple"
+            label={t("Limit Attendees")}
+            rules={[{ required: true, message: t("Please enter number!") }]}
+          >
+            <Input type="number" min={1} />
+          </Form.Item>
         </div>
 
-        {/* Content */}
         <Form.Item>
           <Button
             icon={<CameraOutlined />}
@@ -209,21 +177,11 @@ const EventForm: React.FC<EventFormProps> = ({
           <CKEditorComponent
             value={form.getFieldValue("description")}
             onChange={(data: string) => {
-              form.setFieldsValue({ content: data });
+              form.setFieldsValue({ description: data });
             }}
           />
         </Form.Item>
 
-        {/* Multiple */}
-        <Form.Item
-          name="multiple"
-          label={t("Multiple")}
-          rules={[{ required: true, message: t("Please enter number!") }]}
-        >
-          <Input type="number" min={1} />
-        </Form.Item>
-
-        {/* Training ID */}
         <Form.Item name="trainingId" label={t("Training ID")}>
           <Input placeholder={t("Enter training ID")} />
         </Form.Item>

@@ -47,12 +47,18 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [form] = Form.useForm();
 
-  // Lấy danh sách member
+  // 🧠 Lấy danh sách thành viên
   const fetchMembers = async () => {
     try {
       setLoadingMembers(true);
       const res = await getUser({ keyword: "" });
-      if (Array.isArray(res)) setMembers(res);
+      if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
+        const allMembers = res._embedded.userShortInfoResponseDtoList;
+        const filteredMembers = allMembers.filter(
+          (m: Member) => !organizers.some((o) => o.organizerId === m.id)
+        );
+        setMembers(filteredMembers);
+      }
     } catch {
       message.error(t("Failed to fetch members"));
     } finally {
@@ -95,6 +101,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         }
 
         onChangeOrganizers([...organizers, newOrganizer]);
+        setMembers((prev) => prev.filter((m) => m.id !== selectedMember.id));
         message.success(t("Organizer added successfully"));
         form.resetFields();
         setSelectedMember(null);
@@ -105,8 +112,21 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   };
 
   const handleDelete = (id: string) => {
+    const removed = organizers.find((o) => o.organizerId === id);
     onChangeOrganizers(organizers.filter((o) => o.organizerId !== id));
     message.success(t("Organizer removed"));
+
+    if (removed) {
+      setMembers((prev) => [
+        ...prev,
+        {
+          id: removed.organizerId,
+          fullName: removed.fullName || "",
+          username: removed.username || "",
+          email: removed.email || "",
+        },
+      ]);
+    }
   };
 
   const updateOrganizer = () => {
@@ -126,7 +146,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       });
   };
 
-  // Table member (bên trái)
+  // 🧩 Cột bảng
   const memberColumns = [
     {
       title: t("Full Name"),
@@ -134,16 +154,8 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       key: "fullName",
       render: (text: string) => <span className="font-semibold">{text}</span>,
     },
-    {
-      title: t("Username"),
-      dataIndex: "username",
-      key: "username",
-    },
-    {
-      title: t("Email"),
-      dataIndex: "email",
-      key: "email",
-    },
+    { title: t("Username"), dataIndex: "username", key: "username" },
+    { title: t("Email"), dataIndex: "email", key: "email" },
     {
       title: "",
       key: "action",
@@ -152,10 +164,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
           type="link"
           onClick={() => {
             setSelectedMember(record);
-            form.setFieldsValue({ organizerId: record.id });
-            form.setFieldsValue({ fullName: record.fullName });
-            form.setFieldsValue({ username: record.username });
-            form.setFieldsValue({ email: record.email });
+            form.setFieldsValue(record);
           }}
         >
           {t("Select")}
@@ -164,28 +173,15 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
     },
   ];
 
-  // Table organizer (bên phải, không header)
   const organizerColumnsModal = [
     {
       dataIndex: "fullName",
       key: "fullName",
       render: (text: string) => <span className="font-semibold">{text}</span>,
     },
-    {
-      dataIndex: "username",
-      key: "username",
-      render: (text: string) => <span>{text}</span>,
-    },
-    {
-      dataIndex: "email",
-      key: "email",
-      render: (text: string) => <span>{text}</span>,
-    },
-    {
-      dataIndex: "roleContent",
-      key: "roleContent",
-      render: (text: string) => <span>{text}</span>,
-    },
+    { dataIndex: "username", key: "username" },
+    { dataIndex: "email", key: "email" },
+    { dataIndex: "roleContent", key: "roleContent" },
     {
       dataIndex: "roles",
       key: "roles",
@@ -225,6 +221,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
 
   return (
     <div className="event-organizers border border-gray-300 rounded-[10px] mb-5">
+      {/* Header */}
       <div className="flex justify-between items-center px-4 py-2 border-b border-gray-300">
         <Title level={4} className="!m-0">
           {t("Organizers")}
@@ -239,15 +236,17 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         />
       </div>
 
+      {/* List hiển thị */}
       {isPublishListVisible && (
         <div>
           <Table
-            className="p-4"
+            className="p-2"
             rowKey="organizerId"
             columns={organizerColumns}
             dataSource={organizers}
-            showHeader={false} // ✅ Bỏ header
+            showHeader={false}
             pagination={false}
+            scroll={{ x: true }}
           />
 
           <div className="flex justify-end border-t bg-[#f6f7f7] border-gray-300 rounded-b-[10px] p-4">
@@ -267,25 +266,26 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         </div>
       )}
 
-      {/* Modal thêm organizer */}
+      {/* Modal */}
       <Modal
-        title={<p className="pb-4 text-2xl">{t("Event Organizers")}</p>}
+        title={<p className="pb-2 text-2xl">{t("Event Organizers")}</p>}
         open={isModalOpen}
         onCancel={handleCloseModal}
-        width={1400}
+        width="90%"
+        style={{ top: 20 }}
         footer={
-          eventId && (
+          eventId ? (
             <div>
               <Button type="primary" onClick={updateOrganizer}>
                 {t("Update Organizers")}
               </Button>
             </div>
-          )
+          ) : null
         }
       >
-        <Row gutter={24}>
+        <Row gutter={[16, 16]} className="flex flex-col md:flex-row">
           {/* LEFT: List Member */}
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Title level={5}>{t("Select a Member")}</Title>
             <Table
               rowKey="id"
@@ -293,14 +293,15 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
               dataSource={members}
               loading={loadingMembers}
               pagination={{ pageSize: 5 }}
+              scroll={{ x: true }}
             />
           </Col>
 
           {/* RIGHT: Form + List Organizer */}
-          <Col span={12}>
+          <Col xs={24} md={12}>
             <Title level={5}>{t("Organizer Info")}</Title>
             <Form form={form} layout="vertical" className="mb-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Form.Item
                   name="fullName"
                   label={t("Full Name")}
@@ -308,7 +309,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                     { required: true, message: t("Please select a member") },
                   ]}
                 >
-                  <Input disabled value={selectedMember?.fullName || ""} />
+                  <Input disabled />
                 </Form.Item>
 
                 <Form.Item
@@ -318,11 +319,11 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                     { required: true, message: t("Please select a member") },
                   ]}
                 >
-                  <Input disabled value={selectedMember?.username || ""} />
+                  <Input disabled />
                 </Form.Item>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Form.Item
                   name="email"
                   label={t("Email")}
@@ -330,7 +331,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                     { required: true, message: t("Please select a member") },
                   ]}
                 >
-                  <Input disabled value={selectedMember?.email || ""} />
+                  <Input disabled />
                 </Form.Item>
                 <Form.Item
                   name="roleContent"
@@ -342,14 +343,16 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                   <Input placeholder={t("Enter role content")} />
                 </Form.Item>
               </div>
+
               <Form.Item name="roles" label={t("Roles")}>
-                <Checkbox.Group>
+                <Checkbox.Group className="flex flex-wrap gap-2">
                   <Checkbox value="MODIFY">{t("Modify")}</Checkbox>
                   <Checkbox value="CHECK_IN">{t("Check In")}</Checkbox>
                   <Checkbox value="REGISTER">{t("Register")}</Checkbox>
                   <Checkbox value="BAN">{t("Ban")}</Checkbox>
                 </Checkbox.Group>
               </Form.Item>
+
               <div className="flex justify-end">
                 <Button type="primary" onClick={handleAddOrganizer}>
                   {t("Add to Organizer")}
@@ -362,8 +365,9 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
               rowKey="organizerId"
               columns={organizerColumnsModal}
               dataSource={organizers}
-              showHeader={false} // ✅ Bỏ header
+              showHeader={false}
               pagination={false}
+              scroll={{ x: true }}
             />
           </Col>
         </Row>

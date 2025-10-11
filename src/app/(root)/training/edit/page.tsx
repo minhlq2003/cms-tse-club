@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Event, Member, Training } from "@/constant/types";
 import {
   getTrainingById,
+  updateStatusTrainingByLeader,
   updateTraining,
 } from "@/modules/services/trainingService";
 import TrainingForm from "@/modules/training/TrainingForm";
@@ -15,6 +16,7 @@ import TrainingMentors from "@/modules/training/TrainingMentors";
 import Publish from "@/components/Publish";
 import TrainingEventTable from "@/modules/training/TrainingEvent";
 import moment from "moment";
+import { isLeader } from "@/lib/utils";
 
 const EditTraining = () => {
   const { t } = useTranslation("common");
@@ -26,7 +28,7 @@ const EditTraining = () => {
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [mentors, setMentors] = useState<Member[]>([]);
-  const [status, setStatus] = useState<string>("draft");
+  const [status, setStatus] = useState<string>("PENDING");
   const [trainingEvents, setTrainingEvents] = useState<Event[]>([]);
 
   const fetchTraining = useCallback(
@@ -52,7 +54,11 @@ const EditTraining = () => {
 
           form.setFieldsValue(formattedData);
           setUploadedImage(data.image || "");
-          setStatus(data.status || "draft");
+          setStatus(
+            data.status === "PENDING" || data.status === "ACCEPTED"
+              ? "PENDING"
+              : "ARCHIVED"
+          );
 
           // Gán mentors
           setMentors(
@@ -111,15 +117,23 @@ const EditTraining = () => {
       description: values.description,
       status: status,
       location: values.location,
-      mentorIds: mentors.map((m) => m.id),
-      trainingEvents: trainingEvents,
+      limitRegister: Number(values.limitRegister),
     };
 
     try {
       if (id) {
-        await updateTraining(id, dataPayload);
-        toast.success(t("Training updated successfully!"));
-        router.push("/admin/trainings");
+        const response = await updateTraining(id, dataPayload);
+
+        if (response) {
+          if (isLeader() && dataPayload.status === "PENDING") {
+            await updateStatusTrainingByLeader(String(id), "ACCEPTED");
+          }
+
+          toast.success(t("Training updated successfully!"));
+          router.push("/training");
+        } else {
+          toast.error(t("Failed to update training. Please try again."));
+        }
       } else {
         toast.error(t("Invalid training ID."));
       }

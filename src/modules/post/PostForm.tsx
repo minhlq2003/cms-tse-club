@@ -55,6 +55,7 @@ const PostForm: React.FC<PostFormProps> = ({
   const handleSubmit = () => {
     const formData = form.getFieldsValue();
     onFinish(formData);
+    form.resetFields();
   };
 
   const handleOpenModal = (action: "selectMedia" | "addToContent") => {
@@ -133,15 +134,17 @@ const PostForm: React.FC<PostFormProps> = ({
               className="custom-input"
             />
           </Form.Item>
-          <Button
-            className="self-start mt-7"
-            icon={<EditOutlined />}
-            color={!isEditableSlug ? "primary" : "default"}
-            variant="outlined"
-            onClick={() => setIsEditableSlug(!isEditableSlug)}
-          >
-            {t("Edit")}
-          </Button>
+          <div className="self-center pb-5 pl-3">
+            <Button
+              className="self-center"
+              icon={<EditOutlined />}
+              color={!isEditableSlug ? "primary" : "default"}
+              variant="outlined"
+              onClick={() => setIsEditableSlug(!isEditableSlug)}
+            >
+              {t("Edit")}
+            </Button>
+          </div>
         </div>
         <Form.Item>
           <Button

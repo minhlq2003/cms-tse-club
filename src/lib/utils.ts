@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 import dayjs from "dayjs";
+import { jwtDecode } from "jwt-decode";
 import type { Event } from "@/constant/types";
 
 interface ScheduleInput {
@@ -27,12 +28,24 @@ export const formatDate = (createdAt: string | Date) => {
   return { formattedDate, formattedTime };
 };
 
-export const getRoleUser = (role: string) => {
+export const getRoleUser = () => {
   const user = localStorage.getItem("user");
   if (user) {
     const parsedUser = JSON.parse(user);
-    return parsedUser.role === role;
+    return parsedUser.role;
   }
+};
+
+export const isLeader = () => {
+  const role = getRoleUser();
+  return role === "LEADER" || role === "ADMIN";
+};
+export const getUser = () => {
+  const user = localStorage.getItem("user");
+  if (user) {
+    return JSON.parse(user);
+  }
+  return null;
 };
 
 export function generateLessonFromSchedule(values: ScheduleInput): Event[] {
@@ -85,4 +98,21 @@ export function generateLessonFromSchedule(values: ScheduleInput): Event[] {
   }
 
   return lessons;
+}
+
+interface JwtPayload {
+  exp: number;
+  iat?: number;
+  [key: string]: any;
+}
+
+export function isTokenExpired(token: string): boolean {
+  try {
+    const decoded = jwtDecode<JwtPayload>(token);
+    if (!decoded.exp) return true;
+    const currentTime = Math.floor(Date.now() / 1000);
+    return decoded.exp < currentTime;
+  } catch (error) {
+    return true;
+  }
 }

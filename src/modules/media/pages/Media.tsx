@@ -34,10 +34,10 @@ const Media = ({ isOpenModal, onSelectMedia }: MediaProp) => {
   );
 
   return (
-    <div className="p-2 pt-6 bg-white">
+    <div className="px-4 pt-10 bg-white">
       {!isOpenModal && (
-        <div className="flex justify-between space-x-4 items-center mt-4">
-          <h1 className="text-3xl font-bold">Thư viện</h1>
+        <div className="flex justify-between  items-center">
+          <h1 className="text-3xl font-bold ml-[10px]">Thư viện</h1>
           <Button
             color="primary"
             variant="outlined"
@@ -48,7 +48,7 @@ const Media = ({ isOpenModal, onSelectMedia }: MediaProp) => {
           </Button>
         </div>
       )}
-      <div className="flex justify-between align-middle mt-5 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg">
+      <div className="flex justify-between align-middle mt-5 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg px-4">
         <Space>
           {!isOpenModal && (
             <Space className="view">

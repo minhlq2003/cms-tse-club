@@ -2,6 +2,7 @@ import { Post, PostListResponse, PostResponse } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_POST_PATH = "/posts";
+const API_PREFIX_LEADER_POST_PATH = "/leader/posts";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5003";
@@ -25,6 +26,19 @@ export const getPosts = async (params?: {
   return response;
 };
 
+export const getPostsByLeader = async (params?: {
+  page?: number;
+  size?: number;
+  sort?: string;
+  title?: string;
+  status?: string;
+}) => {
+  const response = await http.get(`${API_PREFIX_LEADER_POST_PATH}/search`, {
+    params,
+  });
+  return response;
+};
+
 export const getPostsByCategory = async (
   categorySlug?: string,
   params?: { page?: number; limit?: number }
@@ -37,7 +51,7 @@ export const getPostsByCategory = async (
 };
 
 export const getPostById = (id: string) =>
-  http.get<PostResponse>(`${API_PREFIX_POST_PATH}/postdetails?id=${id}`);
+  http.get<Post>(`${API_PREFIX_POST_PATH}/${id}`);
 
 export const getPostBySlug = (slug: string) =>
   http.get<PostResponse>(`${API_PREFIX_POST_PATH}/postdetails?slug=${slug}`);
@@ -46,7 +60,26 @@ export const createPost = (data: any) =>
   http.post<PostResponse>(`${API_PREFIX_POST_PATH}`, data);
 
 export const updatePost = (id: string, data: Partial<Post>) =>
-  http.post<PostResponse>(`${API_PREFIX_POST_PATH}/updatepost/${id}`, data);
+  http.put<PostResponse>(`${API_PREFIX_POST_PATH}/${id}`, data);
 
 export const deletePost = (id: string) =>
-  http.post<PostResponse>(`${API_PREFIX_POST_PATH}/deletepost/${id}`);
+  http.delete<PostResponse>(`${API_PREFIX_POST_PATH}/${id}`);
+
+export const approvePostByLeader = (id: string) =>
+  http.patch<PostResponse>(`${API_PREFIX_LEADER_POST_PATH}/${id}/approve`, {});
+
+export const rejectPostByLeader = (id: string) =>
+  http.patch<PostResponse>(`${API_PREFIX_LEADER_POST_PATH}/${id}/reject`, {});
+
+export const searchByLeader = async (params?: {
+  page?: number;
+  size?: number;
+  sort?: string;
+  title?: string;
+  status?: string;
+}) => {
+  const response = await http.get(`${API_PREFIX_LEADER_POST_PATH}/search`, {
+    params,
+  });
+  return response;
+};

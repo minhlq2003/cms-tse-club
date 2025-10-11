@@ -1,6 +1,7 @@
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_TRAINING_PATH = "/trainings";
+const API_PREFIX_LEADER_TRAINING_PATH = "/leader/trainings";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
@@ -25,23 +26,29 @@ export const manualTriggerRegister = (trainingId: string, data: any) =>
     data
   );
 
-// Chèn thêm các sự kiện vào một training
 export const addTrainingEvents = (trainingId: string, data: any) =>
   http.post<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}/events`, data);
 
-// Thêm hoặc bớt thành viên (mentor, participant) cho một training
 export const modifyTrainingMembers = (trainingId: string, data: any) =>
   http.put<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}/members`, data);
 
-// Lấy chi tiết một training
 export const getTrainingById = (trainingId: string) =>
   http.get<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}`);
 
-// Cập nhật thông tin một training
 export const updateTraining = (trainingId: string, data: any) =>
   http.patch<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}`, data);
 
-// Tìm kiếm training của tôi (base theo creator hoặc mentor)
+export const updateStatusTrainingByLeader = (
+  trainingId: string,
+  status: string
+) =>
+  http.patch<any>(`${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/status`, {
+    status,
+  });
+
+export const deleteTraining = (trainingId: string) =>
+  http.delete<any>(`${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}`);
+
 export const searchMyTrainings = (params?: {
   page?: number;
   limit?: number;
@@ -50,6 +57,18 @@ export const searchMyTrainings = (params?: {
 }) =>
   http
     .get(`${API_PREFIX_TRAINING_PATH}/me/search`, {
+      params,
+    })
+    .then((res) => res._embedded?.trainingWrapperDtoList ?? []);
+
+export const searchTrainingsByLeader = (params?: {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+  status?: string;
+}) =>
+  http
+    .get(`${API_PREFIX_LEADER_TRAINING_PATH}/search`, {
       params,
     })
     .then((res) => res._embedded?.trainingWrapperDtoList ?? []);

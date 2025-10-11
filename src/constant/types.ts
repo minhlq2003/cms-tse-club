@@ -424,6 +424,8 @@ export interface PostResponse {
   code: number;
   message?: string;
   data: Post;
+  id?: string;
+  status: number;
 }
 
 export interface Post {
@@ -432,12 +434,12 @@ export interface Post {
   slug?: string;
   content?: string;
   category?: string;
-  created_at?: string;
+  postTime?: string;
   updated_at?: string;
   status?: string;
-  user_id?: number;
   image?: string;
   excerpt?: string;
+  writer?: Member;
 }
 
 export interface CategoryOption {
@@ -465,6 +467,8 @@ export interface Event {
   trainingId?: string;
   category?: string;
   description?: string;
+  host?: Member;
+  limitRegister?: number;
 }
 export interface Location {
   destination: string;
@@ -490,6 +494,7 @@ export interface Training {
   creator?: Member;
   mentor?: Member[];
   mentorIds?: string[];
+  limitRegister?: number;
 }
 
 export interface Member {

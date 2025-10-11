@@ -5,12 +5,21 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Event, Organizer } from "@/constant/types";
-import { getEventById, updateEvent } from "@/modules/services/eventService";
+import { Event, Member, Organizer } from "@/constant/types";
+import dayjs from "dayjs";
+
+import {
+  getEventAttendees,
+  getEventById,
+  updateEvent,
+  updateStatusEventByLeader,
+} from "@/modules/services/eventService";
 import EventForm from "@/modules/event/EventForm";
 import EventOrganizers from "@/modules/event/EventOrganizers";
 import moment from "moment";
 import Publish from "@/components/Publish";
+import EventAttendees from "@/modules/event/Attendee";
+import { isLeader } from "@/lib/utils";
 
 const EditEvent = () => {
   const { t } = useTranslation("common");
@@ -18,11 +27,10 @@ const EditEvent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
-
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [status, setStatus] = useState<string>("draft");
+  const [status, setStatus] = useState<string>("PENDING");
 
   const fetchEvent = useCallback(
     async (id: string) => {
@@ -31,24 +39,26 @@ const EditEvent = () => {
         const res = await getEventById(id);
         const data = res;
         if (data) {
-          // Gán dữ liệu vào form
           const formattedData = {
             ...data,
             location: {
               ...data.location,
               startTime: data.location?.startTime
-                ? moment(data.location.startTime)
+                ? dayjs(data.location.startTime, "YYYY-MM-DDTHH:mm:ss")
                 : null,
               endTime: data.location?.endTime
-                ? moment(data.location.endTime)
+                ? dayjs(data.location.endTime, "YYYY-MM-DDTHH:mm:ss")
                 : null,
             },
           };
 
-          // Set the formatted data to the form
           form.setFieldsValue(formattedData);
           setUploadedImage(data.image || "");
-          setStatus(data.status || "draft");
+          setStatus(
+            data.status === "PENDING" || data.status === "ACCEPTED"
+              ? "PENDING"
+              : "ARCHIVED"
+          );
           setOrganizers(
             Array.isArray(data.organizers)
               ? data.organizers.map((org: any) => ({
@@ -80,6 +90,7 @@ const EditEvent = () => {
       status: status,
       category: values.category,
       multiple: Number(values.multiple),
+      limitRegister: Number(values.multiple),
       location: values.location,
       organizers: organizers.map((org) => ({
         organizerId: org.organizerId,
@@ -90,9 +101,19 @@ const EditEvent = () => {
 
     try {
       if (id) {
-        await updateEvent(id, dataPayload);
-        toast.success(t("Event updated successfully!"));
-        router.push("/admin/events");
+        const response = await updateEvent(id, dataPayload);
+
+        if (response && response.id) {
+          // Nếu người cập nhật là Leader và status vẫn là "PENDING" thì duyệt luôn
+          if (isLeader() && dataPayload.status === "PENDING") {
+            await updateStatusEventByLeader(String(response.id), "ACCEPTED");
+          }
+
+          toast.success(t("Event updated successfully!"));
+          router.push("/events");
+        } else {
+          toast.error(t("Failed to update event. Please try again."));
+        }
       } else {
         toast.error(t("Invalid event ID."));
       }
@@ -115,11 +136,11 @@ const EditEvent = () => {
         </div>
       ) : (
         <div className="w-full">
-          <h1 className="ml-[10px] text-3xl font-bold pb-6">
+          <h1 className="ml-[10px] text-3xl font-bold pb-3 md:pb-6">
             {t("Edit Event")}
           </h1>
 
-          <div className="flex justify-between w-full">
+          <div className="flex flex-col md:flex-row justify-between w-full">
             <EventForm
               form={form}
               onFinish={onFinish}
@@ -127,7 +148,7 @@ const EditEvent = () => {
               setUploadedImages={setUploadedImage}
             />
 
-            <div className="w-[22%] pl-5">
+            <div className="md:w-[22%] w-full pl-0 md:pl-5">
               <Publish
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
@@ -138,6 +159,7 @@ const EditEvent = () => {
                 onChangeOrganizers={setOrganizers}
                 eventId={id || ""}
               />
+              <EventAttendees eventId={id || ""} />
             </div>
           </div>
         </div>

@@ -1,13 +1,15 @@
 "use client";
 
 import { useTranslation } from "next-i18next";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Eye, EyeOff, Images } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { loginWithGoogle } from "@/lib/actions/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Image, message } from "antd";
+import { Images } from "@/constant/image";
+import { isTokenExpired } from "@/lib/utils";
 
 function SignIn() {
   const { t } = useTranslation("common");
@@ -17,6 +19,7 @@ function SignIn() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -53,61 +56,97 @@ function SignIn() {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+
+    if (typeof window !== "undefined") {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user && user.id && token && !isTokenExpired(token)) {
+        router.push("/");
+      }
+    }
+  }, [router]);
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="w-full flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-center text-blue-700 mb-6">
-            {t("LOGIN")}
-          </h2>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label
-                htmlFor="email"
-                className="block text-gray-700 text-sm font-medium mb-2"
-              >
-                Username
-              </label>
-              <input
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
+      <div className="relative w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-black overflow-hidden">
+        <div className="flex w-[1000px]">
+          <div className="hidden md:flex flex-col justify-center text-[#120e31] px-12 max-w-xl">
+            <Image
+              src={Images.logoTSE.src}
+              preview={false}
+              alt="Logo"
+              className="w-32 mb-6"
+            />
+            <div className="flex justify-between">
+              <p className="text-xl font-semibold mb-6">TSE Club CMS</p>
+              <p> Version: 1.0.0 </p>
             </div>
-            <div className="mb-4 relative">
-              <label
-                htmlFor="password"
-                className="block text-gray-700 text-sm font-medium mb-2"
-              >
-                Password
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-              <span
-                className="absolute inset-y-0 right-0 top-8 flex items-center pr-3 cursor-pointer"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff color="gray" /> : <Eye color="gray" />}
-              </span>
-            </div>
+            <p className="mb-2">
+              Address: H3.2, 12 Nguyễn Văn Bảo, Gò Vấp, TP.HCM
+            </p>
+            <p className="mb-2">E-MAIL: tseclub@iuh.edu.vn</p>
+          </div>
 
-            {error && <div className="text-red-500 mb-4">{error}</div>}
+          {/* Login box */}
+          <div className="relative z-10 w-full max-w-md bg-white rounded-xl shadow-2xl p-8 mx-auto md:mr-20">
+            <h2 className="text-2xl font-bold text-center text-[#120e31] mb-6">
+              {t("LOGIN")}
+            </h2>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label
+                  htmlFor="email"
+                  className="block text-gray-700 text-sm font-medium mb-2"
+                >
+                  Username or Email
+                </label>
+                <input
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-black focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div className="mb-4 relative">
+                <label
+                  htmlFor="password"
+                  className="block text-gray-700 text-sm font-medium mb-2"
+                >
+                  Password
+                </label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-black focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <span
+                  className="absolute inset-y-0 right-0 top-8 flex items-center pr-3 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff color="gray" />
+                  ) : (
+                    <Eye color="gray" />
+                  )}
+                </span>
+              </div>
 
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={loading}
-            >
-              {loading ? "Logging in..." : t("LOG IN")}
-            </button>
+              {error && <div className="text-red-500 mb-4">{error}</div>}
+
+              <button
+                type="submit"
+                className="w-full bg-[#120e31] text-white font-medium py-2 px-4 rounded-md hover:bg-purple-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#120e31]"
+                disabled={loading}
+              >
+                {loading ? "Logging in..." : t("LOG IN")}
+              </button>
+            </form>
+
             <div className="mt-4 text-center text-gray-500">
               <p>
                 Don&apos;t have an account?{" "}
@@ -129,13 +168,14 @@ function SignIn() {
             <div className="mt-6 text-center text-gray-500">
               <p>or continue with</p>
             </div>
-          </form>
-          <button
-            className="w-full bg-white border text-black border-gray-300 rounded-md py-2 px-4 flex items-center justify-center mt-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-            onClick={() => loginWithGoogle()}
-          >
-            Continue with Google
-          </button>
+
+            <button
+              className="w-full bg-white border text-black border-gray-300 rounded-md py-2 px-4 flex items-center justify-center mt-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+              onClick={() => loginWithGoogle()}
+            >
+              Continue with Google
+            </button>
+          </div>
         </div>
       </div>
     </Suspense>

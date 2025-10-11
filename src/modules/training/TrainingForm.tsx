@@ -181,6 +181,21 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
               onBlur={handleTitleBlur}
             />
           </Form.Item>
+          <Form.Item
+            name={"limitRegister"}
+            label={t("Limit Register")}
+            rules={[
+              { required: true, message: t("Please enter limit register!") },
+            ]}
+            className="mt-4"
+          >
+            <Input
+              type="number"
+              min={1}
+              placeholder={t("Limit Register")}
+              className="custom-input"
+            />
+          </Form.Item>
         </div>
 
         {/* Content */}

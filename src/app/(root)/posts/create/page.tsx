@@ -3,20 +3,25 @@
 import { Button, Form, message } from "antd";
 import { useState } from "react";
 import { Post } from "@/constant/types";
-import { createPost } from "@/modules/services/postService";
+import {
+  approvePostByLeader,
+  createPost,
+} from "@/modules/services/postService";
 import { useTranslation } from "react-i18next";
 import PostForm from "@/modules/post/PostForm";
 import FeaturedImage from "@/modules/post/FeaturedImage";
 import Categories from "@/modules/post/Categories";
 import { toast } from "sonner";
 import Publish from "@/components/Publish";
+import { getRoleUser, isLeader } from "@/lib/utils";
+import { log } from "node:console";
 
 export default function AddPost() {
   const { t } = useTranslation("common");
   const [form] = Form.useForm();
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<string>("draft");
+  const [status, setStatus] = useState<string>("PENDING");
 
   const onFinish = async (values: Post) => {
     const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
@@ -30,10 +35,21 @@ export default function AddPost() {
     };
 
     try {
-      await createPost(dataPayload);
-      toast.success(t("Post added successfully!"));
-      form.resetFields();
-      setUploadedImage("");
+      const response = await createPost(dataPayload);
+      console.log("response:", response);
+
+      if (response && response.id) {
+        if (isLeader()) {
+          if (status === "PENDING") {
+            approvePostByLeader(String(response.id));
+          }
+        }
+        toast.success(t("Post added successfully!"));
+        form.resetFields();
+        setUploadedImage("");
+      } else {
+        toast.error(t("Failed to add post. Please try again."));
+      }
     } catch {
       toast.error(t("Failed to add post. Please try again."));
     }

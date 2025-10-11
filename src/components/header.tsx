@@ -139,10 +139,18 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
             className="menu-dropdown z-50 absolute right-3 top-full shadow-lg drop-shadow-md px-2 py-1 "
             onClick={handleUserMenuClick}
           >
-            <Menu.Item key="profile" onClick={handleProfileClick}>
+            <Menu.Item
+              key="profile"
+              className="!text-black"
+              onClick={handleProfileClick}
+            >
               {t("Profile")}
             </Menu.Item>
-            <Menu.Item key="logout" onClick={handleLogout}>
+            <Menu.Item
+              key="logout"
+              className="!text-black"
+              onClick={handleLogout}
+            >
               {t("Logout")}
             </Menu.Item>
           </Menu>

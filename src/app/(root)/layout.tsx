@@ -12,6 +12,8 @@ import { Toaster } from "sonner";
 import HeaderCMS from "@/components/header";
 import { i18nInstance } from "@/language/i18n";
 import MobileNav from "@/components/MobileNav";
+import { isTokenExpired } from "@/lib/utils";
+import "antd/dist/reset.css";
 
 export default function RootLayout({
   children,
@@ -23,16 +25,19 @@ export default function RootLayout({
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
 
-  // useEffect(() => {
-  //   if (typeof window !== "undefined") {
-  //     const user = JSON.parse(localStorage.getItem("user") || "{}");
-  //     if (!user || !user.id) {
-  //       router.push("/signin");
-  //     } else if (user.role !== "admin") {
-  //       router.push("/signin");
-  //     }
-  //   }
-  // }, [router]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!user || !user.id) {
+        router.push("/signin");
+      }
+    }
+    const token = localStorage.getItem("accessToken");
+    if (!token || isTokenExpired(token)) {
+      message.warning("Your session has expired. Please sign in again.");
+      router.push("/signin");
+    }
+  }, [router]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -44,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang={"en"}>
       <head>
-        <title>TSE Club</title>
+        <title>TSE Club - CMS</title>
       </head>
       <body>
         <Suspense fallback={<div>Loading...</div>}>
