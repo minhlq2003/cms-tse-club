@@ -82,9 +82,6 @@ function SignIn() {
               <p className="text-xl font-semibold mb-6">TSE Club CMS</p>
               <p> Version: 1.0.0 </p>
             </div>
-            <p className="mb-2">
-              Address: H3.2, 12 Nguyễn Văn Bảo, Gò Vấp, TP.HCM
-            </p>
             <p className="mb-2">E-MAIL: tseclub@iuh.edu.vn</p>
           </div>
 
@@ -149,12 +146,6 @@ function SignIn() {
 
             <div className="mt-4 text-center text-gray-500">
               <p>
-                Don&apos;t have an account?{" "}
-                <Link href="/signup" className="text-blue-500 hover:underline">
-                  Sign up
-                </Link>
-              </p>
-              <p>
                 {t("Didn't remember your password ?")}{" "}
                 <Link
                   href="/forgotpassword"
@@ -164,17 +155,6 @@ function SignIn() {
                 </Link>
               </p>
             </div>
-
-            <div className="mt-6 text-center text-gray-500">
-              <p>or continue with</p>
-            </div>
-
-            <button
-              className="w-full bg-white border text-black border-gray-300 rounded-md py-2 px-4 flex items-center justify-center mt-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
-              onClick={() => loginWithGoogle()}
-            >
-              Continue with Google
-            </button>
           </div>
         </div>
       </div>

@@ -45,28 +45,32 @@ export default function MobileNav() {
       {/* Bottom Nav */}
       <div className="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2 z-50">
         <button onClick={toggleDrawer} className="flex flex-col items-center">
-          <FontAwesomeIcon icon={faBars} size="lg" />
+          <FontAwesomeIcon icon={faBars} size="xl" className="text-gray-500" />
         </button>
         <button
           onClick={() => router.push("/profile")}
           className="flex flex-col items-center"
         >
-          <FontAwesomeIcon icon={faUser} size="lg" />
+          <FontAwesomeIcon icon={faUser} size="xl" className="text-gray-500" />
         </button>
         <button
           onClick={() => router.push("/")}
           className="flex flex-col items-center"
         >
-          <FontAwesomeIcon icon={faHome} size="lg" />
+          <FontAwesomeIcon icon={faHome} size="xl" className="text-gray-500" />
         </button>
         <button
           onClick={() => router.push("/calendar")}
           className="flex flex-col items-center"
         >
-          <FontAwesomeIcon icon={faCalendar} size="lg" />
+          <FontAwesomeIcon
+            icon={faCalendar}
+            size="xl"
+            className="text-gray-500"
+          />
         </button>
         <button onClick={toggleDrawer} className="flex flex-col items-center">
-          <FontAwesomeIcon icon={faBars} size="lg" />
+          <FontAwesomeIcon icon={faBars} size="xl" className="text-gray-500" />
         </button>
       </div>
 

@@ -91,6 +91,39 @@
   "Status: ": "Trạng thái: ",
   "Draft": "Bản nháp",
   "Save Draft": "Lưu bản nháp",
-  "Submit to leader": "Gửi cho trưởng CLB duyệt"
+  "Submit to leader": "Gửi cho trưởng CLB duyệt",
+  "List Training": "Danh sách khóa đào tạo",
+  "Find training...": "Tìm kiếm khóa đào tạo...",
+  "Create Training": "Tạo khóa đào tạo",
+
+
+  "Are you sure you want to delete this training?": "Bạn có chắc chắn muốn xóa khóa đào tạo này không?",
+  "Are you sure you want to approve this training?": "Bạn có chắc chắn muốn duyệt khóa đào tạo này không?",
+  "Are you sure you want to reject this training?": "Bạn có chắc chắn muốn từ chối khóa đào tạo này không?",
+
+  "Training deleted successfully": "Xóa khóa đào tạo thành công",
+  "Failed to delete training": "Xóa khóa đào tạo thất bại",
+  "Training approved successfully": "Duyệt khóa đào tạo thành công",
+  "Failed to approve training": "Duyệt khóa đào tạo thất bại",
+  "Training rejected successfully": "Từ chối khóa đào tạo thành công",
+  "Failed to reject training": "Từ chối khóa đào tạo thất bại",
+  "Failed to fetch trainings": "Không thể tải danh sách khóa đào tạo",
+  "List Posts": "Danh sách bài viết",
+  "Find post...": "Tìm bài viết...",
+  "Create Post": "Tạo bài viết",
+  "Image": "Ảnh",
+  "No image": "Không có ảnh",
+  "Are you sure you want to delete this post?": "Bạn có chắc chắn muốn xóa bài viết này không?",
+  "Are you sure you want to approve this post?": "Bạn có chắc chắn muốn duyệt bài viết này không?",
+  "Are you sure you want to reject this post?": "Bạn có chắc chắn muốn từ chối bài viết này không?",
+  "Post deleted successfully": "Xóa bài viết thành công",
+  "Failed to delete post": "Xóa bài viết thất bại",
+  "Post approved successfully": "Duyệt bài viết thành công",
+  "Failed to approve post": "Duyệt bài viết thất bại",
+  "Post rejected successfully": "Từ chối bài viết thành công",
+  "Failed to reject post": "Từ chối bài viết thất bại",
+  "Failed to fetch posts": "Không thể tải danh sách bài viết",
+  "Created Date (MM/DD/YYYY)": "Ngày tạo (MM/DD/YYYY)"
+  
 
 }

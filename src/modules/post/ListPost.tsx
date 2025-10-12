@@ -8,7 +8,7 @@ import {
   getPosts,
   rejectPostByLeader,
 } from "@/modules/services/postService";
-import { Button, Table, Modal, Tag } from "antd";
+import { Button, Table, Modal, Tag, message } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
 import Image from "next/image";
@@ -23,6 +23,7 @@ interface ListPostProps {
 export default function ListPost({ searchTerm, status }: ListPostProps) {
   const { t } = useTranslation("common");
   const [data, setData] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -36,35 +37,37 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
     setIsModalVisible(true);
   };
 
-  const approvePost = (record: Post) => {
+  const handleApprove = async (record: Post) => {
     Modal.confirm({
-      title: "Xác nhận duyệt bài viết",
-      content: "Bạn có chắc chắn muốn duyệt bài viết này không?",
-      okText: "Duyệt",
-      cancelText: "Hủy",
+      title: t("Confirm Approve"),
+      content: t("Are you sure you want to approve this post?"),
+      okText: t("Approve"),
+      cancelText: t("Cancel"),
       onOk: async () => {
         try {
-          approvePostByLeader(String(record.id));
+          await approvePostByLeader(String(record.id));
+          message.success(t("Post approved successfully"));
           fetchPosts(currentPage, pageSize);
-        } catch (error) {
-          console.error("Failed to approve post:", error);
+        } catch {
+          message.error(t("Failed to approve post"));
         }
       },
     });
   };
 
-  const rejectPost = (record: Post) => {
+  const handleReject = async (record: Post) => {
     Modal.confirm({
-      title: "Xác nhận từ chối bài viết",
-      content: "Bạn có chắc chắn muốn từ chối bài viết này không?",
-      okText: "Từ chối",
-      cancelText: "Hủy",
+      title: t("Confirm Reject"),
+      content: t("Are you sure you want to reject this post?"),
+      okText: t("Reject"),
+      cancelText: t("Cancel"),
       onOk: async () => {
         try {
-          rejectPostByLeader(String(record.id));
+          await rejectPostByLeader(String(record.id));
+          message.success(t("Post rejected successfully"));
           fetchPosts(currentPage, pageSize);
-        } catch (error) {
-          console.error("Failed to reject post:", error);
+        } catch {
+          message.error(t("Failed to reject post"));
         }
       },
     });
@@ -76,17 +79,24 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
     sortBy?: string,
     sortOrder?: string
   ) => {
-    const response = await getPosts({
-      page: pageNo,
-      size: pageSize,
-      sort: sortBy,
-      title: searchTerm,
-      status: status,
-    });
+    try {
+      setLoading(true);
+      const response = await getPosts({
+        page: pageNo,
+        size: pageSize,
+        sort: sortBy,
+        title: searchTerm,
+        status: status,
+      });
 
-    if (Array.isArray(response._embedded.postWrapperDtoList)) {
-      setData(response._embedded.postWrapperDtoList ?? []);
-      setTotalPosts(response?.page.totalElements ?? 0);
+      if (Array.isArray(response._embedded?.postWrapperDtoList)) {
+        setData(response._embedded.postWrapperDtoList);
+        setTotalPosts(response.page.totalElements ?? 0);
+      }
+    } catch {
+      message.error(t("Failed to fetch posts"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,13 +104,18 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
     fetchPosts(currentPage, pageSize, sortBy, sortOrder);
   }, [currentPage, pageSize, sortBy, sortOrder, searchTerm, status]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!postToDelete?.id) return;
-    deletePost(String(postToDelete.id)).then(() => {
+    try {
+      await deletePost(String(postToDelete.id));
+      message.success(t("Post deleted successfully"));
+      fetchPosts(currentPage, pageSize);
+    } catch {
+      message.error(t("Failed to delete post"));
+    } finally {
       setIsModalVisible(false);
       setPostToDelete(null);
-      fetchPosts(currentPage, pageSize);
-    });
+    }
   };
 
   const handleTableChange = (
@@ -108,7 +123,7 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
     _: Record<string, unknown>,
     sorter: SorterResult<Post> | SorterResult<Post>[]
   ) => {
-    setCurrentPage(pagination.current ?? 0);
+    setCurrentPage((pagination.current ?? 1) - 1);
     setPageSize(pagination.pageSize ?? 5);
 
     if (!Array.isArray(sorter)) {
@@ -125,38 +140,45 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
 
   const columns: ColumnsType<Post> = [
     {
-      title: "Ảnh",
+      title: t("Image"),
       dataIndex: "image",
       key: "image",
       render: (url: string | undefined) =>
         url ? (
-          <Image src={url} alt="Post image" width={100} height={60} />
+          <Image
+            src={url}
+            alt="Post image"
+            width={100}
+            height={60}
+            className="rounded-md object-cover"
+          />
         ) : (
-          "Không có ảnh"
+          t("No image")
         ),
     },
     {
-      title: "Tiêu đề",
+      title: t("Title"),
       dataIndex: "title",
       key: "title",
       sorter: true,
       width: 400,
     },
     {
-      title: "Trạng thái",
+      title: t("Status"),
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        let color = "default";
-        if (status === "ACCEPTED") color = "green";
-        if (status === "PENDING") color = "orange";
-        if (status === "REJECTED") color = "red";
-        if (status === "DISABLED") color = "gray";
-        return <Tag color={color}>{t(status)}</Tag>;
+        const colorMap: Record<string, string> = {
+          ACCEPTED: "green",
+          PENDING: "orange",
+          REJECTED: "red",
+          DISABLED: "gray",
+        };
+        return <Tag color={colorMap[status] || "default"}>{t(status)}</Tag>;
       },
     },
     {
-      title: "Ngày tạo (MM/DD/YYYY)",
+      title: t("Created Date (MM/DD/YYYY)"),
       dataIndex: "postTime",
       key: "postTime",
       sorter: true,
@@ -164,41 +186,32 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
         date ? new Date(date).toLocaleString() : "",
     },
     {
-      title: "Hành động",
+      title: t("Action"),
       key: "action",
       render: (_, record) => (
-        <>
-          <Button
-            danger
-            onClick={() => showDeleteModal(record)}
-            style={{ marginRight: 8 }}
-          >
-            Xóa
+        <div className="flex flex-wrap gap-2">
+          <Button danger onClick={() => showDeleteModal(record)}>
+            {t("Delete")}
           </Button>
+
           {getUser().id === record.writer?.id && (
             <Button type="primary">
-              <a href={`/posts/edit?id=${record.id}`}>Sửa</a>
+              <a href={`/posts/edit?id=${record.id}`}>{t("Edit")}</a>
             </Button>
           )}
 
           {(getRoleUser() === "ADMIN" || getRoleUser() === "LEADER") &&
             record.status === "PENDING" && (
-              <div>
-                <Button
-                  onClick={() => approvePost(record)}
-                  style={{ marginLeft: 8 }}
-                >
-                  Duyệt
+              <>
+                <Button onClick={() => handleApprove(record)}>
+                  {t("Approve")}
                 </Button>
-                <Button
-                  onClick={() => rejectPost(record)}
-                  style={{ marginLeft: 8 }}
-                >
-                  Từ chối
+                <Button onClick={() => handleReject(record)}>
+                  {t("Reject")}
                 </Button>
-              </div>
+              </>
             )}
-        </>
+        </div>
       ),
     },
   ];
@@ -208,25 +221,29 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
       <Table
         columns={columns}
         dataSource={data}
+        loading={loading}
         rowKey="id"
         pagination={{
           current: currentPage + 1,
-          pageSize: pageSize,
+          pageSize,
           total: totalPosts,
+          showSizeChanger: false,
         }}
         onChange={handleTableChange}
+        scroll={{ x: "max-content" }}
       />
 
+      {/* Delete Modal */}
       <Modal
-        title="Xác nhận xóa"
+        title={t("Confirm Delete")}
         open={isModalVisible}
         onOk={handleDelete}
         onCancel={() => setIsModalVisible(false)}
-        okText="Xóa"
-        cancelText="Hủy"
+        okText={t("Delete")}
+        cancelText={t("Cancel")}
         okButtonProps={{ danger: true }}
       >
-        <p>Bạn có chắc chắn muốn xóa bài viết này không?</p>
+        <p>{t("Are you sure you want to delete this post?")}</p>
       </Modal>
     </div>
   );

@@ -18,43 +18,55 @@ export default function PostPage() {
 
   return (
     <div className="min-h-[85vh] bg-white flex flex-col items-center justify-start rounded-lg shadow-sm gap-4 px-4 pt-10">
-      <div className="flex justify-between w-full">
-        <h1 className="ml-[10px] text-3xl font-bold">{t("List Posts")}</h1>
+      {/* Header + Filters */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3 md:gap-0">
+        <h1 className="text-2xl md:text-3xl font-bold ml-[10px]">
+          {t("List Posts")}
+        </h1>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {/* Status Filter */}
           <Select
-            placeholder="Status"
+            placeholder={t("Status")}
             style={{ width: 180 }}
             allowClear
             onChange={(val) => setStatusFilter(val)}
             options={[
-              { label: "Pending", value: "PENDING" },
-              { label: "Archived", value: "ARCHIVED" },
-              { label: "Accepted", value: "ACCEPTED" },
-              { label: "Rejected", value: "REJECTED" },
-              { label: "Disabled", value: "DISABLED" },
+              { label: t("Pending"), value: "PENDING" },
+              { label: t("Archived"), value: "ARCHIVED" },
+              { label: t("Accepted"), value: "ACCEPTED" },
+              { label: t("Rejected"), value: "REJECTED" },
+              { label: t("Disabled"), value: "DISABLED" },
             ]}
           />
-          <Input
-            type="text"
-            placeholder={t("Find post...")}
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="px-2 rounded-md border border-gray-300 dark:border-gray-600 h-[34px] w-[300px]"
-          />
-          <Button variant="outlined" className="h-[36px]">
-            <Search className="text-gray-600" />
-          </Button>
 
+          {/* Search Input */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input
+              type="text"
+              placeholder={t("Find post...")}
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="px-2 rounded-md border border-gray-300 dark:border-gray-600 h-[36px] sm:w-[250px] md:w-[300px]"
+            />
+            <Button className="h-[36px] flex items-center justify-center">
+              <Search className="text-gray-600" />
+            </Button>
+          </div>
+
+          {/* Create Button */}
           <Link href="/posts/create">
-            <Button variant="filled" className="h-[36px]">
+            <Button type="primary" className="h-[36px] w-full sm:w-auto">
               {t("Create Post")}
             </Button>
           </Link>
         </div>
       </div>
 
-      <ListPost status={statusFilter} searchTerm={searchTerm} />
+      {/* List Component */}
+      <div className="w-full">
+        <ListPost status={statusFilter} searchTerm={searchTerm} />
+      </div>
     </div>
   );
 }

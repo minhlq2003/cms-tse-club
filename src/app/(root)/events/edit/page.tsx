@@ -159,7 +159,11 @@ const EditEvent = () => {
                 onChangeOrganizers={setOrganizers}
                 eventId={id || ""}
               />
-              <EventAttendees eventId={id || ""} />
+              <EventAttendees
+                startTime={form.getFieldValue(["location", "startTime"])}
+                endTime={form.getFieldValue(["location", "endTime"])}
+                eventId={id || ""}
+              />
             </div>
           </div>
         </div>

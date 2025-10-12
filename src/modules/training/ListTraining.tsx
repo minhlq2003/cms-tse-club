@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Modal, Popconfirm, Table, Tag, message } from "antd";
+import { Button, Modal, Table, Tag, message } from "antd";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,9 +12,8 @@ import {
 } from "@/modules/services/trainingService";
 import { getUser, isLeader } from "@/lib/utils";
 import { Member } from "@/constant/types";
-import { update } from "lodash";
 
-type Training = {
+interface Training {
   id: string;
   title: string;
   location?: {
@@ -24,39 +23,60 @@ type Training = {
   };
   status: string;
   creator?: Member;
-};
-
-interface ListTrainingProps {
-  keyword?: string;
 }
 
-export default function ListTraining({ keyword }: ListTrainingProps) {
+interface ListTrainingProps {
+  filters?: {
+    search?: string;
+    category?: string;
+    startTime?: string;
+    endTime?: string;
+    status?: string;
+  };
+}
+
+export default function ListTraining({ filters }: ListTrainingProps) {
   const { t } = useTranslation("common");
   const router = useRouter();
+
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [openApproveModal, setOpenApproveModal] = useState(false);
-  const [openRejectModal, setOpenRejectModal] = useState(false);
+
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(
     null
   );
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openApproveModal, setOpenApproveModal] = useState(false);
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+
+  const [page, setPage] = useState<number>(1);
+  const [total, setTotal] = useState<number>(0);
 
   const fetchTrainings = async () => {
     try {
       setLoading(true);
       let res;
+
       if (isLeader()) {
         res = await searchTrainingsByLeader({
-          keyword,
+          page: page - 1,
+          limit: 10,
+          ...filters,
         });
       } else {
         res = await searchMyTrainings({
-          keyword,
+          page: page - 1,
+          limit: 10,
+          ...filters,
         });
       }
-      if (Array.isArray(res)) {
+
+      if (Array.isArray(res.content)) {
+        setTrainings(res.content);
+        setTotal(res.totalElements);
+      } else if (Array.isArray(res)) {
         setTrainings(res);
+        setTotal(res.length);
       }
     } catch {
       message.error(t("Failed to fetch trainings"));
@@ -65,35 +85,25 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
     }
   };
 
-  const showDeleteModal = (record: Training) => {
-    setSelectedTraining(record);
-    setOpenDeleteModal(true);
-  };
+  useEffect(() => {
+    fetchTrainings();
+  }, [JSON.stringify(filters), page]);
 
-  const showApproveModal = (record: Training) => {
-    setSelectedTraining(record);
-    setOpenApproveModal(true);
-  };
-
-  const showRejectModal = (record: Training) => {
-    setSelectedTraining(record);
-    setOpenRejectModal(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!selectedTraining) return;
+  const handleDelete = async (id: string) => {
     try {
-      await handleDelete(selectedTraining.id);
-      setOpenDeleteModal(false);
+      await deleteTraining(id);
+      message.success(t("Training deleted successfully"));
+      fetchTrainings();
     } catch {
       message.error(t("Failed to delete training"));
+    } finally {
+      setOpenDeleteModal(false);
     }
   };
 
-  const handleConfirmApprove = async () => {
-    if (!selectedTraining) return;
+  const handleApprove = async (id: string) => {
     try {
-      await updateStatusTrainingByLeader(selectedTraining.id, "ACCEPTED");
+      await updateStatusTrainingByLeader(id, "ACCEPTED");
       message.success(t("Training approved successfully"));
       fetchTrainings();
     } catch {
@@ -103,10 +113,9 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
     }
   };
 
-  const handleConfirmReject = async () => {
-    if (!selectedTraining) return;
+  const handleReject = async (id: string) => {
     try {
-      await updateStatusTrainingByLeader(selectedTraining.id, "REJECTED");
+      await updateStatusTrainingByLeader(id, "REJECTED");
       message.success(t("Training rejected successfully"));
       fetchTrainings();
     } catch {
@@ -115,26 +124,15 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
       setOpenRejectModal(false);
     }
   };
-  const handleDelete = async (id: string) => {
-    try {
-      deleteTraining(id);
-      message.success(t("Training deleted successfully"));
-      fetchTrainings();
-    } catch {
-      message.error(t("Failed to delete training"));
-    }
-  };
-
-  useEffect(() => {
-    fetchTrainings();
-  }, [keyword]);
 
   const columns = [
     {
       title: t("Title"),
       dataIndex: "title",
       key: "title",
-      render: (text: string) => <span className="font-semibold">{text}</span>,
+      render: (text: string) => (
+        <span className="font-semibold break-all max-w-[300px]">{text}</span>
+      ),
     },
     {
       title: t("Location"),
@@ -160,53 +158,58 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        let color = "default";
-        if (status === "PENDING") color = "orange";
-        if (status === "ACCEPTED") color = "green";
-        if (status === "REJECTED") color = "red";
-        return <Tag color={color}>{t(status)}</Tag>;
+        const colorMap: Record<string, string> = {
+          ACCEPTED: "green",
+          PENDING: "orange",
+          REJECTED: "red",
+          DISABLED: "gray",
+        };
+        return <Tag color={colorMap[status] || "default"}>{t(status)}</Tag>;
       },
     },
     {
-      title: t("Creator"),
-      dataIndex: ["creator", "fullName"],
-      key: "creator",
-    },
-    {
-      title: t("Actions"),
-      key: "actions",
+      title: t("Action"),
+      key: "action",
       render: (_: any, record: Training) => (
-        <>
+        <div className="flex flex-wrap gap-2">
           <Button
             danger
-            onClick={() => showDeleteModal(record)}
-            style={{ marginRight: 8 }}
+            onClick={() => {
+              setSelectedTraining(record);
+              setOpenDeleteModal(true);
+            }}
           >
-            Xóa
+            {t("Delete")}
           </Button>
-          {getUser().id === record.creator?.id && (
-            <Button type="primary">
-              <a href={`/training/edit?id=${record.id}`}>Sửa</a>
-            </Button>
-          )}
+
+          <Button
+            type="primary"
+            onClick={() => router.push(`/training/edit?id=${record.id}`)}
+          >
+            {getUser().id === record.creator?.id ? t("Edit") : t("View")}
+          </Button>
 
           {isLeader() && record.status === "PENDING" && (
-            <div>
+            <>
               <Button
-                onClick={() => showApproveModal(record)}
-                style={{ marginLeft: 8 }}
+                onClick={() => {
+                  setSelectedTraining(record);
+                  setOpenApproveModal(true);
+                }}
               >
-                Duyệt
+                {t("Approve")}
               </Button>
               <Button
-                onClick={() => showRejectModal(record)}
-                style={{ marginLeft: 8 }}
+                onClick={() => {
+                  setSelectedTraining(record);
+                  setOpenRejectModal(true);
+                }}
               >
-                Từ chối
+                {t("Reject")}
               </Button>
-            </div>
+            </>
           )}
-        </>
+        </div>
       ),
     },
   ];
@@ -218,14 +221,24 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
         columns={columns}
         dataSource={trainings}
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          pageSize: 10,
+          current: page,
+          onChange: setPage,
+          total: total,
+          showSizeChanger: false,
+        }}
+        scroll={{ x: "max-content" }}
       />
+
       {/* Delete Modal */}
       <Modal
         title={t("Confirm Delete")}
         open={openDeleteModal}
         onCancel={() => setOpenDeleteModal(false)}
-        onOk={handleConfirmDelete}
+        onOk={() =>
+          selectedTraining && handleDelete(String(selectedTraining.id))
+        }
         okButtonProps={{ danger: true }}
         okText={t("Delete")}
         cancelText={t("Cancel")}
@@ -235,26 +248,30 @@ export default function ListTraining({ keyword }: ListTrainingProps) {
 
       {/* Approve Modal */}
       <Modal
-        title="Xác nhận duyệt bài viết"
+        title={t("Confirm Approve")}
         open={openApproveModal}
         onCancel={() => setOpenApproveModal(false)}
-        onOk={handleConfirmApprove}
-        okText="Duyệt"
-        cancelText="Hủy"
+        onOk={() =>
+          selectedTraining && handleApprove(String(selectedTraining.id))
+        }
+        okText={t("Approve")}
+        cancelText={t("Cancel")}
       >
-        <p>Bạn có chắc chắn muốn duyệt bài viết này không?</p>
+        <p>{t("Are you sure you want to approve this training?")}</p>
       </Modal>
 
       {/* Reject Modal */}
       <Modal
-        title="Xác nhận từ chối bài viết"
+        title={t("Confirm Reject")}
         open={openRejectModal}
         onCancel={() => setOpenRejectModal(false)}
-        onOk={handleConfirmReject}
-        okText="Từ chối"
-        cancelText="Hủy"
+        onOk={() =>
+          selectedTraining && handleReject(String(selectedTraining.id))
+        }
+        okText={t("Reject")}
+        cancelText={t("Cancel")}
       >
-        <p>Bạn có chắc chắn muốn từ chối bài viết này không?</p>
+        <p>{t("Are you sure you want to reject this training?")}</p>
       </Modal>
     </div>
   );

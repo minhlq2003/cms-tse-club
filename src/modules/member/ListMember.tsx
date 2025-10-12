@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Popconfirm, Table, message } from "antd";
+import { Button, Popconfirm, Table, Modal, Select, Form } from "antd";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { changeRole, getUser, resetPassword } from "../services/userService";
 import { getRoleUser, isLeader } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Member {
   id: string;
@@ -29,6 +30,11 @@ export default function ListMember({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
   const leader = isLeader();
+  const currentUserRole = getRoleUser();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
 
   const fetchMembers = async () => {
     try {
@@ -43,7 +49,7 @@ export default function ListMember({
         setTotal(res.page.totalElements);
       }
     } catch {
-      message.error(t("Failed to fetch members"));
+      toast.error(t("Failed to fetch members"));
     } finally {
       setLoading(false);
     }
@@ -58,24 +64,62 @@ export default function ListMember({
       const newPassword = prompt(t("Enter new password:"));
       if (!newPassword) return;
       await resetPassword(userId, newPassword);
-      message.success(t("Password reset successfully"));
+      toast.success(t("Password reset successfully"));
     } catch {
-      message.error(t("Failed to reset password"));
+      toast.error(t("Failed to reset password"));
     }
   };
 
-  const handleChangeRole = async (userId: string, currentRole: string) => {
-    try {
-      let newRole = "NONE";
-      if (currentRole === "NONE") newRole = "MEMBER";
-      else if (currentRole === "MEMBER") newRole = "LEADER";
-      else if (currentRole === "LEADER") newRole = "NONE";
+  const openChangeRoleModal = (member: Member) => {
+    setSelectedMember(member);
+    setSelectedRole(member.role);
+    setIsModalOpen(true);
+  };
 
-      await changeRole(userId, newRole);
-      message.success(`${t("Changed role to")} ${newRole}`);
+  const handleConfirmChangeRole = async () => {
+    if (!selectedMember) return;
+
+    const currentRole = selectedMember.role;
+    const newRole = selectedRole;
+    if (currentRole === "NONE" && newRole === "LEADER") {
+      toast.warning(t("Cannot change role from NONE to LEADER directly"));
+      return;
+    }
+
+    if (
+      currentUserRole === "LEADER" &&
+      currentRole === "MEMBER" &&
+      newRole === "LEADER"
+    ) {
+      Modal.confirm({
+        title: t("Transfer leadership"),
+        content: t(
+          "Are you sure you want to transfer leadership to this member? You will be downgraded to MEMBER."
+        ),
+        okText: t("Yes"),
+        cancelText: t("No"),
+        async onOk() {
+          try {
+            await changeRole(selectedMember.id, newRole);
+            toast.success(`${t("Changed role to")} ${newRole}`);
+            fetchMembers();
+          } catch {
+            toast.error(t("Failed to change role"));
+          }
+        },
+      });
+      setIsModalOpen(false);
+      return;
+    }
+
+    try {
+      await changeRole(selectedMember.id, newRole);
+      toast.success(`${t("Changed role to")} ${newRole}`);
       fetchMembers();
     } catch {
-      message.error(t("Failed to change role"));
+      toast.error(t("Failed to change role"));
+    } finally {
+      setIsModalOpen(false);
     }
   };
 
@@ -107,7 +151,7 @@ export default function ListMember({
       key: "actions",
       render: (_: any, record: Member) =>
         record.role !== "ADMIN" &&
-        (record.role !== "LEADER" || getRoleUser() === "ADMIN") && (
+        (record.role !== "LEADER" || currentUserRole === "ADMIN") && (
           <div className="flex gap-2">
             <Popconfirm
               title={t("Are you sure you want to reset this user's password?")}
@@ -118,10 +162,7 @@ export default function ListMember({
               <Button type="link">{t("Reset password")}</Button>
             </Popconfirm>
 
-            <Button
-              type="link"
-              onClick={() => handleChangeRole(record.id, record.role)}
-            >
+            <Button type="link" onClick={() => openChangeRoleModal(record)}>
               {t("Change role")}
             </Button>
           </div>
@@ -146,6 +187,35 @@ export default function ListMember({
         scroll={{ x: 800 }}
         className="min-w-full"
       />
+
+      {/* Modal chọn role */}
+      <Modal
+        title={
+          <p>
+            {t("Change Role for ")}
+            {`${selectedMember?.username}`}
+          </p>
+        }
+        open={isModalOpen}
+        onOk={handleConfirmChangeRole}
+        onCancel={() => setIsModalOpen(false)}
+        okText={t("Confirm")}
+        cancelText={t("Cancel")}
+      >
+        <Form layout="vertical">
+          <Form.Item label={t("Select new role")}>
+            <Select
+              value={selectedRole}
+              onChange={setSelectedRole}
+              options={[
+                { label: "NONE", value: "NONE" },
+                { label: "MEMBER", value: "MEMBER" },
+                { label: "LEADER", value: "LEADER" },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -82,7 +82,7 @@ export default function TrainingEventModal({
               .minute(slot.time[1].minute());
 
             lessons.push({
-              title: `Lesson ${current.format(
+              title: `${values.title} ${current.format(
                 "YYYY-MM-DD"
               )} ${slot.time[0].format("HH:mm")}`,
               description: values.description || "",
@@ -171,6 +171,13 @@ export default function TrainingEventModal({
                 layout="vertical"
                 onFinish={handleAddSchedule}
               >
+                <Form.Item
+                  name="title"
+                  label="Title"
+                  rules={[{ required: true }]}
+                >
+                  <Input placeholder="Title" />
+                </Form.Item>
                 <Form.Item name="description" label="Description">
                   <Input.TextArea rows={3} placeholder="Optional description" />
                 </Form.Item>

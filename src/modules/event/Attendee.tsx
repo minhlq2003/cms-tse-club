@@ -6,7 +6,16 @@ import {
   CaretUpOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import { Button, Modal, Table, Typography, message, Tag, Checkbox } from "antd";
+import {
+  Button,
+  Modal,
+  Table,
+  Typography,
+  message,
+  Tag,
+  Checkbox,
+  Alert,
+} from "antd";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getEventAttendees, manualCheckIn } from "../services/eventService";
@@ -21,14 +30,26 @@ export interface Attendee {
 
 interface EventAttendeesProps {
   eventId?: string;
+  startTime?: string; // <-- thêm props này
+  endTime?: string; // <-- thêm props này
 }
 
-const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
+const EventAttendees: React.FC<EventAttendeesProps> = ({
+  eventId,
+  startTime,
+  endTime,
+}) => {
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // ✅ Xác định thời gian hiện tại có nằm trong thời gian sự kiện không
+  const now = new Date();
+  const start = startTime ? new Date(startTime) : null;
+  const end = endTime ? new Date(endTime) : null;
+  const isDuringEvent = start && end && now >= start && now <= end;
 
   useEffect(() => {
     fetchAttendees();
@@ -105,9 +126,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
     setIsModalOpen(false);
   };
 
-  // ====================
-  // Columns for desktop
-  // ====================
   const attendeeColumns = [
     {
       title: t("Full Name"),
@@ -157,6 +175,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
         <Checkbox
           checked={record.checkIn}
           onChange={() => toggleCheckIn(record.user.id)}
+          disabled={!isDuringEvent} // <-- chỉ cho check khi đang trong thời gian sự kiện
         />
       ),
     },
@@ -209,7 +228,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
       {isListVisible && (
         <div>
           <div className="block md:hidden">
-            {/* Mobile Table */}
             <Table
               rowKey={(record) => record.user.id}
               columns={shortColumns}
@@ -222,7 +240,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
           </div>
 
           <div className="hidden md:block">
-            {/* Desktop Table */}
             <Table
               className="p-2"
               rowKey={(record) => record.user.id}
@@ -255,8 +272,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
               {t("Attendee List")}
             </p>
             <div className="flex gap-2 sm:gap-4">
-              <Button onClick={handleCheckInAll}>{t("Check in All")}</Button>
-              <Button onClick={handleCancelAll} danger>
+              <Button onClick={handleCheckInAll} disabled={!isDuringEvent}>
+                {t("Check in All")}
+              </Button>
+              <Button
+                onClick={handleCancelAll}
+                danger
+                disabled={!isDuringEvent}
+              >
                 {t("Cancel All")}
               </Button>
             </div>
@@ -265,8 +288,21 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({ eventId }) => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={
-          <div className="flex justify-end">
-            <Button type="primary" onClick={handleSave}>
+          <div className="flex flex-col items-end gap-2">
+            {!isDuringEvent && (
+              <Alert
+                type="warning"
+                message={t(
+                  "Chỉ được điểm danh trong thời gian diễn ra sự kiện"
+                )}
+                showIcon
+              />
+            )}
+            <Button
+              type="primary"
+              onClick={handleSave}
+              disabled={!isDuringEvent}
+            >
               {t("Save")}
             </Button>
           </div>

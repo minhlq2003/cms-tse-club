@@ -5,6 +5,8 @@ import { Table, Button, Popconfirm } from "antd";
 import { Event } from "@/constant/types";
 import { PlusOutlined } from "@ant-design/icons";
 import TrainingEventModal from "./TrainingEventModal";
+import { useTranslation } from "react-i18next";
+import Link from "next/link";
 
 interface Props {
   trainingEvent: Event[];
@@ -16,6 +18,7 @@ export default function TrainingEventTable({
   setTrainingEvent,
 }: Props) {
   const [openModal, setOpenModal] = useState(false);
+  const { t } = useTranslation("common");
 
   const handleDelete = (id: string) => {
     setTrainingEvent((prev) => prev.filter((item) => item.id !== id));
@@ -48,14 +51,21 @@ export default function TrainingEventTable({
       title: "Action",
       key: "action",
       render: (_: any, record: Event) => (
-        <Popconfirm
-          title="Are you sure to delete this event?"
-          onConfirm={() => handleDelete(record.id || "")}
-        >
-          <Button danger size="small">
-            Delete
-          </Button>
-        </Popconfirm>
+        <div className="flex gap-2">
+          <Popconfirm
+            title="Are you sure to delete this event?"
+            onConfirm={() => handleDelete(record.id || "")}
+          >
+            <Button danger size="small">
+              Delete
+            </Button>
+          </Popconfirm>
+          <Link href={`/events/edit?id=${record.id}`}>
+            <Button size="small" type="primary">
+              {t("Edit")}
+            </Button>
+          </Link>
+        </div>
       ),
     },
   ];
