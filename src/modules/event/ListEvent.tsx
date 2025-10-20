@@ -12,6 +12,7 @@ import {
 } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import { getUser, isLeader } from "@/lib/utils";
+import { max } from "lodash";
 
 interface ListEventProps {
   filters?: {
@@ -112,6 +113,7 @@ export default function ListEvent({ filters }: ListEventProps) {
       title: t("Title"),
       dataIndex: "title",
       key: "title",
+      width: "25%",
       render: (text: string) => (
         <span className="font-semibold break-all max-w-[300px]">{text}</span>
       ),
@@ -125,6 +127,10 @@ export default function ListEvent({ filters }: ListEventProps) {
       title: t("Location"),
       dataIndex: ["location", "destination"],
       key: "destination",
+      width: "20%",
+      render: (text: string) => (
+        <span className="break-after-all !max-w-[300px]">{text}</span>
+      ),
     },
     {
       title: t("Start Time"),
@@ -166,7 +172,10 @@ export default function ListEvent({ filters }: ListEventProps) {
             type="primary"
             onClick={() => router.push(`/events/edit?id=${record.id}`)}
           >
-            {getUser().id === record.host?.id ? t("Edit") : t("View")}
+            {t("Edit")}
+          </Button>
+          <Button onClick={() => router.push(`/events/view?id=${record.id}`)}>
+            View
           </Button>
 
           {isLeader() && record.status === "PENDING" && (
@@ -208,10 +217,9 @@ export default function ListEvent({ filters }: ListEventProps) {
           total: total,
           showSizeChanger: false,
         }}
-        scroll={{ x: "max-content" }}
+        scroll={{ x: 1700 }}
       />
 
-      {/* Delete Modal */}
       <Modal
         title={t("Confirm Delete")}
         open={openDeleteModal}
@@ -224,7 +232,6 @@ export default function ListEvent({ filters }: ListEventProps) {
         <p>{t("Are you sure you want to delete this event?")}</p>
       </Modal>
 
-      {/* Approve Modal */}
       <Modal
         title={t("Confirm Approve")}
         open={openApproveModal}

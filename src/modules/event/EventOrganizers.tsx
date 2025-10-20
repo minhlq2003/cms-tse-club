@@ -6,12 +6,12 @@ import {
   CaretDownOutlined,
   CaretUpOutlined,
   EditOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import {
   Button,
   Modal,
   Input,
-  Select,
   Typography,
   Form,
   message,
@@ -32,12 +32,14 @@ interface EventOrganizersProps {
   organizers: Organizer[];
   onChangeOrganizers: (organizers: Organizer[]) => void;
   eventId?: string;
+  isView?: boolean; // 👈 thêm prop
 }
 
 const EventOrganizers: React.FC<EventOrganizersProps> = ({
   organizers,
   onChangeOrganizers,
   eventId,
+  isView = false, // 👈 mặc định là false
 }) => {
   const { t } = useTranslation("common");
   const [isPublishListVisible, setPublishListVisible] = useState(true);
@@ -68,9 +70,11 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
-    setSelectedMember(null);
-    form.resetFields();
-    fetchMembers();
+    if (!isView) {
+      setSelectedMember(null);
+      form.resetFields();
+      fetchMembers();
+    }
   };
 
   const handleCloseModal = () => {
@@ -189,20 +193,22 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         <span>{roles.map((role) => t(role)).join(", ")}</span>
       ),
     },
-    {
-      key: "actions",
-      render: (_: any, record: Organizer) => (
-        <Button
-          type="link"
-          icon={<DeleteOutlined />}
-          danger
-          onClick={() => handleDelete(record.organizerId)}
-        >
-          {t("Delete")}
-        </Button>
-      ),
-    },
-  ];
+    !isView
+      ? {
+          key: "actions",
+          render: (_: any, record: Organizer) => (
+            <Button
+              type="link"
+              icon={<DeleteOutlined />}
+              danger
+              onClick={() => handleDelete(record.organizerId)}
+            >
+              {t("Delete")}
+            </Button>
+          ),
+        }
+      : {},
+  ].filter(Boolean);
 
   const organizerColumns = [
     {
@@ -221,7 +227,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
 
   return (
     <div className="event-organizers border border-gray-300 rounded-[10px] mb-5">
-      {/* Header */}
       <div className="flex justify-between items-center px-4 py-2 border-b border-gray-300">
         <Title level={4} className="!m-0">
           {t("Organizers")}
@@ -254,11 +259,19 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
               onClick={handleOpenModal}
               className="flex items-center"
               icon={
-                organizers.length === 0 ? <PlusOutlined /> : <EditOutlined />
+                isView ? (
+                  <EyeOutlined />
+                ) : organizers.length === 0 ? (
+                  <PlusOutlined />
+                ) : (
+                  <EditOutlined />
+                )
               }
               type="primary"
             >
-              {organizers.length === 0
+              {isView
+                ? t("View Full")
+                : organizers.length === 0
                 ? t("Add Organizer")
                 : t("Edit Organizers")}
             </Button>
@@ -274,7 +287,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         width="90%"
         style={{ top: 20 }}
         footer={
-          eventId ? (
+          !isView && eventId ? (
             <div>
               <Button type="primary" onClick={updateOrganizer}>
                 {t("Update Organizers")}
@@ -283,94 +296,109 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
           ) : null
         }
       >
-        <Row gutter={[16, 16]} className="flex flex-col md:flex-row">
-          {/* LEFT: List Member */}
-          <Col xs={24} md={12}>
-            <Title level={5}>{t("Select a Member")}</Title>
-            <Table
-              rowKey="id"
-              columns={memberColumns}
-              dataSource={members}
-              loading={loadingMembers}
-              pagination={{ pageSize: 5 }}
-              scroll={{ x: true }}
-            />
-          </Col>
+        {isView ? (
+          // 👁️ View mode — chỉ hiển thị danh sách Organizer
+          <Table
+            rowKey="organizerId"
+            columns={organizerColumnsModal}
+            dataSource={organizers}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: true }}
+          />
+        ) : (
+          // ✏️ Edit mode
+          <Row gutter={[16, 16]} className="flex flex-col md:flex-row">
+            {/* LEFT: List Member */}
+            <Col xs={24} md={12}>
+              <Title level={5}>{t("Select a Member")}</Title>
+              <Table
+                rowKey="id"
+                columns={memberColumns}
+                dataSource={members}
+                loading={loadingMembers}
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: true }}
+              />
+            </Col>
 
-          {/* RIGHT: Form + List Organizer */}
-          <Col xs={24} md={12}>
-            <Title level={5}>{t("Organizer Info")}</Title>
-            <Form form={form} layout="vertical" className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Form.Item
-                  name="fullName"
-                  label={t("Full Name")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
+            {/* RIGHT: Form + List Organizer */}
+            <Col xs={24} md={12}>
+              <Title level={5}>{t("Organizer Info")}</Title>
+              <Form form={form} layout="vertical" className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    name="fullName"
+                    label={t("Full Name")}
+                    rules={[
+                      { required: true, message: t("Please select a member") },
+                    ]}
+                  >
+                    <Input disabled />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="username"
+                    label={t("Username")}
+                    rules={[
+                      { required: true, message: t("Please select a member") },
+                    ]}
+                  >
+                    <Input disabled />
+                  </Form.Item>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    name="email"
+                    label={t("Email")}
+                    rules={[
+                      { required: true, message: t("Please select a member") },
+                    ]}
+                  >
+                    <Input disabled />
+                  </Form.Item>
+                  <Form.Item
+                    name="roleContent"
+                    label={t("Role Content")}
+                    rules={[
+                      {
+                        required: true,
+                        message: t("Please enter role content"),
+                      },
+                    ]}
+                  >
+                    <Input placeholder={t("Enter role content")} />
+                  </Form.Item>
+                </div>
+
+                <Form.Item name="roles" label={t("Roles")}>
+                  <Checkbox.Group className="flex flex-wrap gap-2">
+                    <Checkbox value="MODIFY">{t("Modify")}</Checkbox>
+                    <Checkbox value="CHECK_IN">{t("Check In")}</Checkbox>
+                    <Checkbox value="REGISTER">{t("Register")}</Checkbox>
+                    <Checkbox value="BAN">{t("Ban")}</Checkbox>
+                  </Checkbox.Group>
                 </Form.Item>
 
-                <Form.Item
-                  name="username"
-                  label={t("Username")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
-                </Form.Item>
-              </div>
+                <div className="flex justify-end">
+                  <Button type="primary" onClick={handleAddOrganizer}>
+                    {t("Add to Organizer")}
+                  </Button>
+                </div>
+              </Form>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Form.Item
-                  name="email"
-                  label={t("Email")}
-                  rules={[
-                    { required: true, message: t("Please select a member") },
-                  ]}
-                >
-                  <Input disabled />
-                </Form.Item>
-                <Form.Item
-                  name="roleContent"
-                  label={t("Role Content")}
-                  rules={[
-                    { required: true, message: t("Please enter role content") },
-                  ]}
-                >
-                  <Input placeholder={t("Enter role content")} />
-                </Form.Item>
-              </div>
-
-              <Form.Item name="roles" label={t("Roles")}>
-                <Checkbox.Group className="flex flex-wrap gap-2">
-                  <Checkbox value="MODIFY">{t("Modify")}</Checkbox>
-                  <Checkbox value="CHECK_IN">{t("Check In")}</Checkbox>
-                  <Checkbox value="REGISTER">{t("Register")}</Checkbox>
-                  <Checkbox value="BAN">{t("Ban")}</Checkbox>
-                </Checkbox.Group>
-              </Form.Item>
-
-              <div className="flex justify-end">
-                <Button type="primary" onClick={handleAddOrganizer}>
-                  {t("Add to Organizer")}
-                </Button>
-              </div>
-            </Form>
-
-            <Title level={5}>{t("Current Organizers")}</Title>
-            <Table
-              rowKey="organizerId"
-              columns={organizerColumnsModal}
-              dataSource={organizers}
-              showHeader={false}
-              pagination={false}
-              scroll={{ x: true }}
-            />
-          </Col>
-        </Row>
+              <Title level={5}>{t("Current Organizers")}</Title>
+              <Table
+                rowKey="organizerId"
+                columns={organizerColumnsModal}
+                dataSource={organizers}
+                showHeader={false}
+                pagination={false}
+                scroll={{ x: true }}
+              />
+            </Col>
+          </Row>
+        )}
       </Modal>
     </div>
   );

@@ -91,7 +91,7 @@ export default function TrainingPage() {
           </div>
 
           {/* Nút tạo mới */}
-          <Link href="/trainings/create">
+          <Link href="/training/create">
             <Button className="h-[36px]" type="primary">
               {t("Create Training")}
             </Button>

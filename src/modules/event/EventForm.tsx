@@ -72,9 +72,9 @@ const EventForm: React.FC<EventFormProps> = ({
     if (modalAction === "selectMedia") {
       setUploadedImages(media);
     } else if (modalAction === "addToContent") {
-      const currentContent = form.getFieldValue("content") || "";
+      const currentContent = form.getFieldValue("description") || "";
       const updatedContent = `${currentContent}<img src="${media}" alt="Selected Media" />`;
-      form.setFieldsValue({ content: updatedContent });
+      form.setFieldsValue({ description: updatedContent });
     }
   };
 
@@ -109,16 +109,16 @@ const EventForm: React.FC<EventFormProps> = ({
           <Input placeholder={t("Enter event title")} />
         </Form.Item>
 
-        <Form.Item
+        {/* <Form.Item
           name={["location", "destination"]}
           label={t("Destination")}
           rules={[{ required: true, message: t("Please enter destination!") }]}
         >
           <Input placeholder={t("Enter destination")} />
-        </Form.Item>
+        </Form.Item> */}
 
         <div className="flex flex-col md:flex-row gap-0 md:gap-4">
-          <Form.Item
+          {/* <Form.Item
             name={["location", "startTime"]}
             label={t("Start Time")}
             rules={[
@@ -136,7 +136,7 @@ const EventForm: React.FC<EventFormProps> = ({
             className="w-full md:w-1/3"
           >
             <DatePicker className="w-full" showTime format="YYYY-MM-DD HH:mm" />
-          </Form.Item>
+          </Form.Item> */}
 
           <Form.Item
             className="w-full md:w-1/3"
@@ -164,16 +164,16 @@ const EventForm: React.FC<EventFormProps> = ({
           </Form.Item>
         </div>
 
-        <Form.Item>
+        {/* <Form.Item>
           <Button
             icon={<CameraOutlined />}
             onClick={() => handleOpenModal("addToContent")}
           >
             {t("Add media to description")}
           </Button>
-        </Form.Item>
+        </Form.Item> */}
 
-        <Form.Item name="description" label={t("Description")}>
+        {/* <Form.Item name="description" label={t("Description")}>
           <CKEditorComponent
             value={form.getFieldValue("description")}
             onChange={(data: string) => {
@@ -184,14 +184,14 @@ const EventForm: React.FC<EventFormProps> = ({
 
         <Form.Item name="trainingId" label={t("Training ID")}>
           <Input placeholder={t("Enter training ID")} />
-        </Form.Item>
+        </Form.Item> */}
       </div>
 
-      <ModalSelectMedia
+      {/* <ModalSelectMedia
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSelectMedia={handleSelectMedia}
-      />
+      /> */}
     </Form>
   );
 };

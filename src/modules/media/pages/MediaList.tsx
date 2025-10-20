@@ -110,7 +110,7 @@ const MediaList = ({
   };
 
   const handleEdit = (id: number) => {
-    router.push(`/admin/media/edit?id=${id}`);
+    router.push(`/media/edit?id=${id}`);
   };
 
   const handleDelete = async (id: number) => {
@@ -254,14 +254,14 @@ const MediaList = ({
       width: 100,
       render: (_, record) => (
         <Space size="middle" className="justify-center items-center">
-          <Button
+          {/* <Button
             type="primary"
             icon={<EditOutlined />}
             className="bg-blue-500 px-4 py-2 rounded"
             onClick={() => handleEdit(record.id)}
           >
             {t("Edit")}
-          </Button>
+          </Button> */}
           <Button
             danger
             type="primary"

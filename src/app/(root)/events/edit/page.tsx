@@ -5,21 +5,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Event, Member, Organizer } from "@/constant/types";
+import { Event, Organizer } from "@/constant/types";
 import dayjs from "dayjs";
 
 import {
-  getEventAttendees,
   getEventById,
   updateEvent,
   updateStatusEventByLeader,
 } from "@/modules/services/eventService";
 import EventForm from "@/modules/event/EventForm";
 import EventOrganizers from "@/modules/event/EventOrganizers";
-import moment from "moment";
 import Publish from "@/components/Publish";
 import EventAttendees from "@/modules/event/Attendee";
 import { isLeader } from "@/lib/utils";
+import ListTitle from "@/components/ListTitle";
+import PlanForm from "@/components/PlanForm";
+import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
 
 const EditEvent = () => {
   const { t } = useTranslation("common");
@@ -27,38 +28,48 @@ const EditEvent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
+
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [status, setStatus] = useState<string>("PENDING");
 
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [order, setOrder] = useState<string[]>([
+    "Mục đích",
+    "Thời gian & địa điểm",
+    "Kế hoạch di chuyển",
+    "Nội dung chương trình",
+    "Tiến độ thực hiện chương trình",
+    "Ban tổ chức chương trình",
+    "Kinh phí thực hiện",
+  ]);
+  const [planData, setPlanData] = useState<Record<string, any>>({});
+
   const fetchEvent = useCallback(
     async (id: string) => {
       setLoading(true);
       try {
-        const res = await getEventById(id);
-        const data = res;
+        const data = await getEventById(id);
         if (data) {
+          // Đổ dữ liệu cơ bản
           const formattedData = {
             ...data,
             location: {
               ...data.location,
               startTime: data.location?.startTime
-                ? dayjs(data.location.startTime, "YYYY-MM-DDTHH:mm:ss")
+                ? dayjs(data.location.startTime)
                 : null,
               endTime: data.location?.endTime
-                ? dayjs(data.location.endTime, "YYYY-MM-DDTHH:mm:ss")
+                ? dayjs(data.location.endTime)
                 : null,
             },
           };
 
           form.setFieldsValue(formattedData);
           setUploadedImage(data.image || "");
-          setStatus(
-            data.status === "PENDING" || data.status === "ACCEPTED"
-              ? "PENDING"
-              : "ARCHIVED"
-          );
+
+          // Organizer
           setOrganizers(
             Array.isArray(data.organizers)
               ? data.organizers.map((org: any) => ({
@@ -71,6 +82,18 @@ const EditEvent = () => {
                 }))
               : []
           );
+
+          // Kế hoạch (nếu có)
+          if (data.plans) {
+            try {
+              const parsed = JSON.parse(data.plans);
+              setPlanData(parsed.data || {});
+              setSelectedCategories(parsed.selected || []);
+              setOrder(order);
+            } catch {
+              setPlanData({});
+            }
+          }
         }
       } catch {
         toast.error(t("Failed to fetch event."));
@@ -81,51 +104,52 @@ const EditEvent = () => {
   );
 
   const onFinish = async (values: Event) => {
-    const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
-
+    const locationFromPlan = planData["Thời gian & địa điểm"];
+    if (locationFromPlan) {
+      values.location = {
+        destination: locationFromPlan["Địa điểm"] || "",
+        startTime: locationFromPlan["Thời gian"]?.[0] || "",
+        endTime: locationFromPlan["Thời gian"]?.[1] || "",
+      };
+    }
     const dataPayload: Event = {
       ...values,
-      title: values.title,
+      limitRegister: values.multiple,
       description: values.description,
-      status: status,
+      status,
       category: values.category,
-      multiple: Number(values.multiple),
-      limitRegister: Number(values.multiple),
-      location: values.location,
       organizers: organizers.map((org) => ({
         organizerId: org.organizerId,
         roles: org.roles,
         roleContent: org.roleContent,
       })),
+      plans: JSON.stringify({
+        selected: selectedCategories,
+        order,
+        data: planData,
+      }),
     };
 
     try {
-      if (id) {
-        const response = await updateEvent(id, dataPayload);
+      if (!id) return toast.error(t("Invalid event ID."));
+      const res = await updateEvent(id, dataPayload);
 
-        if (response && response.id) {
-          // Nếu người cập nhật là Leader và status vẫn là "PENDING" thì duyệt luôn
-          if (isLeader() && dataPayload.status === "PENDING") {
-            await updateStatusEventByLeader(String(response.id), "ACCEPTED");
-          }
-
-          toast.success(t("Event updated successfully!"));
-          router.push("/events");
-        } else {
-          toast.error(t("Failed to update event. Please try again."));
+      if (res?.id) {
+        if (isLeader() && dataPayload.status === "PENDING") {
+          await updateStatusEventByLeader(String(res.id), "ACCEPTED");
         }
+        toast.success(t("Event updated successfully!"));
+        router.push("/events");
       } else {
-        toast.error(t("Invalid event ID."));
+        toast.error(t("Failed to update event."));
       }
     } catch {
-      toast.error(t("Failed to update event. Please try again."));
+      toast.error(t("Failed to update event."));
     }
   };
 
   useEffect(() => {
-    if (id) {
-      fetchEvent(id);
-    }
+    if (id) fetchEvent(id);
   }, [id, fetchEvent]);
 
   return (
@@ -140,20 +164,50 @@ const EditEvent = () => {
             {t("Edit Event")}
           </h1>
 
-          <div className="flex flex-col md:flex-row justify-between w-full">
-            <EventForm
-              form={form}
-              onFinish={onFinish}
-              uploadedImages={uploadedImage}
-              setUploadedImages={setUploadedImage}
-            />
+          <div className="flex flex-col lg:flex-row justify-between w-full gap-6">
+            <div className="w-full lg:w-[78%] space-y-6">
+              <EventForm
+                form={form}
+                onFinish={onFinish}
+                uploadedImages={uploadedImage}
+                setUploadedImages={setUploadedImage}
+              />
 
-            <div className="md:w-[22%] w-full pl-0 md:pl-5">
+              <PlanForm
+                selectedCategories={selectedCategories}
+                planData={planData}
+                onChange={setPlanData}
+                order={order}
+                form={form}
+                organizers={organizers}
+              />
+            </div>
+
+            <div className="w-full lg:w-[22%]">
               <Publish
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
                 status={status}
               />
+              <Button
+                type="primary"
+                className="!mb-4 w-full"
+                onClick={() =>
+                  exportPlanWithTemplate(
+                    planData,
+                    form.getFieldValue("title") || "KeHoachMoi"
+                  )
+                }
+              >
+                Xuất kế hoạch ra Word (FIT - IUH)
+              </Button>
+              <ListTitle
+                selected={selectedCategories}
+                onChange={setSelectedCategories}
+                order={order}
+                setOrder={setOrder}
+              />
+
               <EventOrganizers
                 organizers={organizers}
                 onChangeOrganizers={setOrganizers}

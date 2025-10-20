@@ -59,11 +59,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           setUploadedFiles((prev) => [...prev, response.attachment]);
           setFileList([]);
           toast.success(t("Media uploaded successfully!"));
-        } else {
-          toast.error(t("Failed to upload media."));
         }
-
-        toast.success(t("Media uploaded successfully!"));
       } catch {
         toast.error(t("Failed to upload media."));
       } finally {
@@ -105,7 +101,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   };
 
   const handleEdit = (file: MediaData) => {
-    router.push(`/admin/media/edit?id=${file.id}`);
+    router.push(`/media/edit?id=${file.id}`);
   };
 
   return (
@@ -117,7 +113,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         <div className="flex w-full mb-5 mt-4">
           <Title level={2}>{t("Upload New Media")}</Title>
           <Button
-            onClick={() => router.push(`/admin/upload`)}
+            onClick={() => router.push(`/media`)}
             className="ml-5 mt-1 bg-white text-blue-700 px-3 py-1 border-[1px] border-blue-700 rounded-[3px] hover:bg-blue-800 hover:text-white duration-300"
           >
             {t("Back to Library")}
@@ -182,12 +178,14 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       </div>
 
       <div className="mt-10">
-        {uploadedFiles.length > 0 && (
+        {/* {uploadedFiles.length > 0 && (
           <List
+            // key={uploadedFiles.map((file) => file?.name).join("-")}
             bordered
             dataSource={uploadedFiles}
             renderItem={(item) => (
               <List.Item
+                key={item?.name}
                 actions={[
                   <Button
                     key="edit"
@@ -207,7 +205,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
               </List.Item>
             )}
           />
-        )}
+        )} */}
       </div>
     </div>
   );

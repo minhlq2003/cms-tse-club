@@ -24,54 +24,17 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
   const { t } = useTranslation("common");
   const [data, setData] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(5);
   const [totalPosts, setTotalPosts] = useState(0);
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [sortOrder, setSortOrder] = useState<string | undefined>();
 
-  const showDeleteModal = (record: Post) => {
-    setPostToDelete(record);
-    setIsModalVisible(true);
-  };
-
-  const handleApprove = async (record: Post) => {
-    Modal.confirm({
-      title: t("Confirm Approve"),
-      content: t("Are you sure you want to approve this post?"),
-      okText: t("Approve"),
-      cancelText: t("Cancel"),
-      onOk: async () => {
-        try {
-          await approvePostByLeader(String(record.id));
-          message.success(t("Post approved successfully"));
-          fetchPosts(currentPage, pageSize);
-        } catch {
-          message.error(t("Failed to approve post"));
-        }
-      },
-    });
-  };
-
-  const handleReject = async (record: Post) => {
-    Modal.confirm({
-      title: t("Confirm Reject"),
-      content: t("Are you sure you want to reject this post?"),
-      okText: t("Reject"),
-      cancelText: t("Cancel"),
-      onOk: async () => {
-        try {
-          await rejectPostByLeader(String(record.id));
-          message.success(t("Post rejected successfully"));
-          fetchPosts(currentPage, pageSize);
-        } catch {
-          message.error(t("Failed to reject post"));
-        }
-      },
-    });
-  };
+  // State cho các modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const fetchPosts = async (
     pageNo: number,
@@ -104,17 +67,43 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
     fetchPosts(currentPage, pageSize, sortBy, sortOrder);
   }, [currentPage, pageSize, sortBy, sortOrder, searchTerm, status]);
 
+  // === Xử lý Delete / Approve / Reject ===
   const handleDelete = async () => {
-    if (!postToDelete?.id) return;
+    if (!selectedPost?.id) return;
     try {
-      await deletePost(String(postToDelete.id));
+      await deletePost(String(selectedPost.id));
       message.success(t("Post deleted successfully"));
       fetchPosts(currentPage, pageSize);
     } catch {
       message.error(t("Failed to delete post"));
     } finally {
-      setIsModalVisible(false);
-      setPostToDelete(null);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedPost?.id) return;
+    try {
+      await approvePostByLeader(String(selectedPost.id));
+      message.success(t("Post approved successfully"));
+      fetchPosts(currentPage, pageSize);
+    } catch {
+      message.error(t("Failed to approve post"));
+    } finally {
+      setIsApproveModalOpen(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedPost?.id) return;
+    try {
+      await rejectPostByLeader(String(selectedPost.id));
+      message.success(t("Post rejected successfully"));
+      fetchPosts(currentPage, pageSize);
+    } catch {
+      message.error(t("Failed to reject post"));
+    } finally {
+      setIsRejectModalOpen(false);
     }
   };
 
@@ -125,7 +114,6 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
   ) => {
     setCurrentPage((pagination.current ?? 1) - 1);
     setPageSize(pagination.pageSize ?? 5);
-
     if (!Array.isArray(sorter)) {
       setSortBy((sorter.field as string) || undefined);
       setSortOrder(
@@ -190,7 +178,13 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
       key: "action",
       render: (_, record) => (
         <div className="flex flex-wrap gap-2">
-          <Button danger onClick={() => showDeleteModal(record)}>
+          <Button
+            danger
+            onClick={() => {
+              setSelectedPost(record);
+              setIsDeleteModalOpen(true);
+            }}
+          >
             {t("Delete")}
           </Button>
 
@@ -203,10 +197,20 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
           {(getRoleUser() === "ADMIN" || getRoleUser() === "LEADER") &&
             record.status === "PENDING" && (
               <>
-                <Button onClick={() => handleApprove(record)}>
+                <Button
+                  onClick={() => {
+                    setSelectedPost(record);
+                    setIsApproveModalOpen(true);
+                  }}
+                >
                   {t("Approve")}
                 </Button>
-                <Button onClick={() => handleReject(record)}>
+                <Button
+                  onClick={() => {
+                    setSelectedPost(record);
+                    setIsRejectModalOpen(true);
+                  }}
+                >
                   {t("Reject")}
                 </Button>
               </>
@@ -233,17 +237,41 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
         scroll={{ x: "max-content" }}
       />
 
-      {/* Delete Modal */}
+      {/* Modal Delete */}
       <Modal
         title={t("Confirm Delete")}
-        open={isModalVisible}
+        open={isDeleteModalOpen}
         onOk={handleDelete}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => setIsDeleteModalOpen(false)}
         okText={t("Delete")}
         cancelText={t("Cancel")}
         okButtonProps={{ danger: true }}
       >
         <p>{t("Are you sure you want to delete this post?")}</p>
+      </Modal>
+
+      {/* Modal Approve */}
+      <Modal
+        title={t("Confirm Approve")}
+        open={isApproveModalOpen}
+        onOk={handleApprove}
+        onCancel={() => setIsApproveModalOpen(false)}
+        okText={t("Approve")}
+        cancelText={t("Cancel")}
+      >
+        <p>{t("Are you sure you want to approve this post?")}</p>
+      </Modal>
+
+      {/* Modal Reject */}
+      <Modal
+        title={t("Confirm Reject")}
+        open={isRejectModalOpen}
+        onOk={handleReject}
+        onCancel={() => setIsRejectModalOpen(false)}
+        okText={t("Reject")}
+        cancelText={t("Cancel")}
+      >
+        <p>{t("Are you sure you want to reject this post?")}</p>
       </Modal>
     </div>
   );

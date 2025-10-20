@@ -273,7 +273,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   async function handleSaveEdits() {
     try {
       const croppedImageUrl: string = await getCroppedImg(
-        `${media.file_url}`,
+        `${media.url}`,
         croppedAreaPixels,
         rotation
       );
@@ -356,7 +356,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
               style={{ width: mediaWidth, height: mediaHeight }}
             >
               <Cropper
-                image={`${media.file_url}`}
+                image={`${media.url}`}
                 crop={crop}
                 zoom={zoom}
                 rotation={rotation}

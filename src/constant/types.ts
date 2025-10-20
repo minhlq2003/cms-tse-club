@@ -469,6 +469,9 @@ export interface Event {
   description?: string;
   host?: Member;
   limitRegister?: number;
+  plans?: string;
+  isPublic?: boolean;
+  allowedType?: number;
 }
 export interface Location {
   destination: string;
@@ -495,6 +498,7 @@ export interface Training {
   mentor?: Member[];
   mentorIds?: string[];
   limitRegister?: number;
+  featuredImageName?: string;
 }
 
 export interface Member {

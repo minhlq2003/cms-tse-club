@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Popconfirm, Table, Modal, Select, Form } from "antd";
+import { Button, Popconfirm, Table, Modal, Select, Form, Alert } from "antd";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { changeRole, getUser, resetPassword } from "../services/userService";
@@ -35,6 +35,8 @@ export default function ListMember({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
+
+  const [showConfirmTransfer, setShowConfirmTransfer] = useState(false);
 
   const fetchMembers = async () => {
     try {
@@ -73,6 +75,7 @@ export default function ListMember({
   const openChangeRoleModal = (member: Member) => {
     setSelectedMember(member);
     setSelectedRole(member.role);
+    setShowConfirmTransfer(false);
     setIsModalOpen(true);
   };
 
@@ -81,34 +84,22 @@ export default function ListMember({
 
     const currentRole = selectedMember.role;
     const newRole = selectedRole;
+
+    // Không cho đổi trực tiếp NONE → LEADER
     if (currentRole === "NONE" && newRole === "LEADER") {
       toast.warning(t("Cannot change role from NONE to LEADER directly"));
       return;
     }
 
+    // Nếu LEADER chuyển quyền cho MEMBER
     if (
       currentUserRole === "LEADER" &&
       currentRole === "MEMBER" &&
-      newRole === "LEADER"
+      newRole === "LEADER" &&
+      !showConfirmTransfer
     ) {
-      Modal.confirm({
-        title: t("Transfer leadership"),
-        content: t(
-          "Are you sure you want to transfer leadership to this member? You will be downgraded to MEMBER."
-        ),
-        okText: t("Yes"),
-        cancelText: t("No"),
-        async onOk() {
-          try {
-            await changeRole(selectedMember.id, newRole);
-            toast.success(`${t("Changed role to")} ${newRole}`);
-            fetchMembers();
-          } catch {
-            toast.error(t("Failed to change role"));
-          }
-        },
-      });
-      setIsModalOpen(false);
+      // Hiển thị cảnh báo trong modal
+      setShowConfirmTransfer(true);
       return;
     }
 
@@ -199,7 +190,7 @@ export default function ListMember({
         open={isModalOpen}
         onOk={handleConfirmChangeRole}
         onCancel={() => setIsModalOpen(false)}
-        okText={t("Confirm")}
+        okText={showConfirmTransfer ? t("Confirm Transfer") : t("Confirm")}
         cancelText={t("Cancel")}
       >
         <Form layout="vertical">
@@ -214,6 +205,17 @@ export default function ListMember({
               ]}
             />
           </Form.Item>
+
+          {showConfirmTransfer && (
+            <Alert
+              type="warning"
+              showIcon
+              message={t("Transfer leadership")}
+              description={t(
+                "Are you sure you want to transfer leadership to this member? You will be downgraded to MEMBER."
+              )}
+            />
+          )}
         </Form>
       </Modal>
     </div>

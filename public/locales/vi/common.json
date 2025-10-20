@@ -123,7 +123,12 @@
   "Post rejected successfully": "Từ chối bài viết thành công",
   "Failed to reject post": "Từ chối bài viết thất bại",
   "Failed to fetch posts": "Không thể tải danh sách bài viết",
-  "Created Date (MM/DD/YYYY)": "Ngày tạo (MM/DD/YYYY)"
-  
-
+  "Created Date (MM/DD/YYYY)": "Ngày tạo (MM/DD/YYYY)",
+  "Date of Birth": "Ngày sinh",
+  "Edit Event": "Chỉnh sửa sự kiện",
+  "Organizers": "Ban tổ chức",
+  "Limit Attendees": "Giới hạn người tham gia",
+  "Attendees": "Người tham gia",
+  "Edit Organizers": "Chỉnh sửa ban tổ chức",
+  "View Full List": "Xem danh sách"
 }

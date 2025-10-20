@@ -11,6 +11,7 @@ import { getRegisteredEvents } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import { Event } from "@/constant/types";
 import { formatDate } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
@@ -23,17 +24,26 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchData();
+    fetchEvents();
   }, []);
 
   const fetchData = async () => {
     try {
       const info = await getInfoUser();
-      const ev = await getRegisteredEvents();
       setUserInfo(info);
-      setEvents(ev);
+
       form.setFieldsValue(info);
     } catch (err) {
-      console.error("Failed to load profile:", err);
+      toast.error("Failed to load profile");
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await getRegisteredEvents();
+      setEvents(res);
+    } catch (err) {
+      toast.error("Failed to load registered events");
     }
   };
 

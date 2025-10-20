@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import Publish from "@/components/Publish";
 import TrainingEventTable from "@/modules/training/TrainingEvent";
 import { isLeader } from "@/lib/utils";
+import FeaturedImage from "@/modules/training/FeaturedImage";
 
 export default function AddTraining() {
   const { t } = useTranslation("common");
@@ -35,6 +36,7 @@ export default function AddTraining() {
       limitRegister: Number(values.limitRegister),
       mentorIds: mentors.map((mentor) => mentor.id),
       trainingEvents: trainingEvents,
+      featuredImageName: uploadedImage,
     };
 
     try {
@@ -86,6 +88,10 @@ export default function AddTraining() {
             />
 
             <TrainingMentors mentors={mentors} onChangeMentors={setMentors} />
+            <FeaturedImage
+              selectedMedia={uploadedImage}
+              setSelectedMedia={setUploadedImage}
+            />
           </div>
         </div>
       </div>

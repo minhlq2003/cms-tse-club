@@ -69,3 +69,8 @@ body {
 .ck-editor__editable_inline {
   min-height: 400px;
 }
+
+:where(.css-dev-only-do-not-override-1v28nim).ant-form-item .ant-form-item-label label{
+  font-size: 15px;
+  font-weight: 600;
+}

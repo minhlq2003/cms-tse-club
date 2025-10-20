@@ -106,12 +106,12 @@ export const menuItems: Array<CustomMenuItem> = [
     icon: <CalendarOutlined />,
     children: eventItems,
   },
-  {
-    label: "Categories, Tags",
-    key: "categories",
-    icon: <DatabaseOutlined />,
-    children: categoriesTagsItems,
-  },
+  // {
+  //   label: "Categories, Tags",
+  //   key: "categories",
+  //   icon: <DatabaseOutlined />,
+  //   children: categoriesTagsItems,
+  // },
   {
     label: "Posts",
     key: "posts",
