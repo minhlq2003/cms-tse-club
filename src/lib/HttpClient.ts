@@ -20,6 +20,7 @@ interface RequestConfig {
   params?: object;
   data?: object;
   apiName?: string;
+  responseType?: "json" | "blob" | "arraybuffer" | "text" | "stream";
 }
 
 export class HttpClient {
@@ -32,6 +33,14 @@ export class HttpClient {
   private async wrap<T>(promise: Promise<any>): Promise<T | null> {
     try {
       const res = await promise;
+
+      if (
+        res.config.responseType === "blob" ||
+        res.config.responseType === "arraybuffer"
+      ) {
+        return res as T;
+      }
+
       return res?.data ?? null;
     } catch (err: any) {
       console.log("HTTP Error:", err);

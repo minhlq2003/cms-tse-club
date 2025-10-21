@@ -101,3 +101,8 @@ export const manualCheckIn = (eventId: string, data: string[]) =>
   http.post<any>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-check-in`, {
     attendeeIds: data,
   });
+
+export const exportEventAttendees = (eventId: string) =>
+  http.get(`${API_PREFIX_EVENT_PATH}/${eventId}/attendees/export`, {
+    responseType: "blob",
+  });

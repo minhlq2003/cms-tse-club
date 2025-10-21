@@ -17,7 +17,7 @@ import EventForm from "@/modules/event/EventForm";
 import EventOrganizers from "@/modules/event/EventOrganizers";
 import Publish from "@/components/Publish";
 import EventAttendees from "@/modules/event/Attendee";
-import { isLeader } from "@/lib/utils";
+import { getUser, isLeader } from "@/lib/utils";
 import ListTitle from "@/components/ListTitle";
 import PlanForm from "@/components/PlanForm";
 import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
@@ -52,7 +52,6 @@ const EditEvent = () => {
       try {
         const data = await getEventById(id);
         if (data) {
-          // Đổ dữ liệu cơ bản
           const formattedData = {
             ...data,
             location: {
@@ -69,7 +68,6 @@ const EditEvent = () => {
           form.setFieldsValue(formattedData);
           setUploadedImage(data.image || "");
 
-          // Organizer
           setOrganizers(
             Array.isArray(data.organizers)
               ? data.organizers.map((org: any) => ({
@@ -112,11 +110,16 @@ const EditEvent = () => {
         endTime: locationFromPlan["Thời gian"]?.[1] || "",
       };
     }
+
+    const allowedType = Array.isArray(values.allowedArray)
+      ? values.allowedArray.reduce((acc, val) => acc + val, 0)
+      : 0;
     const dataPayload: Event = {
       ...values,
       limitRegister: values.multiple,
       description: values.description,
       status,
+      allowedType,
       category: values.category,
       organizers: organizers.map((org) => ({
         organizerId: org.organizerId,
@@ -195,7 +198,9 @@ const EditEvent = () => {
                 onClick={() =>
                   exportPlanWithTemplate(
                     planData,
-                    form.getFieldValue("title") || "KeHoachMoi"
+                    form.getFieldValue("title") || "KeHoachMoi",
+                    order,
+                    getUser()?.fullName || "..."
                   )
                 }
               >

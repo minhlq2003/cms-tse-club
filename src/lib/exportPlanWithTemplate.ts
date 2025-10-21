@@ -9,7 +9,6 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
-  Numbering,
   LevelFormat,
 } from "docx";
 import { saveAs } from "file-saver";
@@ -23,7 +22,6 @@ function makeRealTable(headers: string[], rows: any[][]) {
     right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
   };
 
-  // Giảm độ rộng cột tổng thể xuống còn ~90%
   return new Table({
     width: { size: 90, type: WidthType.PERCENTAGE },
     rows: [
@@ -35,7 +33,14 @@ function makeRealTable(headers: string[], rows: any[][]) {
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: [new TextRun({ text: h, bold: true, size: 24 })],
+                  children: [
+                    new TextRun({
+                      text: h,
+                      bold: true,
+                      size: 24,
+                      font: "Times New Roman",
+                    }),
+                  ],
                 }),
               ],
             })
@@ -52,7 +57,11 @@ function makeRealTable(headers: string[], rows: any[][]) {
                     new Paragraph({
                       spacing: { line: 240 },
                       children: [
-                        new TextRun({ text: String(c || ""), size: 24 }),
+                        new TextRun({
+                          text: String(c || ""),
+                          size: 24,
+                          font: "Times New Roman",
+                        }),
                       ],
                     }),
                   ],
@@ -64,19 +73,24 @@ function makeRealTable(headers: string[], rows: any[][]) {
   });
 }
 
+// ===== 🧩 Paragraph chuẩn =====
 function makeParagraph(text: string, opts: any = {}) {
   return new Paragraph({
     spacing: { before: 100, after: 100, line: 300 },
     alignment: opts.align || AlignmentType.JUSTIFIED,
-    indent: {
-      left: 720, // 0.5 inch
-      right: 720,
-      hanging: 360,
-    },
-    children: [new TextRun({ text, bold: opts.bold || false, size: 24 })],
+    indent: { left: 720, right: 720 },
+    children: [
+      new TextRun({
+        text,
+        bold: opts.bold || false,
+        size: 24,
+        font: "Times New Roman",
+      }),
+    ],
   });
 }
 
+// ===== 🧩 Format thời gian =====
 function formatTimeRange(start?: string, end?: string) {
   if (!start || !end) return "";
   const s = new Date(start);
@@ -102,13 +116,8 @@ function formatTimeRange(start?: string, end?: string) {
     )} ${pad(e.getDate())}/${pad(e.getMonth() + 1)}/${e.getFullYear()}`;
 }
 
-export async function exportPlanWithTemplate(
-  planData: Record<string, any>,
-  eventTitle: string
-) {
-  const children: any[] = [];
-
-  // ===== HEADER =====
+// ===== 🧩 Header =====
+function createHeader() {
   const noBorder = {
     top: { style: BorderStyle.NONE },
     bottom: { style: BorderStyle.NONE },
@@ -118,7 +127,68 @@ export async function exportPlanWithTemplate(
     insideVertical: { style: BorderStyle.NONE },
   };
 
-  const headerTable = new Table({
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: noBorder,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: noBorder,
+            children: [
+              makeCentered("TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP TP. HCM", 22),
+              makeCentered("KHOA CÔNG NGHỆ THÔNG TIN", 22),
+              makeCenteredBold("CÂU LẠC BỘ TSE CLUB", 22),
+            ],
+          }),
+          new TableCell({
+            borders: noBorder,
+            children: [
+              makeCenteredBold("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", 22),
+              makeCenteredItalic("Độc lập - Tự do - Hạnh phúc", 22),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function makeCentered(text: string, size: number) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text, size, font: "Times New Roman" })],
+  });
+}
+function makeCenteredBold(text: string, size: number) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [
+      new TextRun({ text, bold: true, size, font: "Times New Roman" }),
+    ],
+  });
+}
+function makeCenteredItalic(text: string, size: number) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [
+      new TextRun({ text, italics: true, size, font: "Times New Roman" }),
+    ],
+  });
+}
+
+// ===== 🧩 Footer =====
+function createFooter(author: string) {
+  const noBorder = {
+    top: { style: BorderStyle.NONE },
+    bottom: { style: BorderStyle.NONE },
+    left: { style: BorderStyle.NONE },
+    right: { style: BorderStyle.NONE },
+    insideHorizontal: { style: BorderStyle.NONE },
+    insideVertical: { style: BorderStyle.NONE },
+  };
+
+  return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: noBorder,
     rows: [
@@ -128,30 +198,18 @@ export async function exportPlanWithTemplate(
             borders: noBorder,
             children: [
               new Paragraph({
-                alignment: AlignmentType.CENTER,
+                alignment: AlignmentType.LEFT,
                 children: [
                   new TextRun({
-                    text: "TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP TP. HCM",
-                    size: 24,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({
-                    text: "KHOA CÔNG NGHỆ THÔNG TIN",
-                    size: 24,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({
-                    text: "BỘ MÔN KỸ THUẬT PHẦN MỀM",
+                    text: "Khoa CNTT ",
                     bold: true,
+                    font: "Times New Roman",
+                  }),
+                  new TextRun({
+                    text: "(duyệt)",
+                    italics: true,
                     size: 24,
+                    font: "Times New Roman",
                   }),
                 ],
               }),
@@ -160,23 +218,16 @@ export async function exportPlanWithTemplate(
           new TableCell({
             borders: noBorder,
             children: [
+              makeCenteredBold("Người lập kế hoạch", 24),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
+                spacing: { before: 400 },
                 children: [
                   new TextRun({
-                    text: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+                    text: author || "",
                     bold: true,
                     size: 24,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({
-                    text: "Độc lập - Tự do - Hạnh phúc",
-                    italics: true,
-                    size: 24,
+                    font: "Times New Roman",
                   }),
                 ],
               }),
@@ -184,13 +235,88 @@ export async function exportPlanWithTemplate(
           }),
         ],
       }),
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: noBorder,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                children: [
+                  new TextRun({
+                    text: "Nơi nhận:",
+                    bold: true,
+                    size: 24,
+                    font: "Times New Roman",
+                  }),
+                ],
+              }),
+              makeParagraph("Ban lãnh đạo Khoa"),
+              makeParagraph("BCN CLB"),
+              makeParagraph("Lưu VT"),
+            ],
+          }),
+          new TableCell({ borders: noBorder, children: [] }),
+        ],
+      }),
     ],
   });
+}
 
-  children.push(headerTable);
+// ===== 🧩 Xuất Word =====
+export async function exportPlanWithTemplate(
+  planData: Record<string, any>,
+  eventTitle: string,
+  orderCategory: string[],
+  author: string
+) {
+  const children: any[] = [];
+  const numbering = {
+    config: [
+      {
+        reference: "main-numbering",
+        levels: [
+          {
+            level: 0,
+            format: LevelFormat.DECIMAL,
+            text: "%1.",
+            alignment: AlignmentType.LEFT,
+            style: {
+              paragraph: {
+                indent: { left: 720, hanging: 360 },
+                spacing: { before: 100, after: 100, line: 300 },
+              },
+              run: { size: 24, font: "Times New Roman" },
+            },
+          },
+        ],
+      },
+      {
+        reference: "bullet-list",
+        levels: [
+          {
+            level: 0,
+            format: LevelFormat.BULLET,
+            text: "•",
+            alignment: AlignmentType.LEFT,
+            style: {
+              paragraph: {
+                indent: { left: 1000, hanging: 360 },
+                spacing: { before: 100, after: 100, line: 300 },
+              },
+              run: { size: 22, font: "Times New Roman" },
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  // Header
+  children.push(createHeader());
   children.push(new Paragraph({ spacing: { after: 200 } }));
 
-  // ===== TIÊU ĐỀ =====
+  // Tiêu đề
   const today = new Date();
   children.push(
     new Paragraph({
@@ -202,93 +328,57 @@ export async function exportPlanWithTemplate(
           } năm ${today.getFullYear()}`,
           italics: true,
           size: 24,
+          font: "Times New Roman",
         }),
       ],
     })
   );
   children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 300 },
-      children: [new TextRun({ text: "KẾ HOẠCH", bold: true, size: 32 })],
-    })
-  );
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-      children: [
-        new TextRun({ text: `V/v: ${eventTitle}`, bold: true, size: 24 }),
-      ],
-    })
+    makeCenteredBold("KẾ HOẠCH", 32),
+    makeCenteredBold(`V/v: ${eventTitle}`, 24)
   );
 
-  const numbering = {
-    config: [
-      {
-        reference: "main-numbering",
-        levels: [
-          {
-            level: 0,
-            bold: true,
-            format: LevelFormat.DECIMAL,
-            text: "%1.",
-            alignment: AlignmentType.LEFT,
-            style: {
-              paragraph: {
-                indent: { left: 720, hanging: 360 },
-                spacing: { before: 100, after: 100, line: 300 },
-              },
-            },
-          },
-        ],
-      },
-      {
-        reference: "bullet-list",
-        levels: [
-          {
-            level: 0,
-            format: LevelFormat.BULLET,
-            text: "-",
-            alignment: AlignmentType.LEFT,
-            style: {
-              paragraph: {
-                indent: { left: 920, hanging: 360 },
-                spacing: { before: 100, after: 100, line: 300 },
-              },
-            },
-          },
-        ],
-      },
-    ],
-  };
-
-  const order = [
-    "Mục đích",
-    "Thời gian & địa điểm",
-    "Kế hoạch di chuyển",
-    "Nội dung chương trình",
-    "Ban tổ chức chương trình",
-    "Tiến độ thực hiện chương trình",
-    "Kinh phí thực hiện",
-    "Thành phần tham dự",
-  ];
-
-  for (let i = 0; i < order.length; i++) {
-    const category = order[i];
+  // Nội dung theo orderCategory
+  for (const category of orderCategory) {
     if (!planData[category]) continue;
 
-    // numbering list
+    // Tiêu đề mục (numbering)
     children.push(
       new Paragraph({
         numbering: { reference: "main-numbering", level: 0 },
-        children: [new TextRun({ text: category, bold: true, size: 24 })],
+        children: [
+          new TextRun({
+            text: category,
+            bold: true,
+            size: 24,
+            font: "Times New Roman",
+          }),
+        ],
       })
     );
 
-    // Nội dung chi tiết
+    // Nội dung từng mục
     if (category === "Mục đích") {
-      children.push(makeParagraph(planData[category]?.["Nội dung"] || ""));
+      const content = planData[category]?.["Nội dung"] || "";
+      const lines = content.split(/\r?\n/).filter((l: string) => l.trim());
+      lines.forEach((line: string) => {
+        if (line.trim().startsWith("-")) {
+          children.push(
+            new Paragraph({
+              numbering: { reference: "bullet-list", level: 0 },
+              children: [
+                new TextRun({
+                  text: line.replace(/^[-–•]\s*/, ""),
+                  size: 24,
+                  font: "Times New Roman",
+                }),
+              ],
+            })
+          );
+        } else {
+          children.push(makeParagraph(line));
+        }
+      });
     }
 
     if (category === "Thời gian & địa điểm") {
@@ -301,6 +391,7 @@ export async function exportPlanWithTemplate(
             new TextRun({
               text: `Thời gian: ${formatTimeRange(tg[0], tg[1])}`,
               size: 24,
+              font: "Times New Roman",
             }),
           ],
         })
@@ -308,7 +399,13 @@ export async function exportPlanWithTemplate(
       children.push(
         new Paragraph({
           numbering: { reference: "bullet-list", level: 0 },
-          children: [new TextRun({ text: `Địa điểm: ${dd}`, size: 24 })],
+          children: [
+            new TextRun({
+              text: `Địa điểm: ${dd}`,
+              size: 24,
+              font: "Times New Roman",
+            }),
+          ],
         })
       );
     }
@@ -320,7 +417,13 @@ export async function exportPlanWithTemplate(
           children.push(
             new Paragraph({
               numbering: { reference: "bullet-list", level: 0 },
-              children: [new TextRun({ text: `${k}: ${v}`, size: 24 })],
+              children: [
+                new TextRun({
+                  text: `${k}: ${v}`,
+                  size: 24,
+                  font: "Times New Roman",
+                }),
+              ],
             })
           );
       });
@@ -336,6 +439,7 @@ export async function exportPlanWithTemplate(
               new TextRun({
                 text: `${c.Thời_gian || ""} – ${c.Hoạt_động || ""}`,
                 size: 24,
+                font: "Times New Roman",
               }),
             ],
           })
@@ -383,23 +487,18 @@ export async function exportPlanWithTemplate(
     }
   }
 
-  // ===== FOOTER =====
+  // Footer
   children.push(new Paragraph({ spacing: { before: 400 } }));
-  children.push(createFooter());
+  children.push(createFooter(author));
 
-  // ===== TẠO FILE =====
+  // Tạo file
   const doc = new Document({
     numbering,
     sections: [
       {
         properties: {
           page: {
-            margin: {
-              top: 720,
-              bottom: 720,
-              left: 900,
-              right: 720,
-            },
+            margin: { top: 720, bottom: 720, left: 900, right: 720 },
           },
         },
         children,
@@ -409,96 +508,4 @@ export async function exportPlanWithTemplate(
 
   const blob = await Packer.toBlob(doc);
   saveAs(blob, `KeHoach_${eventTitle}.docx`);
-}
-
-// ===== FOOTER =====
-function createFooter() {
-  const noBorder = {
-    top: { style: BorderStyle.NONE },
-    bottom: { style: BorderStyle.NONE },
-    left: { style: BorderStyle.NONE },
-    right: { style: BorderStyle.NONE },
-    insideHorizontal: { style: BorderStyle.NONE },
-    insideVertical: { style: BorderStyle.NONE },
-  };
-
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: noBorder,
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            borders: noBorder,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.LEFT,
-                children: [
-                  new TextRun({ text: "Khoa CNTT ", bold: true }),
-                  new TextRun({ text: "(duyệt)", italics: true, size: 24 }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            borders: noBorder,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({
-                    text: "Người lập kế hoạch",
-                    bold: true,
-                    size: 24,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({
-            borders: noBorder,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.LEFT,
-                children: [
-                  new TextRun({ text: "Nơi nhận:", bold: true, size: 24 }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "Ban lãnh đạo Khoa", size: 24 }),
-                ],
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: "BCH Khoa", size: 24 })],
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: "Lưu VT", size: 24 })],
-              }),
-            ],
-          }),
-          new TableCell({
-            borders: noBorder,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                spacing: { before: 400 },
-                children: [
-                  new TextRun({
-                    text: "Nguyễn Thị Hạnh",
-                    bold: true,
-                    size: 24,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
 }

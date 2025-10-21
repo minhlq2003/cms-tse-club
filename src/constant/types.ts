@@ -472,6 +472,7 @@ export interface Event {
   plans?: string;
   isPublic?: boolean;
   allowedType?: number;
+  allowedArray?: number[];
 }
 export interface Location {
   destination: string;

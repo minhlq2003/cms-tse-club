@@ -20,7 +20,11 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { getEventAttendees, manualCheckIn } from "../services/eventService";
+import {
+  exportEventAttendees,
+  getEventAttendees,
+  manualCheckIn,
+} from "../services/eventService";
 import { Member } from "@/constant/types";
 
 const { Title } = Typography;
@@ -113,6 +117,34 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const handleCancelAllLocal = () => {
     setAttendees((prev) => prev.map((a) => ({ ...a, checkIn: false })));
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const res = await exportEventAttendees(eventId!);
+
+      // res ở đây chính là AxiosResponse
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      // 🔍 Lấy tên file nếu có trong headers
+      const disposition = res.headers["content-disposition"];
+      const filenameMatch = disposition?.match(/filename="?([^"]+)"?/);
+      const filename = filenameMatch ? filenameMatch[1] : "attendees.xlsx";
+
+      // 💾 Tải file về
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = decodeURIComponent(filename);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
   };
 
   const handleSave = async () => {
@@ -293,7 +325,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
       )}
 
-      {/* Modal: filters + full table + actions */}
       <Modal
         title={
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
@@ -301,6 +332,9 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
               {t("Attendee List")}
             </p>
             <div className="flex gap-2 sm:gap-4">
+              <Button type="primary" onClick={handleExportExcel}>
+                Xuất Excel
+              </Button>
               <Button onClick={handleCheckInAllLocal} disabled={!canCheckIn}>
                 {t("Check in All")}
               </Button>

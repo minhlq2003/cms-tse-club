@@ -15,7 +15,7 @@ import EventOrganizers from "@/modules/event/EventOrganizers";
 import Publish from "@/components/Publish";
 import ListTitle from "@/components/ListTitle";
 import PlanForm from "@/components/PlanForm";
-import { isLeader } from "@/lib/utils";
+import { getUser, isLeader } from "@/lib/utils";
 import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
 
 export default function AddEvent() {
@@ -56,6 +56,11 @@ export default function AddEvent() {
         endTime: locationFromPlan["Thời gian"]?.[1] || "",
       };
     }
+
+    const allowedType = Array.isArray(values.allowedArray)
+      ? values.allowedArray.reduce((acc, val) => acc + val, 0)
+      : 0;
+
     const dataPayload: Event = {
       ...values,
       title: values.title,
@@ -63,7 +68,7 @@ export default function AddEvent() {
       status,
       category: values.category,
       isPublic: true,
-      allowedType: 1,
+      allowedType: allowedType,
       plans: JSON.stringify({
         selected: selectedCategories,
         order: categoryOrder,
@@ -143,7 +148,9 @@ export default function AddEvent() {
               onClick={() =>
                 exportPlanWithTemplate(
                   planData,
-                  form.getFieldValue("title") || "KeHoachMoi"
+                  form.getFieldValue("title") || "KeHoachMoi",
+                  categoryOrder,
+                  getUser()?.fullName || "..."
                 )
               }
             >
