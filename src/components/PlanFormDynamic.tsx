@@ -350,7 +350,7 @@ export default function PlanFormDynamic({
 
   return (
     <div className="space-y-6">
-      {selectedCategories.map((id) => {
+      {selectedCategories?.map((id) => {
         const t = getTemplateById(id);
         if (!t) return null;
 
@@ -393,7 +393,7 @@ export default function PlanFormDynamic({
         );
       })}
 
-      {selectedCategories.length === 0 && (
+      {selectedCategories?.length === 0 && (
         <div className="text-gray-400 italic text-center py-4">
           Không có block nào được chọn.
         </div>

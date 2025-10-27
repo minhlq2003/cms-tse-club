@@ -1,3 +1,4 @@
+import { EventTemplate } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_BLOCK_TEMPLATE_PATH = "/block-templates";
@@ -17,7 +18,7 @@ export const getEventTemplates = async () => {
   return response;
 };
 
-export const createEventTemplate = (data: any) =>
+export const createEventTemplate = (data: EventTemplate) =>
   http.post(`${API_PREFIX_EVENT_TEMPLATE_PATH}`, data);
 
 export const getEventTemplateById = (id: string) =>

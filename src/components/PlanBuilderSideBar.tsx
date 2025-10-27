@@ -10,6 +10,7 @@ import {
   List,
   Card,
   Typography,
+  Input,
 } from "antd";
 import {
   PlusOutlined,
@@ -20,11 +21,13 @@ import {
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useTranslation } from "react-i18next";
 import ModalCreateBlock from "./ModalCreateBlock";
-import { BlockTemplate } from "@/constant/types";
+import { BlockTemplate, EventTemplate } from "@/constant/types";
 import { BasicBlocks } from "@/constant/data";
 import {
   createBlockTemplate,
   getBlockTemplates,
+  getEventTemplates,
+  createEventTemplate,
 } from "@/modules/services/templateService";
 import PlanFormDynamic from "./PlanFormDynamic";
 
@@ -51,6 +54,14 @@ export default function PlanBuilderSidebar({
     null
   );
 
+  const [saveTemplateModal, setSaveTemplateModal] = useState(false);
+  const [templateTitle, setTemplateTitle] = useState("");
+
+  const [chooseTemplateModal, setChooseTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<EventTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<EventTemplate | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
@@ -63,8 +74,13 @@ export default function PlanBuilderSidebar({
             index === self.findIndex((b) => b.id === block.id)
         );
 
-        setApiBlocks(uniqueBlocks);
-        setCustomBlocks(uniqueBlocks);
+        const basicIds = BasicBlocks.map((b) => b.id);
+        const filteredBlocks = uniqueBlocks.filter(
+          (block: BlockTemplate) => !basicIds.includes(block.id)
+        );
+
+        setApiBlocks(filteredBlocks);
+        setCustomBlocks(filteredBlocks);
       } catch (e) {
         console.error(e);
         setApiBlocks([]);
@@ -109,6 +125,30 @@ export default function PlanBuilderSidebar({
     onAddBlock?.("__REMOVE__");
   };
 
+  // 🧱 Lưu Template
+  const handleSaveTemplate = async () => {
+    if (!templateTitle.trim()) return;
+    const data: EventTemplate = {
+      title: templateTitle.trim(),
+      blockTemplateIds: order,
+    };
+    await createEventTemplate(data);
+    setSaveTemplateModal(false);
+    setTemplateTitle("");
+  };
+
+  // 📂 Chọn Template
+  const handleOpenChooseTemplate = async () => {
+    try {
+      const res = await getEventTemplates();
+      const list = res._embedded?.eventTemplateResponseDtoList || [];
+      setTemplates(list);
+      setChooseTemplateModal(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
       {/* 🔹 Header */}
@@ -126,6 +166,7 @@ export default function PlanBuilderSidebar({
       {/* 🔹 Content */}
       {visible && (
         <div className="p-4">
+          <p className="font-semibold">Mẫu cơ bản</p>
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="plan-order-droppable">
               {(provided) => (
@@ -185,8 +226,12 @@ export default function PlanBuilderSidebar({
 
           <div className="flex justify-end border-t bg-[#f6f7f7] border-gray-300 mt-3 rounded-b-[10px]">
             <div className=" pt-3 flex justify-between w-full">
-              <Button type="primary">Lưu Template</Button>
-              <Button type="primary">Chọn Template</Button>
+              <Button type="primary" onClick={() => setSaveTemplateModal(true)}>
+                Lưu Template
+              </Button>
+              <Button type="primary" onClick={handleOpenChooseTemplate}>
+                Chọn Template
+              </Button>
             </div>
           </div>
         </div>
@@ -308,6 +353,87 @@ export default function PlanBuilderSidebar({
             },
           ]}
         />
+      </Modal>
+
+      <Modal
+        open={saveTemplateModal}
+        onCancel={() => setSaveTemplateModal(false)}
+        title="Lưu Template mới"
+        onOk={handleSaveTemplate}
+        okText="Lưu"
+        width={800}
+      >
+        <Input
+          placeholder="Nhập tiêu đề template"
+          value={templateTitle}
+          onChange={(e) => setTemplateTitle(e.target.value)}
+          className="mb-3"
+        />
+        <Divider />
+        <div className="max-h-[500px] overflow-scroll">
+          <PlanFormDynamic
+            selectedCategories={order}
+            templates={allBlocks.filter((b) => order.includes(b.id))}
+            planData={{}}
+            readonly
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        open={chooseTemplateModal}
+        onCancel={() => setChooseTemplateModal(false)}
+        title="Chọn Template"
+        footer={null}
+        width={900}
+      >
+        <div className="grid grid-cols-3 gap-3">
+          <div className="border rounded p-2 h-[400px] overflow-y-auto">
+            <List
+              dataSource={templates}
+              renderItem={(t) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      type="link"
+                      onClick={() => setSelectedTemplate(t)}
+                      icon={<EyeOutlined />}
+                      key="preview"
+                    >
+                      Xem
+                    </Button>,
+                    <Button
+                      type="primary"
+                      onClick={() => setOrder(t.blockTemplateIds)}
+                      key="choose"
+                    >
+                      Chọn
+                    </Button>,
+                  ]}
+                >
+                  {t.title}
+                </List.Item>
+              )}
+            />
+          </div>
+
+          <div className="col-span-2 border rounded p-2 h-[400px] overflow-y-auto">
+            {selectedTemplate ? (
+              <PlanFormDynamic
+                selectedCategories={selectedTemplate.blockTemplateIds}
+                templates={allBlocks.filter((b) =>
+                  selectedTemplate.blockTemplateIds?.includes(b.id)
+                )}
+                planData={{}}
+                readonly
+              />
+            ) : (
+              <p className="text-gray-400 italic">
+                Chọn một template để xem preview
+              </p>
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   );

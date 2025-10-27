@@ -517,7 +517,13 @@ export interface BlockTemplate {
   id: string; // uuid
   title: string;
   type: "basic" | "custom";
-  block: string; // JSON string của các field
+  block: string;
+}
+
+export interface EventTemplate {
+  title: string;
+  id?: string;
+  blockTemplateIds: string[];
 }
 
 export interface FieldTemplate {
