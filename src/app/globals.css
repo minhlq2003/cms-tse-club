@@ -75,6 +75,6 @@ body {
   font-weight: 600;
 }
 
-:where(.css-1v28nim).ant-menu-light .ant-menu-item{
+:where(.css-1v28nim).ant-menu-light .ant-menu-item, :where(.css-1v28nim).ant-menu-light .ant-menu-submenu-title, :where(.css-1v28nim).ant-menu-light>.ant-menu .ant-menu-submenu-title{
   color: #fff;
 }
