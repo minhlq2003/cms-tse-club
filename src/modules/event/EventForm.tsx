@@ -1,8 +1,8 @@
 "use client";
 
 import { Event } from "@/constant/types";
-import { Form, FormInstance, Input, Select, Checkbox } from "antd";
-import React, { useEffect, useState } from "react";
+import { Form, FormInstance, Input, Select, Checkbox, Switch } from "antd";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface EventFormProps {
@@ -19,11 +19,6 @@ const EventForm: React.FC<EventFormProps> = ({
   setUploadedImages,
 }) => {
   const { t } = useTranslation("common");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditableSlug, setIsEditableSlug] = useState(true);
-  const [modalAction, setModalAction] = useState<
-    "selectMedia" | "addToContent"
-  >("selectMedia");
 
   const allowedOptions = [
     { label: "Sinh viên", value: 1 },
@@ -39,6 +34,14 @@ const EventForm: React.FC<EventFormProps> = ({
       .map((opt) => opt.value);
     form.setFieldsValue({ allowedArray: selectedValues });
   }, [form]);
+
+  const isPublic = Form.useWatch("isPublic", form);
+
+  useEffect(() => {
+    if (isPublic) {
+      form.setFieldsValue({ allowedArray: [], allowedType: 0 });
+    }
+  }, [isPublic, form]);
 
   const handleSubmit = () => {
     const formData = form.getFieldsValue();
@@ -80,6 +83,7 @@ const EventForm: React.FC<EventFormProps> = ({
               ]}
             />
           </Form.Item>
+
           <Form.Item
             className="w-full md:w-1/4"
             name="multiple"
@@ -88,23 +92,50 @@ const EventForm: React.FC<EventFormProps> = ({
           >
             <Input type="number" min={1} />
           </Form.Item>
-          <Form.Item name="allowedArray" label={t("Allowed Participants")}>
-            <Checkbox.Group
-              onChange={(checkedValues: number[]) => {
-                const total = checkedValues.reduce((acc, val) => acc + val, 0);
-                form.setFieldsValue({ allowedType: total });
-              }}
-            >
-              <div className="grid grid-cols-2 gap-2">
-                {allowedOptions.map((opt) => (
-                  <Checkbox key={opt.value} value={opt.value}>
-                    {t(opt.label)}
-                  </Checkbox>
-                ))}
-              </div>
-            </Checkbox.Group>
+
+          <Form.Item
+            name="isPublic"
+            label={t("Public Event")}
+            valuePropName="checked"
+            className="flex items-center md:mt-8"
+          >
+            <Switch checkedChildren={t("Yes")} unCheckedChildren={t("No")} />
           </Form.Item>
         </div>
+
+        <Form.Item
+          name="allowedArray"
+          label={t("Allowed Participants")}
+          rules={[
+            {
+              validator: (_, value) => {
+                const isPublicValue = form.getFieldValue("isPublic");
+                if (!isPublicValue && (!value || value.length === 0)) {
+                  return Promise.reject(
+                    new Error(t("Please select at least one participant type!"))
+                  );
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
+          <Checkbox.Group
+            disabled={isPublic}
+            onChange={(checkedValues: number[]) => {
+              const total = checkedValues.reduce((acc, val) => acc + val, 0);
+              form.setFieldsValue({ allowedType: total });
+            }}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {allowedOptions.map((opt) => (
+                <Checkbox key={opt.value} value={opt.value}>
+                  {t(opt.label)}
+                </Checkbox>
+              ))}
+            </div>
+          </Checkbox.Group>
+        </Form.Item>
       </div>
     </Form>
   );

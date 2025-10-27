@@ -65,7 +65,7 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
   };
 
   const handleProfileClick = () => {
-    router.push("/admin/profile");
+    router.push("/profile");
   };
 
   const handleClickOutside = (event: MouseEvent) => {

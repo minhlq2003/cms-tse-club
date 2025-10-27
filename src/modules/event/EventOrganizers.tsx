@@ -20,7 +20,7 @@ import {
   Col,
   Checkbox,
 } from "antd";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Member, Organizer } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { getUser } from "../services/userService";
@@ -39,7 +39,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   organizers,
   onChangeOrganizers,
   eventId,
-  isView = false, // 👈 mặc định là false
+  isView = false,
 }) => {
   const { t } = useTranslation("common");
   const [isPublishListVisible, setPublishListVisible] = useState(true);
@@ -67,6 +67,10 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       setLoadingMembers(false);
     }
   };
+
+  useEffect(() => {
+    fetchMembers();
+  }, [organizers]);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -115,22 +119,15 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const removed = organizers.find((o) => o.organizerId === id);
     onChangeOrganizers(organizers.filter((o) => o.organizerId !== id));
     message.success(t("Organizer removed"));
 
     if (removed) {
-      setMembers((prev) => [
-        ...prev,
-        {
-          id: removed.organizerId,
-          fullName: removed.fullName || "",
-          username: removed.username || "",
-          email: removed.email || "",
-        },
-      ]);
+      await fetchMembers();
     }
+    console.log("member:", members);
   };
 
   const updateOrganizer = () => {

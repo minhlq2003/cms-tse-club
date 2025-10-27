@@ -13,7 +13,22 @@ import {
 } from "docx";
 import { saveAs } from "file-saver";
 
-// ===== 🧩 Bảng =====
+function formatDateTime(str: string): string {
+  if (!str) return "";
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  const datePart = `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}/${d.getFullYear()}`;
+  const timePart =
+    d.getHours() || d.getMinutes()
+      ? ` ${String(d.getHours()).padStart(2, "0")}:${String(
+          d.getMinutes()
+        ).padStart(2, "0")}`
+      : "";
+  return `${datePart}${timePart}`;
+}
+
 function makeRealTable(headers: string[], rows: any[][]) {
   const border = {
     top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
@@ -24,6 +39,7 @@ function makeRealTable(headers: string[], rows: any[][]) {
 
   return new Table({
     width: { size: 90, type: WidthType.PERCENTAGE },
+    indent: { size: 720, type: WidthType.DXA },
     rows: [
       new TableRow({
         children: headers.map(
@@ -189,7 +205,8 @@ function createFooter(author: string) {
   };
 
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: 90, type: WidthType.PERCENTAGE },
+    indent: { size: 720, type: WidthType.DXA },
     borders: noBorder,
     rows: [
       new TableRow({
@@ -199,6 +216,7 @@ function createFooter(author: string) {
             children: [
               new Paragraph({
                 alignment: AlignmentType.LEFT,
+
                 children: [
                   new TextRun({
                     text: "Khoa CNTT ",
@@ -264,13 +282,16 @@ function createFooter(author: string) {
 }
 
 // ===== 🧩 Xuất Word =====
+// ===== 🧩 Xuất Word (updated) =====
 export async function exportPlanWithTemplate(
   planData: Record<string, any>,
   eventTitle: string,
   orderCategory: string[],
-  author: string
+  author: string,
+  blocksMeta: any[]
 ) {
   const children: any[] = [];
+
   const numbering = {
     config: [
       {
@@ -297,7 +318,7 @@ export async function exportPlanWithTemplate(
           {
             level: 0,
             format: LevelFormat.BULLET,
-            text: "•",
+            text: "–",
             alignment: AlignmentType.LEFT,
             style: {
               paragraph: {
@@ -312,11 +333,11 @@ export async function exportPlanWithTemplate(
     ],
   };
 
-  // Header
+  // ===== Header =====
   children.push(createHeader());
   children.push(new Paragraph({ spacing: { after: 200 } }));
 
-  // Tiêu đề
+  // ===== Tiêu đề & ngày tháng =====
   const today = new Date();
   children.push(
     new Paragraph({
@@ -333,22 +354,35 @@ export async function exportPlanWithTemplate(
       ],
     })
   );
-  children.push(
-    makeCenteredBold("KẾ HOẠCH", 32),
-    makeCenteredBold(`V/v: ${eventTitle}`, 24)
-  );
 
-  // Nội dung theo orderCategory
+  children.push(makeCenteredBold("KẾ HOẠCH", 32));
+  children.push(new Paragraph({ spacing: { after: 30 } }));
+
+  children.push(makeCenteredBold(`V/v: ${eventTitle}`, 26));
+  children.push(new Paragraph({ spacing: { after: 30 } }));
+
+  // ===== Nội dung động theo orderCategory =====
   for (const category of orderCategory) {
-    if (!planData[category]) continue;
+    const blockData = planData[category];
+    if (!blockData) continue;
 
-    // Tiêu đề mục (numbering)
+    // tìm metadata block theo id
+    const meta = (blocksMeta || []).find(
+      (b: any) => b.id === category || b.key === category
+    );
+    const blockTitle = meta?.title || category;
+
+    console.log("category:", category);
+    console.log("blockData:", blockData);
+    console.log("meta:", meta);
+
+    // Tiêu đề block (dùng title)
     children.push(
       new Paragraph({
         numbering: { reference: "main-numbering", level: 0 },
         children: [
           new TextRun({
-            text: category,
+            text: blockTitle,
             bold: true,
             size: 24,
             font: "Times New Roman",
@@ -357,149 +391,263 @@ export async function exportPlanWithTemplate(
       })
     );
 
-    // Nội dung từng mục
-    if (category === "Mục đích") {
-      const content = planData[category]?.["Nội dung"] || "";
-      const lines = content.split(/\r?\n/).filter((l: string) => l.trim());
-      lines.forEach((line: string) => {
-        if (line.trim().startsWith("-")) {
+    if (category === "basic_thoi_gian") {
+      const thoiGian = blockData?.["Thời gian"];
+      const diaDiem = blockData?.["Địa điểm"];
+
+      const bullets: string[] = [];
+
+      if (Array.isArray(thoiGian) && thoiGian.length === 2) {
+        const [start, end] = thoiGian;
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const timeString = `${startDate.toLocaleString(
+          "vi-VN"
+        )} - ${endDate.toLocaleString("vi-VN")}`;
+        bullets.push(`Thời gian: ${timeString}`);
+      }
+
+      if (diaDiem) {
+        bullets.push(`Địa điểm: ${diaDiem}`);
+      }
+
+      if (bullets.length > 0) {
+        for (const b of bullets) {
           children.push(
             new Paragraph({
               numbering: { reference: "bullet-list", level: 0 },
               children: [
                 new TextRun({
-                  text: line.replace(/^[-–•]\s*/, ""),
+                  text: b,
                   size: 24,
                   font: "Times New Roman",
                 }),
               ],
             })
           );
-        } else {
-          children.push(makeParagraph(line));
         }
-      });
+      } else {
+        children.push(makeParagraph("Không có dữ liệu thời gian & địa điểm."));
+      }
+
+      continue; // bỏ qua các xử lý mặc định khác
     }
 
-    if (category === "Thời gian & địa điểm") {
-      const tg = planData[category]?.["Thời gian"] || [];
-      const dd = planData[category]?.["Địa điểm"] || "";
-      children.push(
-        new Paragraph({
-          numbering: { reference: "bullet-list", level: 0 },
-          children: [
-            new TextRun({
-              text: `Thời gian: ${formatTimeRange(tg[0], tg[1])}`,
-              size: 24,
-              font: "Times New Roman",
-            }),
-          ],
-        })
-      );
-      children.push(
-        new Paragraph({
-          numbering: { reference: "bullet-list", level: 0 },
-          children: [
-            new TextRun({
-              text: `Địa điểm: ${dd}`,
-              size: 24,
-              font: "Times New Roman",
-            }),
-          ],
-        })
-      );
+    if (category === "basic_ban_to_chuc") {
+      const list = Array.isArray(blockData?.["Ban tổ chức"])
+        ? blockData["Ban tổ chức"]
+        : [];
+
+      if (list.length > 0) {
+        const headers = ["Vai trò", "Họ và tên", "Chức vụ"];
+        const rows = list.map((item: any) => [
+          item.roleContent || "",
+          item.fullName || "",
+          item.title || "",
+        ]);
+        children.push(makeRealTable(headers, rows));
+      } else {
+        children.push(makeParagraph("Không có dữ liệu ban tổ chức."));
+      }
+      continue; // bỏ qua các xử lý mặc định khác
     }
 
-    if (category === "Kế hoạch di chuyển") {
-      ["Phương tiện", "Giờ khởi hành", "Địa điểm tập trung"].forEach((k) => {
-        const v = planData[category]?.[k] || "";
-        if (v)
-          children.push(
-            new Paragraph({
-              numbering: { reference: "bullet-list", level: 0 },
-              children: [
-                new TextRun({
-                  text: `${k}: ${v}`,
-                  size: 24,
-                  font: "Times New Roman",
-                }),
-              ],
+    let parsedFields: any[] = [];
+    try {
+      if (meta?.block) {
+        parsedFields = JSON.parse(meta.block || "[]");
+      }
+    } catch {
+      parsedFields = [];
+    }
+    if (parsedFields.length > 0) {
+      for (const fieldDef of parsedFields) {
+        const fieldKey = fieldDef.label || fieldDef.id;
+        const value = blockData[fieldKey];
+
+        if (value === undefined || value === null) continue;
+
+        // ===== Table field =====
+        if (fieldDef.type === "Table") {
+          // columns từ fieldDef.columns -> tên hiển thị = name (DynamicTable dùng col.name làm key)
+          const cols = fieldDef.columns || [];
+          const headers = cols.map((c: any) => c.name || c.label || c.id || "");
+          // rows: blockData[fieldKey] là mảng object; ta lấy value theo header key (c.name)
+          const rows = (value || []).map((r: any) =>
+            cols.map((c: any) => {
+              let v = r[c.name];
+              if (c.type?.includes("Date")) v = formatDateTime(v);
+              return v ?? "";
             })
           );
-      });
+          if (rows.length > 0) children.push(makeRealTable(headers, rows));
+          // next field
+          continue;
+        }
+
+        // ===== RangeDate/RangeDateTime (mảng ISO 2 phần tử) =====
+        if (
+          Array.isArray(value) &&
+          value.length === 2 &&
+          typeof value[0] === "string" &&
+          value[0].includes("T")
+        ) {
+          children.push(
+            makeParagraph(`${fieldKey}: ${formatTimeRange(value[0], value[1])}`)
+          );
+          continue;
+        }
+
+        // ===== String -> có thể nhiều dòng -> bullet list từng dòng =====
+        if (typeof value === "string") {
+          const lines = value
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+          if (lines.length === 0) continue;
+
+          // nếu nhiều dòng -> mỗi dòng thành bullet
+          if (lines.length > 1) {
+            for (const line of lines) {
+              // loại bỏ kí tự - đầu dòng nếu có
+              const cleaned = line.replace(/^[-–•]\s*/, "");
+              children.push(
+                new Paragraph({
+                  numbering: { reference: "bullet-list", level: 0 },
+                  children: [
+                    new TextRun({
+                      text: cleaned,
+                      size: 24,
+                      font: "Times New Roman",
+                    }),
+                  ],
+                })
+              );
+            }
+          } else {
+            // 1 dòng -> in theo dạng "Label: value" (hoặc nếu label = 'Nội dung' mà bạn muốn dạng text, vẫn in đầy đủ)
+            children.push(makeParagraph(`${value}`));
+          }
+          continue;
+        }
+
+        // ===== Array of primitives (ví dụ list of strings) => bullet per item =====
+        if (
+          Array.isArray(value) &&
+          value.length > 0 &&
+          typeof value[0] !== "object"
+        ) {
+          for (const it of value) {
+            children.push(
+              new Paragraph({
+                numbering: { reference: "bullet-list", level: 0 },
+                children: [
+                  new TextRun({
+                    text: String(it),
+                    size: 24,
+                    font: "Times New Roman",
+                  }),
+                ],
+              })
+            );
+          }
+          continue;
+        }
+
+        // ===== Object (single) =====
+        if (typeof value === "object" && !Array.isArray(value)) {
+          const text = Object.entries(value)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+          children.push(makeParagraph(`${fieldKey}: ${text}`));
+          continue;
+        }
+      }
+      // done parsed fields
+      continue;
     }
 
-    if (category === "Nội dung chương trình") {
-      const ct = planData[category]?.["Chương trình"] || [];
-      ct.forEach((c: any) =>
+    // Nếu không có parsedFields (ví dụ basic_ban_to_chuc trước đây block="") -> fallback: iterate keys from blockData
+    for (const fieldName of Object.keys(blockData)) {
+      const value = blockData[fieldName];
+      if (value === undefined || value === null) continue;
+
+      // String => multiline => bullets
+      if (typeof value === "string") {
+        const lines = value
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        if (lines.length > 1) {
+          for (const line of lines) {
+            const cleaned = line.replace(/^[-–•]\s*/, "");
+            children.push(
+              new Paragraph({
+                numbering: { reference: "bullet-list", level: 0 },
+                children: [
+                  new TextRun({
+                    text: cleaned,
+                    size: 24,
+                    font: "Times New Roman",
+                  }),
+                ],
+              })
+            );
+          }
+        } else {
+          children.push(makeParagraph(`${value}`));
+        }
+        continue;
+      }
+
+      // Range time
+      if (
+        Array.isArray(value) &&
+        value.length === 2 &&
+        typeof value[0] === "string" &&
+        value[0].includes("T")
+      ) {
         children.push(
-          new Paragraph({
-            numbering: { reference: "bullet-list", level: 0 },
-            children: [
-              new TextRun({
-                text: `${c.Thời_gian || ""} – ${c.Hoạt_động || ""}`,
-                size: 24,
-                font: "Times New Roman",
-              }),
-            ],
-          })
-        )
-      );
-    }
+          makeParagraph(`${fieldName}: ${formatTimeRange(value[0], value[1])}`)
+        );
+        continue;
+      }
 
-    if (category === "Ban tổ chức chương trình") {
-      const list = planData[category]?.["Ban tổ chức"] || [];
-      const rows = list.map((o: any) => [
-        o.roleContent || "",
-        o.fullName || "",
-        o.title || "",
-      ]);
-      children.push(makeRealTable(["Vai trò", "Họ và tên", "Chức vụ"], rows));
-    }
+      // Table-like: array of objects -> build table with headers derived from first row keys
+      if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        typeof value[0] === "object"
+      ) {
+        const headers = Object.keys(value[0]);
+        const rows = value.map((r: any) => headers.map((h) => r[h] ?? ""));
+        children.push(makeRealTable(headers, rows));
+        continue;
+      }
 
-    if (category === "Tiến độ thực hiện chương trình") {
-      const td = planData[category]?.["Tiến độ"] || [];
-      const rows = td.map((t: any) => [
-        t.Thời_gian || "",
-        t.Nội_dung || "",
-        t.Người_thực_hiện || "",
-      ]);
-      children.push(
-        makeRealTable(["Thời gian", "Nội dung", "Người thực hiện"], rows)
-      );
-    }
-
-    if (category === "Kinh phí thực hiện") {
-      const kp = planData[category]?.["Kinh phí"] || [];
-      const rows = kp.map((k: any, i: number) => [
-        (i + 1).toString(),
-        k.Nội_dung || "",
-        k.Đơn_vị || "",
-        k.Thành_tiền || "",
-      ]);
-      children.push(
-        makeRealTable(["STT", "Nội dung", "Đơn vị", "Thành tiền"], rows)
-      );
-    }
-
-    if (category === "Thành phần tham dự") {
-      children.push(makeParagraph(planData[category]?.["Danh sách"] || ""));
+      // object fallback
+      if (typeof value === "object") {
+        const text = Object.entries(value)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ");
+        children.push(makeParagraph(`${fieldName}: ${text}`));
+      } else {
+        children.push(makeParagraph(`${fieldName}: ${String(value)}`));
+      }
     }
   }
 
-  // Footer
+  // ===== Footer =====
   children.push(new Paragraph({ spacing: { before: 400 } }));
   children.push(createFooter(author));
 
-  // Tạo file
+  // ===== Xuất Word =====
   const doc = new Document({
     numbering,
     sections: [
       {
         properties: {
-          page: {
-            margin: { top: 720, bottom: 720, left: 900, right: 720 },
-          },
+          page: { margin: { top: 720, bottom: 720, left: 900, right: 720 } },
         },
         children,
       },

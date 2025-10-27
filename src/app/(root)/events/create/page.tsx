@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, Form } from "antd";
-import { useState } from "react";
-import { Event, Organizer } from "@/constant/types";
+import { useCallback, useEffect, useState } from "react";
+import { BlockTemplate, Event, Organizer } from "@/constant/types";
 import {
   createEvent,
   updateStatusEventByLeader,
@@ -17,38 +17,67 @@ import ListTitle from "@/components/ListTitle";
 import PlanForm from "@/components/PlanForm";
 import { getUser, isLeader } from "@/lib/utils";
 import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
+import { get } from "lodash";
+import PlanBuilderSidebar from "@/components/PlanBuilderSideBar";
+import PlanFormDynamic from "@/components/PlanFormDynamic";
+import { BasicBlocks } from "@/constant/data";
 
 export default function AddEvent() {
   const { t } = useTranslation("common");
   const [form] = Form.useForm();
   const [uploadedImage, setUploadedImage] = useState<string>("");
-  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [organizers, setOrganizers] = useState<Organizer[]>([
+    {
+      ...getUser(),
+      organizerId: getUser().id,
+      roles: ["MODIFY"],
+      roleContent: "Trưởng ban",
+    },
+  ]);
   const [status, setStatus] = useState<string>("PENDING");
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
-    "Mục đích",
-    "Thời gian & địa điểm",
-    "Nội dung chương trình",
-    "Tiến độ thực hiện chương trình",
+    "basic_muc_dich",
+    "basic_thoi_gian",
   ]);
-
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([
+    "basic_muc_dich",
+    "basic_thoi_gian",
+  ]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [planData, setPlanData] = useState<Record<string, any>>({});
 
-  const [categoryOrder, setCategoryOrder] = useState<string[]>([
-    "Mục đích",
-    "Thời gian & địa điểm",
-    "Kế hoạch di chuyển",
-    "Nội dung chương trình",
-    "Ban tổ chức chương trình",
-    "Tiến độ thực hiện chương trình",
-    "Kinh phí thực hiện",
-    "Thành phần tham dự",
-  ]);
+  useEffect(() => {
+    const customRaw = localStorage.getItem("plan_block_templates") || "[]";
+    const custom = JSON.parse(customRaw);
+
+    const basic = BasicBlocks;
+
+    setTemplates([...basic, ...custom]);
+  }, []);
+
+  const handleAddBlock = useCallback(
+    (block: BlockTemplate | "__REMOVE__") => {
+      if (block === "__REMOVE__") return;
+
+      const id = block.id;
+      if (!id) return;
+
+      setSelectedCategories((prev) =>
+        prev.includes(id) ? prev : [...prev, id]
+      );
+      setCategoryOrder((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+      const exists = templates.find((t) => t.id === id);
+      if (!exists) setTemplates((prev) => [...prev, block]);
+    },
+    [templates, setSelectedCategories, setCategoryOrder, setTemplates]
+  );
 
   const onFinish = async (values: Event) => {
     const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
 
-    const locationFromPlan = planData["Thời gian & địa điểm"];
+    const locationFromPlan = planData["basic_thoi_gian"];
     if (locationFromPlan) {
       values.location = {
         destination: locationFromPlan["Địa điểm"] || "",
@@ -66,12 +95,14 @@ export default function AddEvent() {
       title: values.title,
       description: values.description || "none",
       status,
+      limitRegister: values.multiple,
       category: values.category,
       isPublic: true,
       allowedType: allowedType,
       plans: JSON.stringify({
         selected: selectedCategories,
         order: categoryOrder,
+        templates,
         data: planData,
       }),
 
@@ -119,7 +150,7 @@ export default function AddEvent() {
               setUploadedImages={setUploadedImage}
             />
 
-            <PlanForm
+            {/* <PlanForm
               selectedCategories={selectedCategories}
               planData={planData}
               onChange={(updater) => {
@@ -132,6 +163,17 @@ export default function AddEvent() {
               order={categoryOrder}
               form={form}
               organizers={organizers}
+            /> */}
+            <PlanFormDynamic
+              selectedCategories={categoryOrder}
+              organizers={organizers}
+              templates={templates}
+              planData={planData}
+              onChange={(updater) => {
+                if (typeof updater === "function")
+                  setPlanData((prev) => updater(prev));
+                else setPlanData(updater);
+              }}
             />
           </div>
 
@@ -150,17 +192,23 @@ export default function AddEvent() {
                   planData,
                   form.getFieldValue("title") || "KeHoachMoi",
                   categoryOrder,
-                  getUser()?.fullName || "..."
+                  getUser()?.fullName || "...",
+                  BasicBlocks
                 )
               }
             >
               Xuất kế hoạch ra Word (FIT - IUH)
             </Button>
-            <ListTitle
+            {/* <ListTitle
               selected={selectedCategories}
               onChange={setSelectedCategories}
               order={categoryOrder}
               setOrder={setCategoryOrder}
+            /> */}
+            <PlanBuilderSidebar
+              order={categoryOrder}
+              setOrder={setCategoryOrder}
+              onAddBlock={handleAddBlock}
             />
 
             <EventOrganizers

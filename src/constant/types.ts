@@ -429,7 +429,7 @@ export interface PostResponse {
 }
 
 export interface Post {
-  id?: number;
+  id?: string;
   title?: string;
   slug?: string;
   content?: string;
@@ -440,6 +440,8 @@ export interface Post {
   image?: string;
   excerpt?: string;
   writer?: Member;
+  featureImageName?: string;
+  eventId?: string;
 }
 
 export interface CategoryOption {
@@ -510,3 +512,43 @@ export interface Member {
   nickname?: string | null;
   userUrl?: string;
 }
+
+export interface BlockTemplate {
+  id: string; // uuid
+  title: string;
+  type: "basic" | "custom";
+  block: string; // JSON string của các field
+}
+
+export interface FieldTemplate {
+  id: string;
+  label?: string;
+  placeholder?: string;
+  type:
+    | "Text"
+    | "Number"
+    | "TextArea"
+    | "Date"
+    | "DateTime"
+    | "RangeDate"
+    | "RangeDateTime"
+    | "Table";
+  columns?: ColumnTemplate[]; // nếu là Table
+}
+
+export interface ColumnTemplate {
+  id: string;
+  name: string; // tên cột
+  dataIndex?: string; // key dữ liệu
+  type: "Text" | "Number" | "Date" | "DateTime" | "RangeDate" | "RangeDateTime";
+}
+
+export type FieldType =
+  | "Text"
+  | "Number"
+  | "TextArea"
+  | "Date"
+  | "DateTime"
+  | "RangeDate"
+  | "RangeDateTime"
+  | "Table";

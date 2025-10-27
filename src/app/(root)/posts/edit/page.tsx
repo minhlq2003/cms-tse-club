@@ -4,13 +4,18 @@ import { Form, Spin } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { Post } from "@/constant/types";
-import { getPostById, updatePost } from "@/modules/services/postService";
+import {
+  approvePostByLeader,
+  getPostById,
+  updatePost,
+} from "@/modules/services/postService";
 import { useTranslation } from "react-i18next";
 import PostForm from "@/modules/post/PostForm";
 import FeaturedImage from "@/modules/post/FeaturedImage";
 import Categories from "@/modules/post/Categories";
 import { toast } from "sonner";
 import Publish from "@/components/Publish";
+import { isLeader } from "@/lib/utils";
 
 const EditPost = () => {
   const { t } = useTranslation("common");
@@ -23,6 +28,7 @@ const EditPost = () => {
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<string>("PENDING");
+  const [eventId, setEventId] = useState<string>("");
   const fetchPost = useCallback(
     async (id: string) => {
       setLoading(true);
@@ -32,7 +38,7 @@ const EditPost = () => {
         if (data) {
           setPost(data);
           form.setFieldsValue(data);
-          setUploadedImage(data.image || "");
+          setUploadedImage(data.featureImageName || "");
           const categoriesArray = data.category
             ? data.category.split(",")?.map((cat: string) => cat.trim())
             : [];
@@ -56,20 +62,27 @@ const EditPost = () => {
       ...values,
       title: values.title,
       slug,
+      status: status,
       content: values.content,
       category: categoryString,
-      status: values.status ? "draft" : "published",
-      image: uploadedImage,
+      featureImageName: uploadedImage,
+      eventId: eventId || undefined,
     };
 
     try {
-      if (id) {
-        await updatePost(id, dataPayload);
-        toast.success(t("Post updated successfully!"));
+      const response = await updatePost(id || "", dataPayload);
+
+      if (response && response.id) {
+        if (isLeader()) {
+          if (status === "PENDING") {
+            approvePostByLeader(String(response.id));
+          }
+        }
+        toast.success(t("Post added successfully!"));
         form.resetFields();
-        router.push("/posts");
+        setUploadedImage("");
       } else {
-        toast.error(t("Invalid post ID."));
+        toast.error(t("Failed to add post. Please try again."));
       }
     } catch {
       toast.error(t("Failed to update post. Please try again."));
@@ -107,6 +120,10 @@ const EditPost = () => {
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
                 status={status}
+                type="post"
+                postId={id || ""}
+                eventId={eventId}
+                setEventId={setEventId}
               />
               <FeaturedImage
                 selectedMedia={uploadedImage}

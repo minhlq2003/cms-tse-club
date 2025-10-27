@@ -133,6 +133,16 @@ export default function ListEvent({ filters }: ListEventProps) {
       ),
     },
     {
+      title: t("Attendees"),
+      dataIndex: "currentRegistered",
+      key: "currentRegistered",
+      render: (count: number, record: Event) => (
+        <span>
+          {count} / {record.limitRegister}
+        </span>
+      ),
+    },
+    {
       title: t("Start Time"),
       dataIndex: ["location", "startTime"],
       key: "startTime",
@@ -175,7 +185,7 @@ export default function ListEvent({ filters }: ListEventProps) {
             {t("Edit")}
           </Button>
           <Button onClick={() => router.push(`/events/view?id=${record.id}`)}>
-            View
+            Xem
           </Button>
 
           {isLeader() && record.status === "PENDING" && (

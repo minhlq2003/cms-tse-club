@@ -101,10 +101,8 @@ export default function PlanForm({
       const current = prev["Ban tổ chức chương trình"] || {};
       const currentList = current["Ban tổ chức"] || [];
 
-      // Tạo map để tránh trùng organizerId
       const mergedMap = new Map<string, any>();
 
-      // 1. Thêm các organizer hiện có từ props
       organizers.forEach((o) => {
         mergedMap.set(o.organizerId, {
           key: o.organizerId,
@@ -117,7 +115,6 @@ export default function PlanForm({
         });
       });
 
-      // 2. Giữ lại các dòng thêm thủ công (không có organizerId)
       currentList
         .filter((r: any) => !r.organizerId)
         .forEach((r: any) => {

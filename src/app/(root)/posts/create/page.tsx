@@ -15,10 +15,13 @@ import { toast } from "sonner";
 import Publish from "@/components/Publish";
 import { getRoleUser, isLeader } from "@/lib/utils";
 import { log } from "node:console";
+import { useSearchParams } from "next/navigation";
 
 export default function AddPost() {
   const { t } = useTranslation("common");
   const [form] = Form.useForm();
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("eventId");
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<string>("PENDING");
@@ -32,11 +35,12 @@ export default function AddPost() {
       title: values.title,
       content: values.content,
       status: status,
+      featureImageName: uploadedImage,
+      eventId: eventId || undefined,
     };
 
     try {
       const response = await createPost(dataPayload);
-      console.log("response:", response);
 
       if (response && response.id) {
         if (isLeader()) {
@@ -63,18 +67,22 @@ export default function AddPost() {
         </h1>
 
         <div className="flex justify-between w-full">
-          <PostForm
-            form={form}
-            onFinish={onFinish}
-            uploadedImages={uploadedImage}
-            setUploadedImages={setUploadedImage}
-          />
+          <div className="flex w-full md:w-[78%]">
+            <PostForm
+              form={form}
+              onFinish={onFinish}
+              uploadedImages={uploadedImage}
+              setUploadedImages={setUploadedImage}
+            />
+          </div>
 
           <div className="w-[22%] pl-5">
             <Publish
               onSubmit={() => onFinish(form.getFieldsValue())}
               setStatus={setStatus}
               status={status}
+              type="post"
+              eventId={eventId || ""}
             />
             <FeaturedImage
               selectedMedia={uploadedImage}

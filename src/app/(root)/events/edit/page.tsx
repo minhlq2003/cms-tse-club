@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Event, Organizer } from "@/constant/types";
+import { BlockTemplate, Event, Organizer, Post } from "@/constant/types";
 import dayjs from "dayjs";
 
 import {
@@ -18,9 +18,11 @@ import EventOrganizers from "@/modules/event/EventOrganizers";
 import Publish from "@/components/Publish";
 import EventAttendees from "@/modules/event/Attendee";
 import { getUser, isLeader } from "@/lib/utils";
-import ListTitle from "@/components/ListTitle";
-import PlanForm from "@/components/PlanForm";
 import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
+
+import PlanFormDynamic from "@/components/PlanFormDynamic";
+import PlanBuilderSidebar from "@/components/PlanBuilderSideBar";
+import { BasicBlocks } from "@/constant/data";
 
 const EditEvent = () => {
   const { t } = useTranslation("common");
@@ -33,19 +35,40 @@ const EditEvent = () => {
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [status, setStatus] = useState<string>("PENDING");
+  const [post, setPost] = useState<Post | undefined>(undefined);
 
+  // --- Plan builder states ---
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [order, setOrder] = useState<string[]>([
-    "Mục đích",
-    "Thời gian & địa điểm",
-    "Kế hoạch di chuyển",
-    "Nội dung chương trình",
-    "Tiến độ thực hiện chương trình",
-    "Ban tổ chức chương trình",
-    "Kinh phí thực hiện",
-  ]);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [planData, setPlanData] = useState<Record<string, any>>({});
 
+  // Load basic + custom templates
+  useEffect(() => {
+    const customRaw = localStorage.getItem("plan_block_templates") || "[]";
+    const custom = JSON.parse(customRaw);
+    setTemplates([...BasicBlocks, ...custom]);
+  }, []);
+
+  // Handle add new block to sidebar
+  const handleAddBlock = useCallback(
+    (block: BlockTemplate | "__REMOVE__") => {
+      if (block === "__REMOVE__") return;
+      const id = block.id;
+      if (!id) return;
+
+      setSelectedCategories((prev) =>
+        prev.includes(id) ? prev : [...prev, id]
+      );
+      setCategoryOrder((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+      const exists = templates.find((t) => t.id === id);
+      if (!exists) setTemplates((prev) => [...prev, block]);
+    },
+    [templates]
+  );
+
+  // Fetch event data
   const fetchEvent = useCallback(
     async (id: string) => {
       setLoading(true);
@@ -67,6 +90,7 @@ const EditEvent = () => {
 
           form.setFieldsValue(formattedData);
           setUploadedImage(data.image || "");
+          setPost(data.eventPost || undefined);
 
           setOrganizers(
             Array.isArray(data.organizers)
@@ -81,13 +105,14 @@ const EditEvent = () => {
               : []
           );
 
-          // Kế hoạch (nếu có)
+          // parse plan
           if (data.plans) {
             try {
               const parsed = JSON.parse(data.plans);
               setPlanData(parsed.data || {});
               setSelectedCategories(parsed.selected || []);
-              setOrder(order);
+              setCategoryOrder(parsed.order || []);
+              if (parsed.templates) setTemplates(parsed.templates);
             } catch {
               setPlanData({});
             }
@@ -101,8 +126,9 @@ const EditEvent = () => {
     [form, t]
   );
 
+  // Submit
   const onFinish = async (values: Event) => {
-    const locationFromPlan = planData["Thời gian & địa điểm"];
+    const locationFromPlan = planData["basic_thoi_gian"];
     if (locationFromPlan) {
       values.location = {
         destination: locationFromPlan["Địa điểm"] || "",
@@ -114,6 +140,7 @@ const EditEvent = () => {
     const allowedType = Array.isArray(values.allowedArray)
       ? values.allowedArray.reduce((acc, val) => acc + val, 0)
       : 0;
+
     const dataPayload: Event = {
       ...values,
       limitRegister: values.multiple,
@@ -128,7 +155,8 @@ const EditEvent = () => {
       })),
       plans: JSON.stringify({
         selected: selectedCategories,
-        order,
+        order: categoryOrder,
+        templates,
         data: planData,
       }),
     };
@@ -155,6 +183,7 @@ const EditEvent = () => {
     if (id) fetchEvent(id);
   }, [id, fetchEvent]);
 
+  // --- JSX ---
   return (
     <div className="min-h-[85vh] bg-white flex flex-col items-center justify-start rounded-lg shadow-sm gap-4 px-4 pt-10">
       {loading ? (
@@ -168,6 +197,7 @@ const EditEvent = () => {
           </h1>
 
           <div className="flex flex-col lg:flex-row justify-between w-full gap-6">
+            {/* MAIN FORM */}
             <div className="w-full lg:w-[78%] space-y-6">
               <EventForm
                 form={form}
@@ -176,22 +206,30 @@ const EditEvent = () => {
                 setUploadedImages={setUploadedImage}
               />
 
-              <PlanForm
-                selectedCategories={selectedCategories}
-                planData={planData}
-                onChange={setPlanData}
-                order={order}
-                form={form}
+              <PlanFormDynamic
+                selectedCategories={categoryOrder}
                 organizers={organizers}
+                templates={templates}
+                planData={planData}
+                onChange={(updater) => {
+                  if (typeof updater === "function")
+                    setPlanData((prev) => updater(prev));
+                  else setPlanData(updater);
+                }}
               />
             </div>
 
-            <div className="w-full lg:w-[22%]">
+            {/* SIDEBAR */}
+            <div className="w-full lg:w-[22%] space-y-4">
               <Publish
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
                 status={status}
+                type="event"
+                eventId={id || ""}
+                postId={post?.id}
               />
+
               <Button
                 type="primary"
                 className="!mb-4 w-full"
@@ -199,18 +237,19 @@ const EditEvent = () => {
                   exportPlanWithTemplate(
                     planData,
                     form.getFieldValue("title") || "KeHoachMoi",
-                    order,
-                    getUser()?.fullName || "..."
+                    categoryOrder,
+                    getUser()?.fullName || "...",
+                    BasicBlocks
                   )
                 }
               >
                 Xuất kế hoạch ra Word (FIT - IUH)
               </Button>
-              <ListTitle
-                selected={selectedCategories}
-                onChange={setSelectedCategories}
-                order={order}
-                setOrder={setOrder}
+
+              <PlanBuilderSidebar
+                order={categoryOrder}
+                setOrder={setCategoryOrder}
+                onAddBlock={handleAddBlock}
               />
 
               <EventOrganizers
@@ -218,6 +257,7 @@ const EditEvent = () => {
                 onChangeOrganizers={setOrganizers}
                 eventId={id || ""}
               />
+
               <EventAttendees
                 startTime={form.getFieldValue(["location", "startTime"])}
                 endTime={form.getFieldValue(["location", "endTime"])}
