@@ -219,12 +219,19 @@ function createFooter(author: string) {
 
                 children: [
                   new TextRun({
-                    text: "Khoa CNTT ",
+                    text: "Chủ nhiệm CLB",
                     bold: true,
                     font: "Times New Roman",
+                    size: 24,
                   }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+
+                children: [
                   new TextRun({
-                    text: "(duyệt)",
+                    text: "   (duyệt)",
                     italics: true,
                     size: 24,
                     font: "Times New Roman",

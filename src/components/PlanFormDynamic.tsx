@@ -12,6 +12,8 @@ import {
   Organizer,
 } from "@/constant/types";
 import Title from "antd/es/typography/Title";
+import { BasicBlocks } from "@/constant/data";
+import { toast } from "sonner";
 
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
@@ -33,6 +35,7 @@ export default function PlanFormDynamic({
   readonly = false,
   organizers = [],
 }: PlanFormDynamicProps) {
+  const basicIds = ["basic_muc_dich", "basic_noi_dung", "basic_tien_do"];
   const getTemplateById = (id: string) =>
     templates.find((t) => t.id === id) || null;
 
@@ -85,42 +88,41 @@ export default function PlanFormDynamic({
   useEffect(() => {
     if (!organizers || organizers.length === 0 || !onChange) return;
 
-    onChange((prev: any) => {
-      const blockId = "basic_ban_to_chuc";
-      const currentBlock = prev?.[blockId] || {};
-      const currentList = currentBlock["Ban tổ chức"] || [];
+    const blockId = "basic_ban_to_chuc";
+    const currentBlock = planData?.[blockId] || {};
+    const currentList = currentBlock["Ban tổ chức"] || [];
 
-      const mergedMap = new Map<string, any>();
-
-      // thêm organizers mới hoặc cập nhật organizer cũ
-      organizers.forEach((o) => {
-        mergedMap.set(o.organizerId, {
-          key: o.organizerId,
-          organizerId: o.organizerId,
-          roleContent: o.roleContent || "",
-          fullName: o.fullName || "",
-          title:
-            currentList.find((r: any) => r.organizerId === o.organizerId)
-              ?.title || "",
-        });
+    const mergedMap = new Map<string, any>();
+    organizers.forEach((o) => {
+      mergedMap.set(o.organizerId, {
+        key: o.organizerId,
+        organizerId: o.organizerId,
+        roleContent: o.roleContent || "",
+        fullName: o.fullName || "",
+        title:
+          currentList.find((r: any) => r.organizerId === o.organizerId)
+            ?.title || "",
       });
+    });
+    currentList
+      .filter((r: any) => !r.organizerId)
+      .forEach((r: any) => mergedMap.set(r.key, r));
 
-      // giữ lại các dòng tự thêm (chưa có organizerId)
-      currentList
-        .filter((r: any) => !r.organizerId)
-        .forEach((r: any) => mergedMap.set(r.key, r));
+    const mergedList = Array.from(mergedMap.values());
 
-      const mergedList = Array.from(mergedMap.values());
+    // 🧠 So sánh để tránh update vô ích (và vòng lặp)
+    const isEqual = JSON.stringify(currentList) === JSON.stringify(mergedList);
 
-      return {
+    if (!isEqual) {
+      onChange((prev: any) => ({
         ...prev,
         [blockId]: {
           ...currentBlock,
           ["Ban tổ chức"]: mergedList,
         },
-      };
-    });
-  }, [organizers, onChange]);
+      }));
+    }
+  }, [organizers]);
 
   const renderField = (blockId: string, field: FieldTemplate) => {
     const key = field.label || field.id;
@@ -207,6 +209,34 @@ export default function PlanFormDynamic({
     const data = planData[blockId] || {};
 
     if (blockId === "basic_thoi_gian") {
+      const handleTimeChange = (val: any) => {
+        if (!val || !val[0] || !val[1]) {
+          toast.warning("Vui lòng chọn đầy đủ thời gian bắt đầu và kết thúc!");
+          return;
+        }
+
+        const now = dayjs();
+        const start = dayjs(val[0]);
+
+        if (start.isBefore(now, "minute")) {
+          toast.error("Thời gian bắt đầu phải sau thời điểm hiện tại!");
+          return;
+        }
+
+        setValue(blockId, "Thời gian", [
+          val[0].toISOString(),
+          val[1].toISOString(),
+        ]);
+      };
+
+      const handleLocationChange = (e: any) => {
+        const val = e.target.value;
+        if (!val.trim()) {
+          toast.warning("Vui lòng nhập địa điểm tổ chức!");
+        }
+        setValue(blockId, "Địa điểm", val);
+      };
+
       return (
         <div className="space-y-2">
           <RangePicker
@@ -218,18 +248,13 @@ export default function PlanFormDynamic({
                 ? [dayjs(data["Thời gian"][0]), dayjs(data["Thời gian"][1])]
                 : undefined
             }
-            onChange={(val) =>
-              setValue(blockId, "Thời gian", [
-                val?.[0]?.toISOString(),
-                val?.[1]?.toISOString(),
-              ])
-            }
+            onChange={handleTimeChange}
             disabled={readonly}
           />
           <Input
             placeholder="Địa điểm tổ chức (VD: FPT Software HCM...)"
             value={data?.["Địa điểm"] || ""}
-            onChange={(e) => setValue(blockId, "Địa điểm", e.target.value)}
+            onChange={handleLocationChange}
             disabled={readonly}
           />
         </div>
@@ -369,10 +394,22 @@ export default function PlanFormDynamic({
 
         // Các block còn lại => render từ template JSON
         let fields: FieldTemplate[] = [];
-        try {
-          fields = JSON.parse(t.block || "[]");
-        } catch {
-          console.error("Invalid block JSON:", t.block);
+        if (basicIds.includes(t.id)) {
+          const matched = BasicBlocks.find((b) => b.id === t.id);
+          if (matched) {
+            try {
+              fields = JSON.parse(matched.block || "[]");
+            } catch {
+              console.error("Invalid BasicBlock JSON:", matched.block);
+            }
+          }
+        } else {
+          // ⚙️ Nếu không phải basic block → lấy từ template JSON của t
+          try {
+            fields = JSON.parse(t.block || "[]");
+          } catch {
+            console.error("Invalid block JSON:", t.block);
+          }
         }
 
         return (
@@ -382,12 +419,13 @@ export default function PlanFormDynamic({
           >
             <Title level={5}>{t.title}</Title>
             <div className="space-y-3">
-              {fields.map((f) => (
-                <div key={f.id}>
-                  <div className="mb-2 font-medium">{f.label || ""}</div>
-                  {renderField(t.id, f)}
-                </div>
-              ))}
+              {Array.isArray(fields) &&
+                fields?.map((f) => (
+                  <div key={f.id}>
+                    <div className="mb-2 font-medium">{f.label || ""}</div>
+                    {renderField(t.id, f)}
+                  </div>
+                ))}
             </div>
           </div>
         );

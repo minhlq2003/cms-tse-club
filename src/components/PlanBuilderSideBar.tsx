@@ -27,9 +27,12 @@ import {
   createBlockTemplate,
   getBlockTemplates,
   getEventTemplates,
+  getEventTemplateById,
   createEventTemplate,
+  deleteEventTemplate,
 } from "@/modules/services/templateService";
 import PlanFormDynamic from "./PlanFormDynamic";
+import { formatDate, getUser } from "@/lib/utils";
 
 const { Title } = Typography;
 
@@ -53,14 +56,13 @@ export default function PlanBuilderSidebar({
   const [selectedPreview, setSelectedPreview] = useState<BlockTemplate | null>(
     null
   );
-
   const [saveTemplateModal, setSaveTemplateModal] = useState(false);
   const [templateTitle, setTemplateTitle] = useState("");
-
   const [chooseTemplateModal, setChooseTemplateModal] = useState(false);
   const [templates, setTemplates] = useState<EventTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] =
     useState<EventTemplate | null>(null);
+  const [templateBlocks, setTemplateBlocks] = useState<BlockTemplate[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -125,7 +127,6 @@ export default function PlanBuilderSidebar({
     onAddBlock?.("__REMOVE__");
   };
 
-  // 🧱 Lưu Template
   const handleSaveTemplate = async () => {
     if (!templateTitle.trim()) return;
     const data: EventTemplate = {
@@ -137,7 +138,6 @@ export default function PlanBuilderSidebar({
     setTemplateTitle("");
   };
 
-  // 📂 Chọn Template
   const handleOpenChooseTemplate = async () => {
     try {
       const res = await getEventTemplates();
@@ -149,9 +149,36 @@ export default function PlanBuilderSidebar({
     }
   };
 
+  const handlePreviewTemplate = async (template: EventTemplate) => {
+    try {
+      const res = await getEventTemplateById(template.id || "");
+      const detail = res as EventTemplate;
+      const blocks = detail.blocks || [];
+      const mappedBlocks: BlockTemplate[] = blocks.map((b) => ({
+        id: b.id,
+        title: b.title,
+        block: b.block,
+        createdAt: b.createdAt,
+        lastModifiedTime: b.lastModifiedTime,
+        type: "custom",
+      }));
+      setSelectedTemplate(detail);
+      setTemplateBlocks(mappedBlocks);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleChooseTemplate = async () => {
+    if (!selectedTemplate) return;
+    const blocks = selectedTemplate.blocks || [];
+    const ids = blocks.map((b) => b.id);
+    setOrder(ids);
+    setChooseTemplateModal(false);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      {/* 🔹 Header */}
       <div className="flex justify-between items-center px-4 py-2 border-b border-gray-300">
         <Title level={4} className="!m-0">
           {t("Template Plan")}
@@ -163,10 +190,11 @@ export default function PlanBuilderSidebar({
         />
       </div>
 
-      {/* 🔹 Content */}
       {visible && (
         <div className="p-4">
-          <p className="font-semibold">Mẫu cơ bản</p>
+          <p className="font-semibold">
+            {selectedTemplate ? `${selectedTemplate.title}` : "Mẫu cơ bản"}
+          </p>
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="plan-order-droppable">
               {(provided) => (
@@ -188,14 +216,18 @@ export default function PlanBuilderSidebar({
                               snapshot.isDragging ? "bg-blue-50" : "bg-gray-50"
                             }`}
                           >
-                            <div>{block ? block.title : id}</div>
-                            <Button
-                              size="small"
-                              danger
-                              onClick={() => handleRemoveBlock(id)}
-                            >
-                              Xóa
-                            </Button>
+                            <div className="min-h-[22px]">
+                              {block ? block.title : id}
+                            </div>
+                            {id !== "basic_thoi_gian" && (
+                              <Button
+                                size="small"
+                                danger
+                                onClick={() => handleRemoveBlock(id)}
+                              >
+                                Xóa
+                              </Button>
+                            )}
                           </div>
                         )}
                       </Draggable>
@@ -237,14 +269,12 @@ export default function PlanBuilderSidebar({
         </div>
       )}
 
-      {/* 🔹 Modal tạo block */}
       <ModalCreateBlock
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreate={handleCreate}
       />
 
-      {/* 🔹 Modal chọn block */}
       <Modal
         open={selectModalOpen}
         onCancel={() => setSelectModalOpen(false)}
@@ -262,29 +292,39 @@ export default function PlanBuilderSidebar({
                 <div>
                   <List
                     dataSource={BasicBlocks}
-                    renderItem={(b) => (
-                      <List.Item
-                        actions={[
-                          <Button
-                            type="link"
-                            onClick={() => setSelectedPreview(b)}
-                            icon={<EyeOutlined />}
-                            key="preview"
-                          >
-                            Xem
-                          </Button>,
-                          <Button
-                            type="primary"
-                            onClick={() => handleAddBlock(b)}
-                            key="choose"
-                          >
-                            Chọn
-                          </Button>,
-                        ]}
-                      >
-                        {b.title}
-                      </List.Item>
-                    )}
+                    renderItem={(b) => {
+                      const isSelected = order.includes(b.id);
+                      const isPreviewed = selectedPreview?.id === b.id;
+                      return (
+                        <List.Item
+                          className={`border-b border-gray-100 p-2 ${
+                            isPreviewed ? "bg-blue-50 rounded" : ""
+                          }`}
+                          actions={[
+                            <Button
+                              type="link"
+                              onClick={() => setSelectedPreview(b)}
+                              icon={<EyeOutlined />}
+                              key="preview"
+                            >
+                              Xem
+                            </Button>,
+                            <Button
+                              type="primary"
+                              disabled={isSelected}
+                              onClick={() => handleAddBlock(b)}
+                              key="choose"
+                            >
+                              {isSelected ? "Đã chọn" : "Chọn"}
+                            </Button>,
+                          ]}
+                        >
+                          <div>
+                            <p className="!font-semibold ml-3">{b.title}</p>
+                          </div>
+                        </List.Item>
+                      );
+                    }}
                   />
                   <Divider />
                   {selectedPreview && (
@@ -309,30 +349,48 @@ export default function PlanBuilderSidebar({
               children: (
                 <div>
                   <List
-                    dataSource={Array.isArray(apiBlocks) ? apiBlocks : []}
-                    renderItem={(b) => (
-                      <List.Item
-                        actions={[
-                          <Button
-                            type="link"
-                            onClick={() => setSelectedPreview(b)}
-                            icon={<EyeOutlined />}
-                            key="preview"
-                          >
-                            Xem
-                          </Button>,
-                          <Button
-                            type="primary"
-                            onClick={() => handleAddBlock(b)}
-                            key="choose"
-                          >
-                            Chọn
-                          </Button>,
-                        ]}
-                      >
-                        {b.title}
-                      </List.Item>
-                    )}
+                    dataSource={apiBlocks}
+                    renderItem={(b) => {
+                      const isSelected = order.includes(b.id);
+                      const isPrev = selectedPreview?.id === b.id;
+                      return (
+                        <List.Item
+                          className={`border-b border-gray-100 p-2 ${
+                            isPrev ? "bg-blue-50 rounded" : ""
+                          }`}
+                          actions={[
+                            <Button
+                              type="link"
+                              onClick={() => setSelectedPreview(b)}
+                              icon={<EyeOutlined />}
+                              key="preview"
+                            >
+                              Xem
+                            </Button>,
+                            <Button
+                              type="primary"
+                              disabled={isSelected}
+                              onClick={() => handleAddBlock(b)}
+                              key="choose"
+                            >
+                              {isSelected ? "Đã chọn" : "Chọn"}
+                            </Button>,
+                          ]}
+                        >
+                          <div className="flex justify-start gap-2">
+                            <p className="!font-semibold mx-3">{b.title}</p>
+                            {t("uploaded by")}
+                            <p className="!font-semibold mr-3">
+                              {b.author?.fullName}
+                            </p>
+                            {t("at")}{" "}
+                            <p className="!font-semibold">
+                              {formatDate(b.createdAt || "").formattedDate}
+                            </p>
+                          </div>
+                        </List.Item>
+                      );
+                    }}
                   />
                   <Divider />
                   {selectedPreview && (
@@ -384,51 +442,97 @@ export default function PlanBuilderSidebar({
         open={chooseTemplateModal}
         onCancel={() => setChooseTemplateModal(false)}
         title="Chọn Template"
-        footer={null}
-        width={900}
+        width={1000}
+        footer={[
+          <Button key="cancel" onClick={() => setChooseTemplateModal(false)}>
+            Hủy
+          </Button>,
+          <Button
+            key="choose"
+            type="primary"
+            onClick={handleChooseTemplate}
+            disabled={!selectedTemplate}
+          >
+            Chọn Template
+          </Button>,
+        ]}
       >
         <div className="grid grid-cols-3 gap-3">
-          <div className="border rounded p-2 h-[400px] overflow-y-auto">
+          {/* Danh sách template */}
+          <div className="border rounded p-2 h-[600px] overflow-y-auto">
             <List
               dataSource={templates}
-              renderItem={(t) => (
-                <List.Item
-                  actions={[
-                    <Button
-                      type="link"
-                      onClick={() => setSelectedTemplate(t)}
-                      icon={<EyeOutlined />}
-                      key="preview"
-                    >
-                      Xem
-                    </Button>,
-                    <Button
-                      type="primary"
-                      onClick={() => setOrder(t.blockTemplateIds)}
-                      key="choose"
-                    >
-                      Chọn
-                    </Button>,
-                  ]}
-                >
-                  {t.title}
-                </List.Item>
-              )}
+              renderItem={(t) => {
+                const isSelected = selectedTemplate?.id === t.id;
+                const currentUser = getUser(); // ✅ lấy user hiện tại
+                const isAuthor = currentUser && t.author?.id === currentUser.id;
+
+                return (
+                  <List.Item
+                    className={`border-b border-gray-100 py-2 ${
+                      isSelected ? "bg-blue-50 rounded" : ""
+                    }`}
+                  >
+                    <div className="flex flex-col px-3">
+                      <p className="font-medium text-gray-800">{t.title}</p>
+                      {t.author?.fullName && (
+                        <p className="text-gray-500 text-sm">
+                          Tác giả: {t.author.fullName}
+                        </p>
+                      )}
+                      {t.createdAt && (
+                        <p className="text-gray-400 text-xs">
+                          {new Date(t.createdAt).toLocaleString("vi-VN")}
+                        </p>
+                      )}
+                      <div className="flex flex-row">
+                        <Button
+                          type="link"
+                          onClick={() => handlePreviewTemplate(t)}
+                          icon={<EyeOutlined />}
+                          key="preview"
+                        >
+                          Xem
+                        </Button>
+                        {isAuthor && (
+                          <div>
+                            <Button type="link">Sửa</Button>
+                            <Button
+                              danger
+                              type="link"
+                              onClick={async () => {
+                                await deleteEventTemplate(t.id || "");
+                                const res = await getEventTemplates();
+                                const list =
+                                  res._embedded?.eventTemplateResponseDtoList ||
+                                  [];
+                                setTemplates(list);
+                              }}
+                              key="delete"
+                            >
+                              Xóa
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </List.Item>
+                );
+              }}
             />
           </div>
 
-          <div className="col-span-2 border rounded p-2 h-[400px] overflow-y-auto">
+          {/* Preview template */}
+          <div className="col-span-2 border rounded p-2 h-[600px] overflow-y-auto">
             {selectedTemplate ? (
               <PlanFormDynamic
-                selectedCategories={selectedTemplate.blockTemplateIds}
-                templates={allBlocks.filter((b) =>
-                  selectedTemplate.blockTemplateIds?.includes(b.id)
-                )}
+                selectedCategories={templateBlocks.map((b) => b.id)}
+                templates={[...templateBlocks, ...BasicBlocks]}
                 planData={{}}
                 readonly
               />
             ) : (
-              <p className="text-gray-400 italic">
+              <p className="text-gray-400 italic text-center mt-20">
                 Chọn một template để xem preview
               </p>
             )}

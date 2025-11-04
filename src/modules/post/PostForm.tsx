@@ -117,7 +117,7 @@ const PostForm: React.FC<PostFormProps> = ({
             onBlur={handleNameBlur}
           />
         </Form.Item>
-        <div className="flex w-full">
+        {/* <div className="flex w-full">
           <Form.Item
             className="w-1/2 mr-4"
             name="slug"
@@ -145,7 +145,7 @@ const PostForm: React.FC<PostFormProps> = ({
               {t("Edit")}
             </Button>
           </div>
-        </div>
+        </div> */}
         <Form.Item>
           <Button
             icon={<CameraOutlined />}

@@ -21,6 +21,7 @@ import { get } from "lodash";
 import PlanBuilderSidebar from "@/components/PlanBuilderSideBar";
 import PlanFormDynamic from "@/components/PlanFormDynamic";
 import { BasicBlocks } from "@/constant/data";
+import dayjs from "dayjs";
 
 export default function AddEvent() {
   const { t } = useTranslation("common");
@@ -80,10 +81,29 @@ export default function AddEvent() {
     const locationFromPlan = planData["basic_thoi_gian"];
     if (locationFromPlan) {
       values.location = {
-        destination: locationFromPlan["Địa điểm"] || "",
-        startTime: locationFromPlan["Thời gian"]?.[0] || "",
-        endTime: locationFromPlan["Thời gian"]?.[1] || "",
+        destination: locationFromPlan["Địa điểm"],
+        startTime: locationFromPlan["Thời gian"]?.[0],
+        endTime: locationFromPlan["Thời gian"]?.[1],
       };
+      if (
+        values.location.startTime === null ||
+        values.location.endTime === null ||
+        values.location.destination === null
+      ) {
+        toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+        return;
+      } else if (
+        dayjs(values.location.startTime).isBefore(
+          dayjs(values.location.endTime),
+          "day"
+        )
+      ) {
+        toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+        return;
+      }
+    } else {
+      toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+      return;
     }
 
     const allowedType = Array.isArray(values.allowedArray)

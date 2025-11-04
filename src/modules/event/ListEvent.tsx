@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { getUser, isLeader } from "@/lib/utils";
 import { max } from "lodash";
+import { title } from "node:process";
 
 interface ListEventProps {
   filters?: {
@@ -110,44 +111,70 @@ export default function ListEvent({ filters }: ListEventProps) {
 
   const columns = [
     {
-      title: t("Title"),
+      title: t("Sự kiện"),
       dataIndex: "title",
       key: "title",
       width: "25%",
-      render: (text: string) => (
-        <span className="font-semibold break-all max-w-[300px]">{text}</span>
+      render: (text: string, record: Event) => (
+        <div>
+          <span className="font-semibold break-before-all max-w-[300px]">
+            {text}
+          </span>
+          <div className="mt-2 flex gap-10">
+            <p>{record.category}</p>
+            <p>
+              Số lượng đăng ký: {record.currentRegistered}/
+              {record.limitRegister}
+            </p>
+          </div>
+        </div>
       ),
     },
+    // {
+    //   title: t("Category"),
+    //   dataIndex: "category",
+    //   key: "category",
+    // },
+    // {
+    //   title: t("Location"),
+    //   dataIndex: ["location", "destination"],
+    //   key: "destination",
+    //   width: "20%",
+    //   render: (text: string) => (
+    //     <span className="break-after-all !max-w-[300px]">{text}</span>
+    //   ),
+    // },
+    // {
+    //   title: t("Attendees"),
+    //   dataIndex: "currentRegistered",
+    //   key: "currentRegistered",
+    //   render: (count: number, record: Event) => (
+    //     <span>
+    //       {count} / {record.limitRegister}
+    //     </span>
+    //   ),
+    // },
     {
-      title: t("Category"),
-      dataIndex: "category",
-      key: "category",
-    },
-    {
-      title: t("Location"),
-      dataIndex: ["location", "destination"],
-      key: "destination",
-      width: "20%",
-      render: (text: string) => (
-        <span className="break-after-all !max-w-[300px]">{text}</span>
-      ),
-    },
-    {
-      title: t("Attendees"),
-      dataIndex: "currentRegistered",
-      key: "currentRegistered",
-      render: (count: number, record: Event) => (
-        <span>
-          {count} / {record.limitRegister}
-        </span>
-      ),
-    },
-    {
-      title: t("Start Time"),
+      title: t("Thời gian và địa điểm"),
       dataIndex: ["location", "startTime"],
       key: "startTime",
-      render: (date: string | undefined) =>
-        date ? new Date(date).toLocaleString() : "",
+      render: (date: string | undefined, record: Event) => (
+        <div>
+          <p>
+            {date ? new Date(date).toLocaleString() : ""} -{" "}
+            {record.location.endTime
+              ? new Date(record.location.endTime).toLocaleString()
+              : ""}
+          </p>
+          <p>{record.location.destination}</p>
+        </div>
+      ),
+    },
+    {
+      title: t("Host"),
+      dataIndex: ["host", "fullName"],
+      key: "fullName",
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: t("Status"),
@@ -227,7 +254,7 @@ export default function ListEvent({ filters }: ListEventProps) {
           total: total,
           showSizeChanger: false,
         }}
-        scroll={{ x: 1700 }}
+        scroll={{ x: 1500 }}
       />
 
       <Modal

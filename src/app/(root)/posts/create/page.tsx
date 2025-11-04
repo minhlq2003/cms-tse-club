@@ -35,7 +35,7 @@ export default function AddPost() {
       title: values.title,
       content: values.content,
       status: status,
-      featureImageName: uploadedImage,
+      featureImageUrl: uploadedImage,
       eventId: eventId || undefined,
     };
 

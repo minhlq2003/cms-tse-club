@@ -440,8 +440,9 @@ export interface Post {
   image?: string;
   excerpt?: string;
   writer?: Member;
-  featureImageName?: string;
+  featureImageUrl?: string;
   eventId?: string;
+  event?: Event;
 }
 
 export interface CategoryOption {
@@ -475,6 +476,7 @@ export interface Event {
   isPublic?: boolean;
   allowedType?: number;
   allowedArray?: number[];
+  currentRegistered?: number;
 }
 export interface Location {
   destination: string;
@@ -518,12 +520,18 @@ export interface BlockTemplate {
   title: string;
   type: "basic" | "custom";
   block: string;
+  createdAt?: string;
+  lastModifiedTime?: string;
+  author?: Member;
 }
 
 export interface EventTemplate {
   title: string;
   id?: string;
   blockTemplateIds: string[];
+  author?: Member;
+  createdAt?: string;
+  blocks?: BlockTemplate[];
 }
 
 export interface FieldTemplate {

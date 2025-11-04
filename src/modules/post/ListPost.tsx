@@ -129,7 +129,7 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
   const columns: ColumnsType<Post> = [
     {
       title: t("Image"),
-      dataIndex: "image",
+      dataIndex: "FeatureImageUrl",
       key: "image",
       render: (url: string | undefined) =>
         url ? (

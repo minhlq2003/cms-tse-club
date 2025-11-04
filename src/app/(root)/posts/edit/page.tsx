@@ -38,11 +38,12 @@ const EditPost = () => {
         if (data) {
           setPost(data);
           form.setFieldsValue(data);
-          setUploadedImage(data.featureImageName || "");
+          setUploadedImage(data.featureImageUrl || "");
           const categoriesArray = data.category
             ? data.category.split(",")?.map((cat: string) => cat.trim())
             : [];
           setCategories(categoriesArray);
+          setEventId(data.event?.id || "");
         }
       } catch {
         toast.error(t("Failed to fetch post."));
@@ -65,7 +66,7 @@ const EditPost = () => {
       status: status,
       content: values.content,
       category: categoryString,
-      featureImageName: uploadedImage,
+      featureImageUrl: uploadedImage,
       eventId: eventId || undefined,
     };
 
@@ -108,12 +109,14 @@ const EditPost = () => {
           </h1>
 
           <div className="flex justify-between w-full">
-            <PostForm
-              form={form}
-              onFinish={onFinish}
-              uploadedImages={uploadedImage}
-              setUploadedImages={setUploadedImage}
-            />
+            <div className="flex w-full md:w-[78%]">
+              <PostForm
+                form={form}
+                onFinish={onFinish}
+                uploadedImages={uploadedImage}
+                setUploadedImages={setUploadedImage}
+              />
+            </div>
 
             <div className="w-[22%] pl-5">
               <Publish
