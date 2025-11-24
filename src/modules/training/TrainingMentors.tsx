@@ -221,6 +221,7 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
         title={<p className="pb-4 text-2xl">{t("Training Mentors")}</p>}
         open={isModalOpen}
         onCancel={handleCloseModal}
+        onOk={handleCloseModal}
         width={1300}
         footer={
           trainingId && (

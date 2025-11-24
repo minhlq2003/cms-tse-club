@@ -63,8 +63,8 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
                 alt="featured"
                 className="w-full cursor-pointer "
                 onClick={handleOpenModal}
-                width={100}
-                height={100}
+                width={1000}
+                height={1000}
               />
               <Button
                 variant="outlined"
@@ -82,8 +82,8 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
                 src={selectedMedia}
                 alt="featured"
                 className="w-full cursor-pointer"
-                width={100}
-                height={100}
+                width={1000}
+                height={1000}
               />
               <Button
                 color="danger"

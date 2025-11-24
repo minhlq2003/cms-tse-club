@@ -31,7 +31,7 @@ export default function AddEvent() {
     {
       ...getUser(),
       organizerId: getUser().id,
-      roles: ["MODIFY"],
+      roles: ["MODIFY", "CHECK_IN"],
       roleContent: "Trưởng ban",
     },
   ]);
@@ -57,28 +57,42 @@ export default function AddEvent() {
     setTemplates([...basic, ...custom]);
   }, []);
 
-  const handleAddBlock = useCallback(
-    (block: BlockTemplate | "__REMOVE__") => {
-      if (block === "__REMOVE__") return;
+  const handleAddBlock = useCallback((block: BlockTemplate | "__REMOVE__") => {
+    if (block === "__REMOVE__") return;
 
-      const id = block.id;
-      if (!id) return;
+    const id = block.id;
+    if (!id) return;
 
-      setSelectedCategories((prev) =>
-        prev.includes(id) ? prev : [...prev, id]
-      );
-      setCategoryOrder((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setSelectedCategories((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setCategoryOrder((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
-      const exists = templates.find((t) => t.id === id);
-      if (!exists) setTemplates((prev) => [...prev, block]);
-    },
-    [templates, setSelectedCategories, setCategoryOrder, setTemplates]
-  );
+    // Đảm bảo block được thêm vào templates nếu chưa có
+    setTemplates((prev) => {
+      const exists = prev.find((t) => t.id === id);
+      return exists ? prev : [...prev, block];
+    });
+  }, []);
+
+  // 🆕 Callback khi chọn template
+  const handleTemplateSelect = useCallback((blocks: BlockTemplate[]) => {
+    setTemplates((prev) => {
+      const merged = [...prev];
+      blocks.forEach((block) => {
+        const exists = merged.find((t) => t.id === block.id);
+        if (!exists) {
+          merged.push(block);
+        }
+      });
+      return merged;
+    });
+  }, []);
 
   const onFinish = async (values: Event) => {
     const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
 
     const locationFromPlan = planData["basic_thoi_gian"];
+    console.log(locationFromPlan);
+
     if (locationFromPlan) {
       values.location = {
         destination: locationFromPlan["Địa điểm"],
@@ -93,12 +107,12 @@ export default function AddEvent() {
         toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
         return;
       } else if (
-        dayjs(values.location.startTime).isBefore(
+        dayjs(values.location.startTime).isAfter(
           dayjs(values.location.endTime),
           "day"
         )
       ) {
-        toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+        toast.error(t("Ngày bắt đầu phải trước ngày kết thúc"));
         return;
       }
     } else {
@@ -141,15 +155,15 @@ export default function AddEvent() {
           await updateStatusEventByLeader(res.id, "ACCEPTED");
         }
 
-        toast.success(t("Event added successfully!"));
+        toast.success(t("Tạo sự kiện thành công"));
         form.resetFields();
         setOrganizers([]);
         setPlanData({});
       } else {
-        toast.error(t("Failed to add event. Please try again."));
+        toast.error(t("Tạo sự kiện thất bại"));
       }
     } catch {
-      toast.error(t("Failed to add event. Please try again."));
+      toast.error(t("Tạo sự kiện thất bại"));
     }
   };
 
@@ -170,20 +184,6 @@ export default function AddEvent() {
               setUploadedImages={setUploadedImage}
             />
 
-            {/* <PlanForm
-              selectedCategories={selectedCategories}
-              planData={planData}
-              onChange={(updater) => {
-                if (typeof updater === "function") {
-                  setPlanData((prev) => updater(prev));
-                } else {
-                  setPlanData(updater);
-                }
-              }}
-              order={categoryOrder}
-              form={form}
-              organizers={organizers}
-            /> */}
             <PlanFormDynamic
               selectedCategories={categoryOrder}
               organizers={organizers}
@@ -213,22 +213,18 @@ export default function AddEvent() {
                   form.getFieldValue("title") || "KeHoachMoi",
                   categoryOrder,
                   getUser()?.fullName || "...",
-                  BasicBlocks
+                  templates
                 )
               }
             >
               Xuất kế hoạch ra Word (FIT - IUH)
             </Button>
-            {/* <ListTitle
-              selected={selectedCategories}
-              onChange={setSelectedCategories}
-              order={categoryOrder}
-              setOrder={setCategoryOrder}
-            /> */}
+
             <PlanBuilderSidebar
               order={categoryOrder}
               setOrder={setCategoryOrder}
               onAddBlock={handleAddBlock}
+              onTemplateSelect={handleTemplateSelect}
             />
 
             <EventOrganizers

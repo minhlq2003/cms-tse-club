@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Input, DatePicker, Button, Table, TimePicker } from "antd";
+import { Input, DatePicker, Button, Table, Select } from "antd";
 import dayjs from "dayjs";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import DynamicTable from "./DynamicTable";
@@ -10,6 +10,7 @@ import {
   ColumnTemplate,
   FieldTemplate,
   Organizer,
+  Member,
 } from "@/constant/types";
 import Title from "antd/es/typography/Title";
 import { BasicBlocks } from "@/constant/data";
@@ -19,12 +20,14 @@ const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
 interface PlanFormDynamicProps {
-  selectedCategories: string[]; // array of template ids
-  templates: BlockTemplate[]; // templates list (id + title + block)
-  planData: Record<string, any>; // keyed by template.id
+  selectedCategories: string[];
+  templates: BlockTemplate[];
+  planData: Record<string, any>;
   onChange?: (updater: any) => void;
   readonly?: boolean;
   organizers?: Organizer[];
+  mentors?: Member[];
+  onChangeMentors?: (mentors: Member[]) => void;
 }
 
 export default function PlanFormDynamic({
@@ -34,6 +37,8 @@ export default function PlanFormDynamic({
   onChange,
   readonly = false,
   organizers = [],
+  mentors = [],
+  onChangeMentors,
 }: PlanFormDynamicProps) {
   const basicIds = ["basic_muc_dich", "basic_noi_dung", "basic_tien_do"];
   const getTemplateById = (id: string) =>
@@ -85,6 +90,7 @@ export default function PlanFormDynamic({
     setValue(blockId, field, updated);
   };
 
+  // Sync organizers (for events)
   useEffect(() => {
     if (!organizers || organizers.length === 0 || !onChange) return;
 
@@ -109,8 +115,6 @@ export default function PlanFormDynamic({
       .forEach((r: any) => mergedMap.set(r.key, r));
 
     const mergedList = Array.from(mergedMap.values());
-
-    // 🧠 So sánh để tránh update vô ích (và vòng lặp)
     const isEqual = JSON.stringify(currentList) === JSON.stringify(mergedList);
 
     if (!isEqual) {
@@ -123,6 +127,42 @@ export default function PlanFormDynamic({
       }));
     }
   }, [organizers]);
+
+  // Sync mentors (for training)
+  useEffect(() => {
+    if (!mentors || mentors.length === 0 || !onChange) return;
+
+    const blockId = "basic_mentor";
+    const currentBlock = planData?.[blockId] || {};
+    const currentList = currentBlock["Mentors"] || [];
+
+    const mergedMap = new Map<string, any>();
+    mentors.forEach((m) => {
+      mergedMap.set(m.id, {
+        key: m.id,
+        mentorId: m.id,
+        fullName: m.fullName || "",
+        expertise:
+          currentList.find((r: any) => r.mentorId === m.id)?.expertise || "",
+      });
+    });
+    currentList
+      .filter((r: any) => !r.mentorId)
+      .forEach((r: any) => mergedMap.set(r.key, r));
+
+    const mergedList = Array.from(mergedMap.values());
+    const isEqual = JSON.stringify(currentList) === JSON.stringify(mergedList);
+
+    if (!isEqual) {
+      onChange((prev: any) => ({
+        ...prev,
+        [blockId]: {
+          ...currentBlock,
+          Mentors: mergedList,
+        },
+      }));
+    }
+  }, [mentors]);
 
   const renderField = (blockId: string, field: FieldTemplate) => {
     const key = field.label || field.id;
@@ -208,6 +248,7 @@ export default function PlanFormDynamic({
   const renderBasicBlocks = (blockId: string) => {
     const data = planData[blockId] || {};
 
+    // Block thời gian
     if (blockId === "basic_thoi_gian") {
       const handleTimeChange = (val: any) => {
         if (!val || !val[0] || !val[1]) {
@@ -261,6 +302,7 @@ export default function PlanFormDynamic({
       );
     }
 
+    // Block ban tổ chức (for events)
     if (blockId === "basic_ban_to_chuc") {
       const rows = data?.["Ban tổ chức"] || [];
       const columns = [
@@ -370,6 +412,95 @@ export default function PlanFormDynamic({
       );
     }
 
+    // 🆕 Block mentors (for training)
+    if (blockId === "basic_mentor") {
+      const rows = data?.["Mentors"] || [];
+      const columns = [
+        {
+          title: "Họ và tên",
+          dataIndex: "fullName",
+          render: (text: any, record: any) =>
+            readonly ? (
+              text
+            ) : (
+              <Input
+                value={text}
+                onChange={(e) =>
+                  handleRowChange(
+                    blockId,
+                    "Mentors",
+                    record.key,
+                    "fullName",
+                    e.target.value
+                  )
+                }
+              />
+            ),
+        },
+        {
+          title: "Chuyên môn",
+          dataIndex: "expertise",
+          render: (text: any, record: any) =>
+            readonly ? (
+              text
+            ) : (
+              <Input
+                value={text}
+                onChange={(e) =>
+                  handleRowChange(
+                    blockId,
+                    "Mentors",
+                    record.key,
+                    "expertise",
+                    e.target.value
+                  )
+                }
+              />
+            ),
+        },
+        ...(readonly
+          ? []
+          : [
+              {
+                title: "",
+                width: 50,
+                render: (_: any, record: any) => (
+                  <Button
+                    icon={<DeleteOutlined />}
+                    type="text"
+                    danger
+                    onClick={() =>
+                      handleDeleteRow(blockId, "Mentors", record.key)
+                    }
+                  />
+                ),
+              },
+            ]),
+      ];
+
+      return (
+        <div>
+          <Table
+            bordered
+            pagination={false}
+            size="small"
+            dataSource={rows}
+            columns={columns}
+            rowKey="key"
+          />
+          {!readonly && (
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => handleAddRow(blockId, "Mentors")}
+              className="mt-2"
+            >
+              Thêm mentor
+            </Button>
+          )}
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -380,7 +511,9 @@ export default function PlanFormDynamic({
         if (!t) return null;
 
         // Nếu là block cơ bản => render đặc biệt
-        if (["basic_thoi_gian", "basic_ban_to_chuc"].includes(id)) {
+        if (
+          ["basic_thoi_gian", "basic_ban_to_chuc", "basic_mentor"].includes(id)
+        ) {
           return (
             <div
               key={t.id}
@@ -404,7 +537,6 @@ export default function PlanFormDynamic({
             }
           }
         } else {
-          // ⚙️ Nếu không phải basic block → lấy từ template JSON của t
           try {
             fields = JSON.parse(t.block || "[]");
           } catch {

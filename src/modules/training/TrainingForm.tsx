@@ -1,36 +1,16 @@
 "use client";
 
 import { Training } from "@/constant/types";
-import { CameraOutlined, EditOutlined } from "@ant-design/icons";
-import {
-  Button,
-  Form,
-  FormInstance,
-  Input,
-  Modal,
-  Select,
-  DatePicker,
-} from "antd";
+import { CameraOutlined } from "@ant-design/icons";
+import { Button, Checkbox, Form, FormInstance, Input, Switch } from "antd";
 import dynamic from "next/dynamic";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ModalSelectMedia from "../media/pages/ModalSelectMedia";
 
 const CKEditorComponent = dynamic(() => import("../../lib/ckeditor"), {
   ssr: false,
 });
-
-const removeAccents = (str: string) => {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[đĐ]/g, "d")
-    .replace(/[âÂ]/g, "a")
-    .replace(/[êÊ]/g, "e")
-    .replace(/[.,:\"'<>?`!@#$%^&*();/\\]/g, "")
-    .replace(/\s+/g, "-")
-    .toLowerCase();
-};
 
 export interface TrainingFormProps {
   form: FormInstance;
@@ -47,7 +27,6 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
 }) => {
   const { t } = useTranslation("common");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditableSlug, setIsEditableSlug] = useState(true);
   const [modalAction, setModalAction] = useState<
     "selectMedia" | "addToContent"
   >("selectMedia");
@@ -78,16 +57,28 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
     }
   };
 
-  const handleTitleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const titleValue = e.target.value.trim();
-    if (!titleValue) {
-      form.setFields([{ name: "slug", errors: [] }]);
-      return;
+  const allowedOptions = [
+    { label: "Sinh viên", value: 1 },
+    { label: "Thành viên", value: 2 },
+    { label: "Giảng viên", value: 4 },
+    { label: "Nghiên cứu sinh", value: 8 },
+  ];
+
+  useEffect(() => {
+    const allowedType = form.getFieldValue("allowedType") || 0;
+    const selectedValues = allowedOptions
+      .filter((opt) => (allowedType & opt.value) !== 0)
+      .map((opt) => opt.value);
+    form.setFieldsValue({ allowedArray: selectedValues });
+  }, [form]);
+
+  const isPublic = Form.useWatch("isPublic", form);
+
+  useEffect(() => {
+    if (isPublic) {
+      form.setFieldsValue({ allowedArray: [], allowedType: 0 });
     }
-    const slugValue = removeAccents(titleValue);
-    form.setFieldsValue({ slug: slugValue });
-    form.setFields([{ name: "slug", errors: [] }]);
-  };
+  }, [isPublic, form]);
 
   return (
     <Form
@@ -109,85 +100,17 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
           ]}
           className="mt-4"
         >
-          <Input
-            placeholder={t("Training Title")}
-            className="custom-input"
-            onBlur={handleTitleBlur}
-          />
+          <Input placeholder={t("Training Title")} className="custom-input" />
         </Form.Item>
 
-        {/* Slug */}
-        {/* <div className="flex w-full">
+        <div className="flex justify-between">
           <Form.Item
-            className="w-1/2 mr-4"
-            name="slug"
-            label={t("Slug")}
-            extra={
-              <span className="text-sm">
-                {t(
-                  "May not need to be entered (automatically render by title)"
-                )}
-              </span>
-            }
-          >
-            <Input
-              disabled={isEditableSlug}
-              placeholder={t("slug")}
-              className="custom-input"
-            />
-          </Form.Item>
-          <Button
-            className="self-start mt-7"
-            icon={<EditOutlined />}
-            color={!isEditableSlug ? "primary" : "default"}
-            variant="outlined"
-            onClick={() => setIsEditableSlug(!isEditableSlug)}
-          >
-            {t("Edit")}
-          </Button>
-        </div> */}
-
-        {/* Time */}
-        <div className="flex gap-4">
-          <Form.Item
-            name={["location", "startTime"]}
-            label={t("Start Time")}
-            rules={[
-              { required: true, message: t("Please select start time!") },
-            ]}
-            className="w-1/2"
-          >
-            <DatePicker className="w-full" showTime format="YYYY-MM-DD HH:mm" />
-          </Form.Item>
-
-          <Form.Item
-            name={["location", "endTime"]}
-            label={t("End Time")}
-            rules={[{ required: true, message: t("Please select end time!") }]}
-            className="w-1/2"
-          >
-            <DatePicker className="w-full" showTime format="YYYY-MM-DD HH:mm" />
-          </Form.Item>
-
-          <Form.Item
-            name={["location", "destination"]}
-            label={t("Localtion")}
-            rules={[{ required: true, message: t("Please enter location!") }]}
-            className="mt-4"
-          >
-            <Input
-              placeholder={t("location")}
-              className="custom-input"
-              onBlur={handleTitleBlur}
-            />
-          </Form.Item>
-          <Form.Item
-            name={"limitRegister"}
+            name="limitRegister"
             label={t("Limit Register")}
             rules={[
               { required: true, message: t("Please enter limit register!") },
             ]}
-            className="mt-4"
+            className="mt-4 w-1/3"
           >
             <Input
               type="number"
@@ -196,26 +119,55 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
               className="custom-input"
             />
           </Form.Item>
+          <div className="flex w-1/2">
+            <Form.Item
+              name="isPublic"
+              label={t("Public Event")}
+              valuePropName="checked"
+              className="flex items-center md:mt-8 w-1/3"
+            >
+              <Switch checkedChildren={t("Yes")} unCheckedChildren={t("No")} />
+            </Form.Item>
+            <Form.Item
+              name="allowedArray"
+              label={t("Allowed Participants")}
+              rules={[
+                {
+                  validator: (_, value) => {
+                    const isPublicValue = form.getFieldValue("isPublic");
+                    if (!isPublicValue && (!value || value.length === 0)) {
+                      return Promise.reject(
+                        new Error(
+                          t("Please select at least one participant type!")
+                        )
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
+            >
+              <Checkbox.Group
+                disabled={isPublic}
+                onChange={(checkedValues: number[]) => {
+                  const total = checkedValues.reduce(
+                    (acc, val) => acc + val,
+                    0
+                  );
+                  form.setFieldsValue({ allowedType: total });
+                }}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {allowedOptions.map((opt) => (
+                    <Checkbox key={opt.value} value={opt.value}>
+                      {t(opt.label)}
+                    </Checkbox>
+                  ))}
+                </div>
+              </Checkbox.Group>
+            </Form.Item>
+          </div>
         </div>
-
-        {/* Content */}
-        <Form.Item>
-          <Button
-            icon={<CameraOutlined />}
-            onClick={() => handleOpenModal("addToContent")}
-          >
-            {t("Add media to description")}
-          </Button>
-        </Form.Item>
-
-        <Form.Item name="description" label={t("Description")}>
-          <CKEditorComponent
-            value={form.getFieldValue("description")}
-            onChange={(data: string) => {
-              form.setFieldsValue({ description: data });
-            }}
-          />
-        </Form.Item>
       </div>
 
       <ModalSelectMedia

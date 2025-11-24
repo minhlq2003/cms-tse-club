@@ -477,6 +477,9 @@ export interface Event {
   allowedType?: number;
   allowedArray?: number[];
   currentRegistered?: number;
+  createdAt?: string;
+  lastModifiedTime?: string;
+  isDone?: boolean;
 }
 export interface Location {
   destination: string;
@@ -503,7 +506,10 @@ export interface Training {
   mentor?: Member[];
   mentorIds?: string[];
   limitRegister?: number;
-  featuredImageName?: string;
+  featuredImageUrl?: string;
+  plans?: string;
+  allowedType?: number;
+  allowedArray?: number[];
 }
 
 export interface Member {
@@ -566,3 +572,24 @@ export type FieldType =
   | "RangeDate"
   | "RangeDateTime"
   | "Table";
+
+export interface ListEventProps {
+  filters?: {
+    searchs?: string;
+    searchValues?: string;
+    eventType?: string;
+    startTime?: string;
+    endTime?: string;
+    isDone?: boolean;
+    status?: string;
+    keyword?: string;
+    sort?: string;
+  };
+}
+
+export interface ExamResult {
+  student?: Member;
+  rank?: number;
+  point?: number;
+  userId?: string;
+}

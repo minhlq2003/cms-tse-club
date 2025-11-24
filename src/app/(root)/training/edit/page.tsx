@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Event, Member, Training } from "@/constant/types";
+import { BlockTemplate, Event, Member, Training } from "@/constant/types";
 import {
   getTrainingById,
   updateStatusTrainingByLeader,
@@ -13,10 +13,15 @@ import {
 } from "@/modules/services/trainingService";
 import TrainingForm from "@/modules/training/TrainingForm";
 import TrainingMentors from "@/modules/training/TrainingMentors";
-import Publish from "@/components/Publish";
 import TrainingEventTable from "@/modules/training/TrainingEvent";
-import moment from "moment";
+import Publish from "@/components/Publish";
 import { isLeader } from "@/lib/utils";
+import { BasicBlocks } from "@/constant/data";
+import PlanBuilderSidebar from "@/components/PlanBuilderSideBar";
+import PlanFormDynamic from "@/components/PlanFormDynamic";
+import dayjs from "dayjs";
+import { getBlockTemplates } from "@/modules/services/templateService";
+import FeaturedImage from "@/modules/post/FeaturedImage";
 
 const EditTraining = () => {
   const { t } = useTranslation("common");
@@ -31,6 +36,67 @@ const EditTraining = () => {
   const [status, setStatus] = useState<string>("PENDING");
   const [trainingEvents, setTrainingEvents] = useState<Event[]>([]);
 
+  // Dynamic plan states
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
+    "basic_thoi_gian",
+    "basic_mentor",
+  ]);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([
+    "basic_thoi_gian",
+    "basic_mentor",
+  ]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [planData, setPlanData] = useState<Record<string, any>>({});
+
+  // Fetch templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await getBlockTemplates();
+        const apiBlocks =
+          res._embedded?.blockTemplateWrapperResponseDtoList || [];
+        const allTemplates = [...BasicBlocks, ...apiBlocks];
+        const uniqueTemplates = allTemplates.filter(
+          (t, index, self) => index === self.findIndex((x) => x.id === t.id)
+        );
+        setTemplates(uniqueTemplates);
+      } catch (error) {
+        console.error("Failed to fetch block templates:", error);
+        setTemplates(BasicBlocks);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
+  const handleAddBlock = useCallback((block: BlockTemplate | "__REMOVE__") => {
+    if (block === "__REMOVE__") return;
+
+    const id = block.id;
+    if (!id) return;
+
+    setSelectedCategories((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setCategoryOrder((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+    setTemplates((prev) => {
+      const exists = prev.find((t) => t.id === id);
+      return exists ? prev : [...prev, block];
+    });
+  }, []);
+
+  const handleTemplateSelect = useCallback((blocks: BlockTemplate[]) => {
+    setTemplates((prev) => {
+      const merged = [...prev];
+      blocks.forEach((block) => {
+        const exists = merged.find((t) => t.id === block.id);
+        if (!exists) {
+          merged.push(block);
+        }
+      });
+      return merged;
+    });
+  }, []);
+
   const fetchTraining = useCallback(
     async (id: string) => {
       setLoading(true);
@@ -39,28 +105,21 @@ const EditTraining = () => {
         const data = res;
 
         if (data) {
-          const formattedData = {
-            ...data,
-            location: {
-              ...data.location,
-              startTime: data.location?.startTime
-                ? moment(data.location.startTime)
-                : null,
-              endTime: data.location?.endTime
-                ? moment(data.location.endTime)
-                : null,
-            },
-          };
+          // Set form values (chỉ title, limitRegister, description)
+          form.setFieldsValue({
+            title: data.title,
+            limitRegister: data.limitRegister,
+            description: data.description,
+          });
 
-          form.setFieldsValue(formattedData);
-          setUploadedImage(data.image || "");
+          setUploadedImage(data.featuredImageUrl || "");
           setStatus(
             data.status === "PENDING" || data.status === "ACCEPTED"
               ? "PENDING"
               : "ARCHIVED"
           );
 
-          // Gán mentors
+          // Set mentors
           setMentors(
             Array.isArray(data.mentors)
               ? data.mentors.map((m: any) => ({
@@ -74,31 +133,81 @@ const EditTraining = () => {
               : []
           );
 
-          // Gán trainingEvents
+          // Set training events
           setTrainingEvents(
-            Array.isArray(data.trainingEvents)
-              ? data.trainingEvents.map((ev: any) => ({
-                  id: ev.id,
-                  title: ev.title,
-                  description: ev.description,
-                  multiple: ev.multiple,
-                  category: ev.category,
-                  status: ev.status,
-                  done: ev.done,
-                  timeStatus: ev.timeStatus,
-                  host: ev.host,
-                  location: {
-                    ...ev.location,
-                    startTime: ev.location?.startTime
-                      ? moment(ev.location.startTime)
-                      : null,
-                    endTime: ev.location?.endTime
-                      ? moment(ev.location.endTime)
-                      : null,
-                  },
-                }))
-              : []
+            Array.isArray(data.trainingEvents) ? data.trainingEvents : []
           );
+
+          // Parse and restore plans
+          if (data.plans) {
+            try {
+              const parsedPlans = JSON.parse(data.plans);
+
+              if (parsedPlans.selected) {
+                setSelectedCategories(parsedPlans.selected);
+              }
+              if (parsedPlans.order) {
+                setCategoryOrder(parsedPlans.order);
+              }
+              if (parsedPlans.templates) {
+                // Merge saved templates with current templates
+                setTemplates((prev) => {
+                  const merged = [...prev];
+                  parsedPlans.templates.forEach((t: any) => {
+                    const exists = merged.find((x) => x.id === t.id);
+                    if (!exists) {
+                      merged.push(t);
+                    }
+                  });
+                  return merged;
+                });
+              }
+              if (parsedPlans.data) {
+                setPlanData(parsedPlans.data);
+              }
+            } catch (e) {
+              console.error("Failed to parse plans:", e);
+              // Fallback: populate planData from location và mentors
+              setPlanData({
+                basic_thoi_gian: {
+                  "Thời gian":
+                    data.location?.startTime && data.location?.endTime
+                      ? [data.location.startTime, data.location.endTime]
+                      : undefined,
+                  "Địa điểm": data.location?.destination || "",
+                },
+                basic_mentor: {
+                  Mentors:
+                    data.mentors?.map((m: any) => ({
+                      key: m.id,
+                      mentorId: m.id,
+                      fullName: m.fullName || "",
+                      expertise: "",
+                    })) || [],
+                },
+              });
+            }
+          } else {
+            // No plans data → create from location and mentors
+            setPlanData({
+              basic_thoi_gian: {
+                "Thời gian":
+                  data.location?.startTime && data.location?.endTime
+                    ? [data.location.startTime, data.location.endTime]
+                    : undefined,
+                "Địa điểm": data.location?.destination || "",
+              },
+              basic_mentor: {
+                Mentors:
+                  data.mentors?.map((m: any) => ({
+                    key: m.id,
+                    mentorId: m.id,
+                    fullName: m.fullName || "",
+                    expertise: "",
+                  })) || [],
+              },
+            });
+          }
         }
       } catch {
         toast.error(t("Failed to fetch training."));
@@ -109,15 +218,66 @@ const EditTraining = () => {
   );
 
   const onFinish = async (values: Training) => {
-    const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
+    // Lấy thông tin từ planData
+    const locationFromPlan = planData["basic_thoi_gian"];
+
+    if (locationFromPlan) {
+      values.location = {
+        destination: locationFromPlan["Địa điểm"],
+        startTime: locationFromPlan["Thời gian"]?.[0],
+        endTime: locationFromPlan["Thời gian"]?.[1],
+      };
+
+      if (
+        !values.location.startTime ||
+        !values.location.endTime ||
+        !values.location.destination
+      ) {
+        toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+        return;
+      }
+
+      if (
+        dayjs(values.location.startTime).isAfter(
+          dayjs(values.location.endTime),
+          "day"
+        )
+      ) {
+        toast.error(t("Ngày bắt đầu phải trước ngày kết thúc"));
+        return;
+      }
+    } else {
+      toast.error(t("Vui lòng nhập đầy đủ thời gian và địa điểm"));
+      return;
+    }
+
+    // Lấy mentors từ planData
+    const mentorsFromPlan = planData["basic_mentor"]?.["Mentors"] || [];
+    const mentorIds = mentorsFromPlan
+      .map((m: any) => m.mentorId)
+      .filter(Boolean);
+
+    const allowedType = Array.isArray(values.allowedArray)
+      ? values.allowedArray.reduce((acc, val) => acc + val, 0)
+      : 0;
 
     const dataPayload: Training = {
       ...values,
       title: values.title,
       description: values.description,
-      status: status,
+      status,
       location: values.location,
       limitRegister: Number(values.limitRegister),
+      mentorIds: mentorIds.length > 0 ? mentorIds : mentors.map((m) => m.id),
+      allowedType: allowedType,
+      trainingEvents: trainingEvents,
+      featuredImageUrl: uploadedImage,
+      plans: JSON.stringify({
+        selected: selectedCategories,
+        order: categoryOrder,
+        templates,
+        data: planData,
+      }),
     };
 
     try {
@@ -129,16 +289,16 @@ const EditTraining = () => {
             await updateStatusTrainingByLeader(String(id), "ACCEPTED");
           }
 
-          toast.success(t("Training updated successfully!"));
+          toast.success(t("Cập nhật training thành công"));
           router.push("/training");
         } else {
-          toast.error(t("Failed to update training. Please try again."));
+          toast.error(t("Cập nhật training thất bại"));
         }
       } else {
         toast.error(t("Invalid training ID."));
       }
     } catch {
-      toast.error(t("Failed to update training. Please try again."));
+      toast.error(t("Cập nhật training thất bại"));
     }
   };
 
@@ -160,13 +320,26 @@ const EditTraining = () => {
             {t("Edit Training")}
           </h1>
 
-          <div className="flex justify-between w-full">
-            <div className="w-full">
+          <div className="flex flex-col lg:flex-row justify-between w-full gap-6">
+            <div className="w-full lg:w-[78%] space-y-6">
               <TrainingForm
                 form={form}
                 onFinish={onFinish}
                 uploadedImages={uploadedImage}
                 setUploadedImages={setUploadedImage}
+              />
+
+              <PlanFormDynamic
+                selectedCategories={categoryOrder}
+                mentors={mentors}
+                onChangeMentors={setMentors}
+                templates={templates}
+                planData={planData}
+                onChange={(updater) => {
+                  if (typeof updater === "function")
+                    setPlanData((prev) => updater(prev));
+                  else setPlanData(updater);
+                }}
               />
 
               <TrainingEventTable
@@ -175,14 +348,25 @@ const EditTraining = () => {
               />
             </div>
 
-            <div className="w-[22%] pl-5">
+            <div className="w-full lg:w-[22%] space-y-4">
               <Publish
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
                 status={status}
               />
 
+              <PlanBuilderSidebar
+                order={categoryOrder}
+                setOrder={setCategoryOrder}
+                onAddBlock={handleAddBlock}
+                onTemplateSelect={handleTemplateSelect}
+              />
+
               <TrainingMentors mentors={mentors} onChangeMentors={setMentors} />
+              <FeaturedImage
+                selectedMedia={uploadedImage}
+                setSelectedMedia={setUploadedImage}
+              />
             </div>
           </div>
         </div>

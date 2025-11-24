@@ -54,6 +54,8 @@ export const searchMyTrainings = (params?: {
   limit?: number;
   keyword?: string;
   status?: string;
+  searchs?: string;
+  searchValues?: string;
 }) =>
   http
     .get(`${API_PREFIX_TRAINING_PATH}/me/search`, {
@@ -66,9 +68,22 @@ export const searchTrainingsByLeader = (params?: {
   limit?: number;
   keyword?: string;
   status?: string;
+  deleted?: boolean;
+  searchs?: string;
+  searchValues?: string;
 }) =>
   http
     .get(`${API_PREFIX_LEADER_TRAINING_PATH}/search`, {
       params,
     })
     .then((res) => res._embedded?.trainingWrapperDtoList ?? []);
+
+export const recoverTrainingFromTrash = (trainingId: string) =>
+  http.post<any>(
+    `${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/recover-from-trash`
+  );
+
+export const moveTrainingToTrash = (trainingId: string) =>
+  http.post<any>(
+    `${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/move-to-trash`
+  );

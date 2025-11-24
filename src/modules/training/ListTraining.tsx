@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Modal, Table, Tag, message } from "antd";
+import { Button, Modal, Table, Tag, Tooltip, message } from "antd";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import {
@@ -9,9 +9,11 @@ import {
   searchMyTrainings,
   searchTrainingsByLeader,
   updateStatusTrainingByLeader,
+  moveTrainingToTrash,
 } from "@/modules/services/trainingService";
-import { getUser, isLeader } from "@/lib/utils";
+import { formatDate, getUser, isLeader } from "@/lib/utils";
 import { Member } from "@/constant/types";
+import { Check, Edit, Eye, Trash2, X } from "lucide-react";
 
 interface Training {
   id: string;
@@ -23,6 +25,11 @@ interface Training {
   };
   status: string;
   creator?: Member;
+  createdAt?: string;
+  lastModifiedTime?: string;
+  currentRegistered?: number;
+  limitRegister?: number;
+  category?: string;
 }
 
 interface ListTrainingProps {
@@ -32,6 +39,7 @@ interface ListTrainingProps {
     startTime?: string;
     endTime?: string;
     status?: string;
+    sort?: string;
   };
 }
 
@@ -45,7 +53,7 @@ export default function ListTraining({ filters }: ListTrainingProps) {
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(
     null
   );
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openMoveToTrashModal, setOpenMoveToTrashModal] = useState(false);
   const [openApproveModal, setOpenApproveModal] = useState(false);
   const [openRejectModal, setOpenRejectModal] = useState(false);
 
@@ -62,12 +70,16 @@ export default function ListTraining({ filters }: ListTrainingProps) {
           page: page - 1,
           limit: 10,
           ...filters,
+          searchs: "deleted",
+          searchValues: "false",
         });
       } else {
         res = await searchMyTrainings({
           page: page - 1,
           limit: 10,
           ...filters,
+          searchs: "deleted",
+          searchValues: "false",
         });
       }
 
@@ -77,6 +89,9 @@ export default function ListTraining({ filters }: ListTrainingProps) {
       } else if (Array.isArray(res)) {
         setTrainings(res);
         setTotal(res.length);
+      } else {
+        setTrainings([]);
+        setTotal(0);
       }
     } catch {
       message.error(t("Failed to fetch trainings"));
@@ -89,15 +104,15 @@ export default function ListTraining({ filters }: ListTrainingProps) {
     fetchTrainings();
   }, [JSON.stringify(filters), page]);
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToTrash = async (id: string) => {
     try {
-      await deleteTraining(id);
-      message.success(t("Training deleted successfully"));
+      await moveTrainingToTrash(id);
+      message.success(t("Training moved to trash successfully"));
       fetchTrainings();
     } catch {
-      message.error(t("Failed to delete training"));
+      message.error(t("Failed to move training to trash"));
     } finally {
-      setOpenDeleteModal(false);
+      setOpenMoveToTrashModal(false);
     }
   };
 
@@ -127,31 +142,64 @@ export default function ListTraining({ filters }: ListTrainingProps) {
 
   const columns = [
     {
-      title: t("Title"),
+      title: t("Training"),
       dataIndex: "title",
       key: "title",
-      render: (text: string) => (
-        <span className="font-semibold break-all max-w-[300px]">{text}</span>
+      width: "25%",
+      render: (text: string, record: Training) => (
+        <div>
+          <span className="font-semibold break-before-all max-w-[300px]">
+            {text}
+          </span>
+          <div className="mt-2 flex gap-10">
+            <p>
+              {t("Số lượng đăng ký")}: {record.currentRegistered || 0}/
+              {record.limitRegister || "∞"}
+            </p>
+          </div>
+        </div>
       ),
     },
     {
-      title: t("Location"),
-      dataIndex: ["location", "destination"],
-      key: "destination",
-    },
-    {
-      title: t("Start Time"),
+      title: t("Thời gian và địa điểm"),
       dataIndex: ["location", "startTime"],
       key: "startTime",
-      render: (date: string | undefined) =>
-        date ? new Date(date).toLocaleString() : "",
+      width: "30%",
+      render: (date: string | undefined, record: Training) => (
+        <div>
+          <p>
+            {date ? new Date(date).toLocaleString() : ""} -{" "}
+            {record.location?.endTime
+              ? new Date(record.location.endTime).toLocaleString()
+              : ""}
+          </p>
+          <p>{record.location?.destination || "-"}</p>
+        </div>
+      ),
     },
     {
-      title: t("End Time"),
-      dataIndex: ["location", "endTime"],
-      key: "endTime",
-      render: (date: string | undefined) =>
-        date ? new Date(date).toLocaleString() : "",
+      title: t("Creator"),
+      dataIndex: ["creator", "fullName"],
+      key: "creator",
+      render: (text: string, record: Training) => (
+        <div>
+          <span className="font-semibold">{text || "-"}</span>
+          <p>
+            {formatDate(record.createdAt || "").formattedTime}{" "}
+            {formatDate(record.createdAt || "").formattedDate}
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: t("Lần chỉnh sửa gần nhất"),
+      dataIndex: "lastModifiedTime",
+      key: "lastModifiedTime",
+      render: (date: string) => (
+        <span>
+          {formatDate(date).formattedTime} {formatDate(date).formattedDate}
+        </span>
+      ),
     },
     {
       title: t("Status"),
@@ -172,41 +220,54 @@ export default function ListTraining({ filters }: ListTrainingProps) {
       key: "action",
       render: (_: any, record: Training) => (
         <div className="flex flex-wrap gap-2">
-          <Button
-            danger
-            onClick={() => {
-              setSelectedTraining(record);
-              setOpenDeleteModal(true);
-            }}
-          >
-            {t("Delete")}
-          </Button>
+          <Tooltip title={t("Move to Trash")}>
+            <Button
+              danger
+              icon={<Trash2 size={22} />}
+              onClick={() => {
+                setSelectedTraining(record);
+                setOpenMoveToTrashModal(true);
+              }}
+            ></Button>
+          </Tooltip>
 
-          <Button
-            type="primary"
-            onClick={() => router.push(`/training/edit?id=${record.id}`)}
-          >
-            {getUser().id === record.creator?.id ? t("Edit") : t("View")}
-          </Button>
+          <Tooltip title={t("Edit")}>
+            <Button
+              type="primary"
+              icon={<Edit size={22} />}
+              onClick={() => router.push(`/training/edit?id=${record.id}`)}
+            ></Button>
+          </Tooltip>
+
+          <Tooltip title={t("View")}>
+            <Button
+              icon={<Eye size={22} />}
+              onClick={() => router.push(`/training/view?id=${record.id}`)}
+            ></Button>
+          </Tooltip>
 
           {isLeader() && record.status === "PENDING" && (
             <>
-              <Button
-                onClick={() => {
-                  setSelectedTraining(record);
-                  setOpenApproveModal(true);
-                }}
-              >
-                {t("Approve")}
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedTraining(record);
-                  setOpenRejectModal(true);
-                }}
-              >
-                {t("Reject")}
-              </Button>
+              <Tooltip title={t("Approve")}>
+                <Button
+                  className="!text-green-600 !border-green-600 !bg-green-50 hover:!bg-green-100"
+                  icon={<Check size={22} />}
+                  onClick={() => {
+                    setSelectedTraining(record);
+                    setOpenApproveModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
+              <Tooltip title={t("Reject")}>
+                <Button
+                  className="!text-red-600 !border-red-600 !bg-red-50 hover:!bg-red-100"
+                  icon={<X size={22} />}
+                  onClick={() => {
+                    setSelectedTraining(record);
+                    setOpenRejectModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
             </>
           )}
         </div>
@@ -228,25 +289,23 @@ export default function ListTraining({ filters }: ListTrainingProps) {
           total: total,
           showSizeChanger: false,
         }}
-        scroll={{ x: "max-content" }}
+        scroll={{ x: 1500 }}
       />
 
-      {/* Delete Modal */}
       <Modal
-        title={t("Confirm Delete")}
-        open={openDeleteModal}
-        onCancel={() => setOpenDeleteModal(false)}
+        title={t("Confirm Move to Trash")}
+        open={openMoveToTrashModal}
+        onCancel={() => setOpenMoveToTrashModal(false)}
         onOk={() =>
-          selectedTraining && handleDelete(String(selectedTraining.id))
+          selectedTraining && handleMoveToTrash(String(selectedTraining.id))
         }
         okButtonProps={{ danger: true }}
-        okText={t("Delete")}
+        okText={t("Move to Trash")}
         cancelText={t("Cancel")}
       >
-        <p>{t("Are you sure you want to delete this training?")}</p>
+        <p>{t("Are you sure you want to move this training to trash?")}</p>
       </Modal>
 
-      {/* Approve Modal */}
       <Modal
         title={t("Confirm Approve")}
         open={openApproveModal}
@@ -260,7 +319,6 @@ export default function ListTraining({ filters }: ListTrainingProps) {
         <p>{t("Are you sure you want to approve this training?")}</p>
       </Modal>
 
-      {/* Reject Modal */}
       <Modal
         title={t("Confirm Reject")}
         open={openRejectModal}

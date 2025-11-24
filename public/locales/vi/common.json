@@ -137,5 +137,23 @@
   "Featured Image": "Ảnh nổi bật",
   "Set Featured Image": "Đặt ảnh nổi bật",
   "Add media to content": "Thêm hình ảnh vào nội dung",
-  "Slug": "Đường dẫn"
+  "Slug": "Đường dẫn",
+  "Export": "Xuất excel",
+  "Import": "Nhập từ excel",
+  "Trash": "Thùng rác",
+  "Move to Trash": "Chuyển vào thùng rác",
+  "Sort by:": "Sắp xếp theo:",
+  "Select sort": "Chọn cách sắp xếp",
+  "Start Time (Newest)": "Thời gian bắt đầu (Mới nhất)",
+  "Start Time (Oldest)": "Thời gian bắt đầu (Cũ nhất)",
+  "Title (A-Z)": "Tiêu đề (A-Z)",
+  "Title (Z-A)": "Tiêu đề (Z-A)",
+  "Created Date (Newest)": "Ngày tạo (Mới nhất)",
+  "Created Date (Oldest)": "Ngày tạo (Cũ nhất)",
+  "Registration (Low to High)": "Người đăng ký (Thấp đến Cao)",
+  "Registration (High to Low)": "Người đăng ký (Cao đến Thấp)",
+  "Start date": "Ngày bắt đầu",
+  "End date": "Ngày kết thúc",
+
+  "Host": "Người tạo"
 }

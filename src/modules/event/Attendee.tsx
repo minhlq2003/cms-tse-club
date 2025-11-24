@@ -1,4 +1,4 @@
-// Attendee.tsx (hoặc EventAttendee.tsx)
+// Attendee.tsx - Enhanced version with Check-in Code
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -13,23 +13,34 @@ import {
   Alert,
   Input,
   Select,
+  InputNumber,
+  Tabs,
+  Spin,
 } from "antd";
 import {
   CaretDownOutlined,
   CaretUpOutlined,
   EyeOutlined,
+  TrophyOutlined,
+  StarOutlined,
+  QrcodeOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import {
   exportEventAttendees,
   getEventAttendees,
   manualCheckIn,
+  updateContestResults,
+  getSeminarReview,
+  getCodeCheckIn,
 } from "../services/eventService";
-import { Member } from "@/constant/types";
+import { Member, ExamResult } from "@/constant/types";
+import dayjs from "dayjs";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 export interface Attendee {
   id?: string;
@@ -43,6 +54,9 @@ interface EventAttendeesProps {
   startTime?: string;
   endTime?: string;
   userRole?: string;
+  eventCategory?: string;
+  canCheckIn?: boolean;
+  eventDone?: boolean;
 }
 
 const EventAttendees: React.FC<EventAttendeesProps> = ({
@@ -50,6 +64,9 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   startTime,
   endTime,
   userRole,
+  eventCategory,
+  canCheckIn = false,
+  eventDone = false,
 }) => {
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
@@ -57,24 +74,37 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filters (ONLY inside modal)
+  const [contestResults, setContestResults] = useState<ExamResult[]>([]);
+  const [isContestModalOpen, setIsContestModalOpen] = useState(false);
+
+  const [seminarReviews, setSeminarReviews] = useState<any[]>([]);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // Check-in Code states
+  const [checkInModalVisible, setCheckInModalVisible] = useState(false);
+  const [checkInCode, setCheckInCode] = useState("");
+  const [loadingCode, setLoadingCode] = useState(false);
+
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
-  // Time checks
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
   const end = endTime ? new Date(endTime) : null;
   const isDuringEvent = Boolean(start && end && now >= start && now <= end);
+  const isEventEnded = Boolean(end && now > end);
 
-  // Permission: only HOST or CHECKER can check-in
-  const canCheckIn =
-    isDuringEvent && ["HOST", "CHECKER"].includes(userRole || "");
+  const canUpdateContest =
+    isEventEnded &&
+    eventCategory === "CONTEST" &&
+    ["MODIFY"].includes(userRole || "");
+  const canViewReviews =
+    isEventEnded &&
+    eventCategory === "SEMINAR" &&
+    ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    // initial fetch (do not open modal)
     fetchAttendees();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const fetchAttendees = async () => {
@@ -82,7 +112,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     try {
       setLoading(true);
       const res = await getEventAttendees(eventId);
-      // expecting structure: res._embedded.attendeeDtoList or array directly
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
         : Array.isArray(res)
@@ -103,6 +132,131 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
+  // Generate Check-in Code
+  const handleGenerateCode = async (forceNew: boolean = false) => {
+    if (!eventId || !endTime) return;
+
+    setLoadingCode(true);
+    try {
+      const formattedEndTime = dayjs(endTime).format("YYYY-MM-DDTHH:mm:ss");
+      const res = await getCodeCheckIn(eventId, formattedEndTime, forceNew);
+      if (res?.checkInCode) {
+        setCheckInCode(res.checkInCode);
+        message.success(
+          forceNew ? t("Đã tạo mã mới thành công") : t("Lấy mã thành công")
+        );
+      }
+    } catch (error: any) {
+      message.error(error?.message || t("Không thể tạo mã điểm danh"));
+    } finally {
+      setLoadingCode(false);
+    }
+  };
+
+  // Contest Results Functions
+  const fetchContestResults = async () => {
+    if (!eventId) return;
+    try {
+      setLoading(true);
+      const initialResults: ExamResult[] = attendees
+        .filter((a) => a.status === "CHECKED")
+        .map((a) => ({
+          userId: a.user.id,
+          student: a.user,
+          rank: 0,
+          point: 0,
+        }));
+      setContestResults(initialResults);
+    } catch (err) {
+      message.error(t("Failed to load contest results"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContestResultChange = (
+    userId: string,
+    field: "rank" | "point",
+    value: number | null
+  ) => {
+    setContestResults((prev) =>
+      prev.map((result) =>
+        result.userId === userId ? { ...result, [field]: value || 0 } : result
+      )
+    );
+  };
+
+  const handleSaveContestResults = async () => {
+    if (!eventId) return;
+
+    const invalid = contestResults.some(
+      (r) => r.rank === undefined || r.point === undefined
+    );
+    if (invalid) {
+      message.warning(t("Vui lòng nhập đầy đủ thứ hạng và điểm số"));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        examResults: contestResults.map((r) => ({
+          userId: r.userId,
+          rank: r.rank,
+          point: r.point,
+        })),
+      };
+
+      const res = await updateContestResults(eventId, payload);
+      if (res) {
+        message.success(t("Đã cập nhật kết quả thi thành công"));
+        setIsContestModalOpen(false);
+      } else {
+        message.error(t("Không thể cập nhật kết quả"));
+      }
+    } catch (err) {
+      console.error("Error updating contest results:", err);
+      message.error(t("Có lỗi xảy ra khi cập nhật kết quả"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Seminar Review Functions
+  const fetchSeminarReviews = async () => {
+    if (!eventId) return;
+    try {
+      setLoading(true);
+      const res = await getSeminarReview(eventId);
+      const reviews = Array.isArray(res.reviews)
+        ? res.reviews
+        : Array.isArray(res)
+        ? res
+        : [];
+      setSeminarReviews(reviews);
+    } catch (err) {
+      message.error(t("Không thể tải đánh giá"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openContestModal = () => {
+    setIsContestModalOpen(true);
+    fetchContestResults();
+  };
+
+  const openReviewModal = () => {
+    setIsReviewModalOpen(true);
+    fetchSeminarReviews();
+  };
+
+  const openCheckInCodeModal = () => {
+    setCheckInModalVisible(true);
+    handleGenerateCode(false);
+  };
+
+  // Standard check-in functions
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
       prev.map((a) =>
@@ -122,18 +276,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const handleExportExcel = async () => {
     try {
       const res = await exportEventAttendees(eventId!);
-
-      // res ở đây chính là AxiosResponse
       const blob = new Blob([res.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-
-      // 🔍 Lấy tên file nếu có trong headers
       const disposition = res.headers["content-disposition"];
       const filenameMatch = disposition?.match(/filename="?([^"]+)"?/);
       const filename = filenameMatch ? filenameMatch[1] : "attendees.xlsx";
-
-      // 💾 Tải file về
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -154,16 +302,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const checkedIds = attendees
         .filter((a) => a.checkIn)
         .map((a) => a.user.id);
-
-      // manualCheckIn(eventId, checkedIds) expected to return an object with .ok / .status
       const res = await manualCheckIn(eventId, checkedIds);
-
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
         setIsModalOpen(false);
         fetchAttendees();
       } else {
-        // show available status if present
         message.error(
           `${t("Failed to save check-in")} ${
             res?.status ? `(status ${res.status})` : ""
@@ -182,9 +326,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     fetchAttendees();
   };
 
-  const closeModal = () => setIsModalOpen(false);
-
-  // Filtering only used inside modal/table
   const filteredAttendees = attendees.filter((a) => {
     const kw = keyword.trim().toLowerCase();
     const matchesKeyword =
@@ -192,12 +333,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       (a.user?.fullName || "").toLowerCase().includes(kw) ||
       (a.user?.username || "").toLowerCase().includes(kw) ||
       (a.user?.email || "").toLowerCase().includes(kw);
-
     const matchesStatus = statusFilter ? a.status === statusFilter : true;
-
     return matchesKeyword && matchesStatus;
   });
 
+  // Table columns
   const attendeeColumns = [
     {
       title: t("Full Name"),
@@ -227,7 +367,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         if (status === "CHECKED") color = "green";
         else if (status === "REGISTERED") color = "blue";
         else if (status === "MISSED") color = "red";
-        else color = "gray";
         return <Tag color={color}>{t(status)}</Tag>;
       },
     },
@@ -238,8 +377,73 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <Checkbox
           checked={Boolean(record.checkIn)}
           onChange={() => toggleCheckInLocal(record.user.id)}
-          disabled={!canCheckIn}
+          disabled={!canCheckIn || eventDone}
         />
+      ),
+    },
+  ];
+
+  const contestColumns = [
+    {
+      title: t("Sinh viên"),
+      key: "student",
+      render: (_: any, record: ExamResult) => (
+        <div>
+          <div className="font-semibold">{record.student?.fullName}</div>
+          <div className="text-sm text-gray-500">{record.student?.email}</div>
+        </div>
+      ),
+    },
+    {
+      title: t("Thứ hạng"),
+      key: "rank",
+      render: (_: any, record: ExamResult) => (
+        <InputNumber
+          min={1}
+          value={record.rank}
+          onChange={(val) =>
+            handleContestResultChange(record.userId!, "rank", val)
+          }
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+    {
+      title: t("Điểm số"),
+      key: "point",
+      render: (_: any, record: ExamResult) => (
+        <InputNumber
+          min={0}
+          max={100}
+          value={record.point}
+          onChange={(val) =>
+            handleContestResultChange(record.userId!, "point", val)
+          }
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+  ];
+
+  const reviewColumns = [
+    {
+      title: t("Người đánh giá"),
+      dataIndex: ["user", "fullName"],
+      key: "reviewer",
+    },
+    {
+      title: t("Nội dung"),
+      dataIndex: "content",
+      key: "content",
+    },
+    {
+      title: t("Đánh giá"),
+      dataIndex: "rating",
+      key: "rating",
+      render: (rating: number) => (
+        <span>
+          {rating} <StarOutlined style={{ color: "#faad14" }} />
+        </span>
       ),
     },
   ];
@@ -285,7 +489,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         />
       </div>
 
-      {/* Main content (no filters here) */}
+      {/* Main content */}
       {isListVisible && (
         <div>
           <div className="block md:hidden">
@@ -312,7 +516,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             />
           </div>
 
-          <div className="flex justify-end border-t bg-[#f6f7f7] border-gray-300 rounded-b-[10px] p-4">
+          <div className="flex flex-wrap justify-end gap-2 border-t bg-[#f6f7f7] border-gray-300 rounded-b-[10px] p-4">
             <Button
               onClick={openModal}
               className="flex items-center"
@@ -321,10 +525,41 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             >
               {t("View Full List")}
             </Button>
+
+            {canCheckIn && !eventDone && (
+              <Button
+                onClick={openCheckInCodeModal}
+                icon={<QrcodeOutlined />}
+                type="default"
+              >
+                {t("Mã điểm danh")}
+              </Button>
+            )}
+
+            {canUpdateContest && (
+              <Button
+                onClick={openContestModal}
+                icon={<TrophyOutlined />}
+                type="default"
+              >
+                {t("Cập nhật kết quả thi")}
+              </Button>
+            )}
+
+            {canViewReviews && (
+              <Button
+                onClick={openReviewModal}
+                icon={<StarOutlined />}
+                type="default"
+              >
+                {t("Xem đánh giá")}
+              </Button>
+            )}
           </div>
         </div>
       )}
 
+      {/* Attendees Modal */}
       <Modal
         title={
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
@@ -333,15 +568,18 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             </p>
             <div className="flex gap-2 sm:gap-4">
               <Button type="primary" onClick={handleExportExcel}>
-                Xuất Excel
+                {t("Xuất Excel")}
               </Button>
-              <Button onClick={handleCheckInAllLocal} disabled={!canCheckIn}>
+              <Button
+                onClick={handleCheckInAllLocal}
+                disabled={!canCheckIn || eventDone}
+              >
                 {t("Check in All")}
               </Button>
               <Button
                 onClick={handleCancelAllLocal}
                 danger
-                disabled={!canCheckIn}
+                disabled={!canCheckIn || eventDone}
               >
                 {t("Cancel All")}
               </Button>
@@ -349,24 +587,28 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           </div>
         }
         open={isModalOpen}
-        onCancel={closeModal}
+        onCancel={() => setIsModalOpen(false)}
         footer={
           <div className="flex flex-col items-end gap-2">
-            {!canCheckIn && (
+            {(!canCheckIn || eventDone) && (
               <Alert
                 type="warning"
-                message={t(
-                  "Chỉ được điểm danh trong thời gian diễn ra sự kiện"
-                )}
+                message={
+                  eventDone
+                    ? t("Sự kiện đã kết thúc, không thể điểm danh")
+                    : t("Bạn không có quyền điểm danh")
+                }
                 showIcon
               />
             )}
             <div className="flex gap-2">
-              <Button onClick={closeModal}>{t("Close")}</Button>
+              <Button onClick={() => setIsModalOpen(false)}>
+                {t("Close")}
+              </Button>
               <Button
                 type="primary"
                 onClick={handleSave}
-                disabled={!canCheckIn}
+                disabled={!canCheckIn || eventDone}
               >
                 {t("Save")}
               </Button>
@@ -375,9 +617,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         }
         width="90%"
         className="!max-w-[1100px]"
-        bodyStyle={{ overflowX: "auto" }}
       >
-        {/* FILTERS: only inside modal */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <Search
             placeholder={t("Search attendee")}
@@ -405,7 +645,138 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           dataSource={filteredAttendees}
           loading={loading}
           pagination={{ pageSize: 8 }}
-          size="middle"
+        />
+      </Modal>
+
+      {/* Check-in Code Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <QrcodeOutlined style={{ fontSize: 24 }} />
+            <span>{t("Mã điểm danh")}</span>
+          </div>
+        }
+        open={checkInModalVisible}
+        onCancel={() => setCheckInModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setCheckInModalVisible(false)}>
+            {t("Đóng")}
+          </Button>,
+          <Button
+            key="refresh"
+            type="primary"
+            loading={loadingCode}
+            onClick={() => handleGenerateCode(true)}
+          >
+            {t("Tạo mã mới")}
+          </Button>,
+        ]}
+        width={500}
+      >
+        <div className="py-4">
+          {loadingCode ? (
+            <div className="flex justify-center py-8">
+              <Spin />
+            </div>
+          ) : checkInCode ? (
+            <div className="text-center">
+              <div className="mb-4">
+                <Text type="secondary">{t("Mã điểm danh hiện tại")}:</Text>
+              </div>
+              <Input
+                value={checkInCode}
+                readOnly
+                size="large"
+                className="text-center font-mono text-2xl font-bold"
+                style={{ fontSize: 28 }}
+              />
+              <div className="mt-4">
+                <Text type="secondary" className="text-sm">
+                  {t("Mã này sẽ hết hiệu lực sau 10 phút kể từ thời điểm tạo")}
+                </Text>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Text type="secondary">{t("Không thể tải mã điểm danh")}</Text>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Contest Results Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <TrophyOutlined style={{ fontSize: 24, color: "#faad14" }} />
+            <span className="text-xl font-semibold">
+              {t("Cập nhật kết quả thi")}
+            </span>
+          </div>
+        }
+        open={isContestModalOpen}
+        onCancel={() => setIsContestModalOpen(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setIsContestModalOpen(false)}>
+              {t("Hủy")}
+            </Button>
+            <Button
+              type="primary"
+              onClick={handleSaveContestResults}
+              loading={loading}
+            >
+              {t("Lưu kết quả")}
+            </Button>
+          </div>
+        }
+        width="90%"
+        className="!max-w-[900px]"
+      >
+        <Alert
+          message={t("Lưu ý")}
+          description={t(
+            "Chỉ sinh viên đã điểm danh mới được hiển thị để cập nhật kết quả"
+          )}
+          type="info"
+          showIcon
+          className="mb-4"
+        />
+        <Table
+          rowKey={(record: ExamResult) => record.userId!}
+          columns={contestColumns}
+          dataSource={contestResults}
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
+      </Modal>
+
+      {/* Seminar Reviews Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <StarOutlined style={{ fontSize: 24, color: "#faad14" }} />
+            <span className="text-xl font-semibold">
+              {t("Đánh giá seminar")}
+            </span>
+          </div>
+        }
+        open={isReviewModalOpen}
+        onCancel={() => setIsReviewModalOpen(false)}
+        footer={
+          <Button type="primary" onClick={() => setIsReviewModalOpen(false)}>
+            {t("Đóng")}
+          </Button>
+        }
+        width="90%"
+        className="!max-w-[900px]"
+      >
+        <Table
+          rowKey={(record: any) => record.id || Math.random()}
+          columns={reviewColumns}
+          dataSource={seminarReviews}
+          loading={loading}
+          pagination={{ pageSize: 10 }}
         />
       </Modal>
     </div>

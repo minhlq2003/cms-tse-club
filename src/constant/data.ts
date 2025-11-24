@@ -26,6 +26,12 @@ export const eventUpcomming = [
 
 export const BasicBlocks: BlockTemplate[] = [
   {
+    id: "basic_mentor",
+    title: "Mentors",
+    block: "",
+    type: "basic",
+  },
+  {
     id: "basic_muc_dich",
     title: "Mục đích",
     type: "basic",

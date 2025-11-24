@@ -1,77 +1,123 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import {
+  Button,
+  Form,
+  Spin,
+  Card,
+  Descriptions,
+  Tag,
+  Space,
+  Modal,
+  Input,
+} from "antd";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { Button, Spin, Tag } from "antd";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { getEventById } from "@/modules/services/eventService";
-import { Event, Organizer } from "@/constant/types";
-import EventOrganizers from "@/modules/event/EventOrganizers";
-import EventAttendees from "@/modules/event/Attendee";
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { CalendarDays, MapPin, Users } from "lucide-react";
-import { getUser } from "@/lib/utils";
+import { Event, Organizer, Post } from "@/constant/types";
+import dayjs from "dayjs";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  UserOutlined,
+  TeamOutlined,
+  FileTextOutlined,
+  EditOutlined,
+} from "@ant-design/icons";
+
+import {
+  getEventById,
+  updateStatusEventByLeader,
+} from "@/modules/services/eventService";
+import { getUser, isLeader } from "@/lib/utils";
+import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
+
+import PlanFormDynamic from "@/components/PlanFormDynamic";
+import { BasicBlocks } from "@/constant/data";
+
+const { TextArea } = Input;
 
 const ViewEvent = () => {
   const { t } = useTranslation("common");
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
   const [loading, setLoading] = useState(false);
-  const [eventData, setEventData] = useState<Event | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [event, setEvent] = useState<Event | null>(null);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [userRole, setUserRole] = useState<string>("");
+  const [post, setPost] = useState<Post | undefined>(undefined);
 
+  // Modal states
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  // Plan data
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [planData, setPlanData] = useState<Record<string, any>>({});
+
+  // Load basic + custom templates
+  useEffect(() => {
+    const customRaw = localStorage.getItem("plan_block_templates") || "[]";
+    const custom = JSON.parse(customRaw);
+    setTemplates([...BasicBlocks, ...custom]);
+  }, []);
+
+  // Fetch event data
   const fetchEvent = useCallback(
     async (id: string) => {
       setLoading(true);
       try {
-        const res = await getEventById(id);
-        const data = res;
-
+        const data = await getEventById(id);
         if (data) {
-          setEventData(data);
+          setEvent(data);
+          setPost(data.eventPost || undefined);
+
           setOrganizers(
             Array.isArray(data.organizers)
               ? data.organizers.map((org: any) => ({
-                  organizerId: org.organizer.id,
-                  fullName: org.organizer.fullName,
-                  email: org.organizer.email,
-                  username: org.organizer.username,
+                  organizerId: org.organizer?.id || org.organizerId,
+                  fullName: org.organizer?.fullName || org.fullName,
+                  email: org.organizer?.email || org.email,
+                  username: org.organizer?.username || org.username,
                   roles: org.roles,
                   roleContent: org.roleContent,
                 }))
               : []
           );
 
-          // ✅ Lấy ID người dùng hiện tại
-          const currentUser = getUser();
-          const currentId = currentUser?.id;
+          // Parse plan
+          if (data.plans) {
+            try {
+              const parsed =
+                typeof data.plans === "string"
+                  ? JSON.parse(data.plans)
+                  : data.plans;
 
-          // ✅ Xác định vai trò người dùng trong sự kiện
-          let role = "VIEWER";
-          if (data.host?.id === currentId) {
-            role = "HOST";
-          } else if (
-            data.organizers?.some(
-              (org: any) =>
-                org.organizer.id === currentId &&
-                org.roles?.some((r: string) => r === "CHECKER")
-            )
-          ) {
-            role = "CHECKER";
+              setPlanData(parsed.data || {});
+              setSelectedCategories(parsed.selected || []);
+              setCategoryOrder(parsed.order || parsed.selected || []);
+
+              if (parsed.templates) {
+                setTemplates(parsed.templates);
+              }
+            } catch (err) {
+              console.error("Error parsing plans:", err);
+              setPlanData({});
+            }
           }
-          setUserRole(role);
-        } else {
-          toast.error(t("Event not found"));
         }
-      } catch {
-        toast.error(t("Failed to fetch event."));
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching event:", error);
+        toast.error(t("Lấy thông tin sự kiện thất bại."));
       }
+      setLoading(false);
     },
     [t]
   );
@@ -80,114 +126,342 @@ const ViewEvent = () => {
     if (id) fetchEvent(id);
   }, [id, fetchEvent]);
 
+  // Approve event
+  const handleApprove = async () => {
+    Modal.confirm({
+      title: t("Xác nhận duyệt"),
+      content: t("Bạn có chắc chắn muốn duyệt sự kiện này?"),
+      okText: t("Duyệt"),
+      cancelText: t("Hủy"),
+      onOk: async () => {
+        try {
+          setActionLoading(true);
+          if (!id) return;
+          await updateStatusEventByLeader(id, "ACCEPTED");
+          toast.success(t("Đã duyệt sự kiện thành công"));
+          fetchEvent(id);
+        } catch (error) {
+          console.error("Error approving event:", error);
+          toast.error(t("Không thể duyệt sự kiện"));
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
+  };
+
+  // Reject event
+  const handleReject = () => {
+    setRejectModalVisible(true);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.warning(t("Vui lòng nhập lý do từ chối"));
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      if (!id) return;
+      await updateStatusEventByLeader(id, "REJECTED");
+      toast.success(t("Đã từ chối sự kiện"));
+      setRejectModalVisible(false);
+      setRejectReason("");
+      fetchEvent(id);
+    } catch (error) {
+      console.error("Error rejecting event:", error);
+      toast.error(t("Không thể từ chối sự kiện"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Export plan to Word
+  const handleExportPlan = () => {
+    if (!event) return;
+
+    exportPlanWithTemplate(
+      planData,
+      event.title || "KeHoach",
+      categoryOrder,
+      getUser()?.fullName || "...",
+      templates
+    );
+  };
+
+  // Get status tag
+  const getStatusTag = (status: string) => {
+    const statusMap: Record<string, { color: string; text: string }> = {
+      PENDING: { color: "orange", text: "Chờ duyệt" },
+      ACCEPTED: { color: "green", text: "Đã duyệt" },
+      REJECTED: { color: "red", text: "Đã từ chối" },
+      DRAFT: { color: "default", text: "Nháp" },
+    };
+
+    const config = statusMap[status] || { color: "default", text: status };
+    return <Tag color={config.color}>{t(config.text)}</Tag>;
+  };
+
+  // Get category label
+  const getCategoryLabel = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      ACADEMIC: "Học thuật",
+      SPORTS: "Thể thao",
+      CULTURAL: "Văn hóa",
+      SOCIAL: "Xã hội",
+      TECHNOLOGY: "Công nghệ",
+      OTHER: "Khác",
+    };
+    return categoryMap[category] || category;
+  };
+
+  // Check if user can approve/reject
+  const canApprove = isLeader() && event?.status === "PENDING";
+
+  // --- RENDER ---
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <Spin size="large" />
+      <div className="min-h-[85vh] bg-white flex items-center justify-center rounded-lg shadow-sm">
+        <Spin size="large" tip={t("Đang tải...")} />
       </div>
     );
   }
 
-  if (!eventData) {
+  if (!event) {
     return (
-      <div className="p-10 text-center">
-        <p>{t("No event data available")}</p>
-        <Button type="primary" onClick={() => router.push("/events")}>
-          {t("Back to events")}
-        </Button>
-      </div>
-    );
-  }
-
-  const { title, description, category, multiple, location, status, host } =
-    eventData;
-
-  return (
-    <div className="min-h-[85vh] bg-white flex flex-col items-center justify-start rounded-lg gap-4 px-4 pt-10 mb-5">
-      <div className="w-full">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => router.push("/events")}
-          className="mb-4"
-        >
-          {t("Back")}
-        </Button>
-
-        <h1 className="ml-[10px] text-3xl font-bold pb-3 md:pb-6">{title}</h1>
-
-        <div className="flex flex-col md:flex-row justify-between w-full ">
-          <div className="w-full md:w-[78%] p-4 bg-gray-200 rounded-3xl">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <Tag color="blue">{t(category || "Event")}</Tag>
-              <Tag
-                color={
-                  status === "PENDING"
-                    ? "orange"
-                    : status === "ACCEPTED"
-                    ? "green"
-                    : "red"
-                }
-              >
-                {t(status || "PENDING")}
-              </Tag>
-              <Tag color="purple">
-                {t("Limit")}: {multiple || 0}
-              </Tag>
-            </div>
-
-            <div className="space-y-2 text-gray-600 text-md">
-              <p className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-blue-600" />
-                <span>
-                  <strong>{t("START")}:</strong>{" "}
-                  {new Date(location.startTime).toLocaleString()}
-                </span>
-              </p>
-              <p className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-blue-600" />
-                <span>
-                  <strong>{t("END")}:</strong>{" "}
-                  {new Date(location.endTime).toLocaleString()}
-                </span>
-              </p>
-              <p className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-blue-600" />
-                <span>
-                  <strong>{t("LOCATION")}:</strong> {location?.destination}
-                </span>
-              </p>
-              <p className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
-                <span>
-                  <strong>{t("HOST")}:</strong> {host?.fullName}
-                </span>
-              </p>
-            </div>
-
-            <div className="w-full flex flex-col justify-between">
-              <div
-                dangerouslySetInnerHTML={{ __html: description || "" }}
-                className="text-md text-gray-700 my-6"
-              />
-            </div>
-          </div>
-
-          <div className="md:w-[22%] w-full pl-0 md:pl-5">
-            <EventOrganizers
-              organizers={organizers}
-              onChangeOrganizers={setOrganizers}
-              eventId={id || ""}
-              isView={true}
-            />
-            <EventAttendees
-              startTime={location.startTime}
-              endTime={location.endTime}
-              eventId={id || ""}
-              userRole={userRole}
-            />
-          </div>
+      <div className="min-h-[85vh] bg-white flex items-center justify-center rounded-lg shadow-sm">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">
+            {t("Không tìm thấy sự kiện")}
+          </h2>
+          <Button type="primary" onClick={() => router.back()}>
+            {t("Quay lại")}
+          </Button>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[85vh] bg-white rounded-lg shadow-sm p-4 md:p-6">
+      {/* Header */}
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">{event.title}</h1>
+          <Space size="middle" wrap>
+            {getStatusTag(event.status || "")}
+            <Tag color="blue">{getCategoryLabel(event.category || "")}</Tag>
+            {event.isPublic ? (
+              <Tag color="green">{t("Công khai")}</Tag>
+            ) : (
+              <Tag color="default">{t("Riêng tư")}</Tag>
+            )}
+          </Space>
+        </div>
+
+        <Space wrap>
+          {canApprove && (
+            <>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={handleApprove}
+                loading={actionLoading}
+                size="large"
+              >
+                {t("Duyệt")}
+              </Button>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={handleReject}
+                loading={actionLoading}
+                size="large"
+              >
+                {t("Từ chối")}
+              </Button>
+            </>
+          )}
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => router.push(`/events/edit?id=${id}`)}
+          >
+            {t("Chỉnh sửa")}
+          </Button>
+          <Button onClick={() => router.back()}>{t("Quay lại")}</Button>
+        </Space>
+      </div>
+
+      {/* Event Details */}
+      <Card className="mb-6" title={t("Thông tin sự kiện")}>
+        <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }}>
+          <Descriptions.Item
+            label={
+              <span>
+                <CalendarOutlined className="mr-2" />
+                {t("Thời gian bắt đầu")}
+              </span>
+            }
+            span={2}
+          >
+            {event.location?.startTime
+              ? dayjs(event.location.startTime).format("DD/MM/YYYY HH:mm")
+              : t("Chưa xác định")}
+          </Descriptions.Item>
+
+          <Descriptions.Item
+            label={
+              <span>
+                <CalendarOutlined className="mr-2" />
+                {t("Thời gian kết thúc")}
+              </span>
+            }
+            span={2}
+          >
+            {event.location?.endTime
+              ? dayjs(event.location.endTime).format("DD/MM/YYYY HH:mm")
+              : t("Chưa xác định")}
+          </Descriptions.Item>
+
+          <Descriptions.Item
+            label={
+              <span>
+                <EnvironmentOutlined className="mr-2" />
+                {t("Địa điểm")}
+              </span>
+            }
+            span={2}
+          >
+            {event.location?.destination || t("Chưa xác định")}
+          </Descriptions.Item>
+
+          <Descriptions.Item
+            label={
+              <span>
+                <TeamOutlined className="mr-2" />
+                {t("Giới hạn đăng ký")}
+              </span>
+            }
+          >
+            {event.limitRegister || t("Không giới hạn")}
+          </Descriptions.Item>
+
+          <Descriptions.Item
+            label={
+              <span>
+                <UserOutlined className="mr-2" />
+                {t("Loại đối tượng")}
+              </span>
+            }
+          >
+            {event.allowedType ? (
+              <Space wrap>
+                {(event.allowedType & 1) > 0 && <Tag>Sinh viên</Tag>}
+                {(event.allowedType & 2) > 0 && <Tag>Giảng viên</Tag>}
+                {(event.allowedType & 4) > 0 && <Tag>Khách mời</Tag>}
+              </Space>
+            ) : (
+              t("Tất cả")
+            )}
+          </Descriptions.Item>
+
+          <Descriptions.Item
+            label={
+              <span>
+                <FileTextOutlined className="mr-2" />
+                {t("Mô tả")}
+              </span>
+            }
+            span={2}
+          >
+            {event.description || t("Không có mô tả")}
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      {/* Organizers */}
+      {organizers.length > 0 && (
+        <Card title={t("Ban tổ chức")} className="mb-6">
+          <div className="space-y-3">
+            {organizers.map((org, index) => (
+              <div
+                key={index}
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded gap-2"
+              >
+                <div className="flex-1">
+                  <div className="font-semibold">{org.fullName}</div>
+                  <div className="text-gray-600 text-sm">{org.roleContent}</div>
+                  {org.email && (
+                    <div className="text-gray-500 text-xs">{org.email}</div>
+                  )}
+                </div>
+                <Space wrap>
+                  {org.roles?.includes("MODIFY") && (
+                    <Tag color="blue">{t("Quản lý")}</Tag>
+                  )}
+                  {org.roles?.includes("VIEW") && (
+                    <Tag color="green">{t("Xem")}</Tag>
+                  )}
+                </Space>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Plan Details */}
+      {categoryOrder.length > 0 && (
+        <Card
+          title={t("Kế hoạch chi tiết")}
+          className="mb-6"
+          extra={
+            <Button
+              type="primary"
+              icon={<FileTextOutlined />}
+              onClick={handleExportPlan}
+            >
+              {t("Xuất Word")}
+            </Button>
+          }
+        >
+          <PlanFormDynamic
+            selectedCategories={categoryOrder}
+            templates={templates}
+            planData={planData}
+            organizers={organizers}
+            readonly={true}
+          />
+        </Card>
+      )}
+
+      {/* Reject Modal */}
+      <Modal
+        title={t("Từ chối sự kiện")}
+        open={rejectModalVisible}
+        onOk={confirmReject}
+        onCancel={() => {
+          setRejectModalVisible(false);
+          setRejectReason("");
+        }}
+        okText={t("Xác nhận từ chối")}
+        cancelText={t("Hủy")}
+        okButtonProps={{ danger: true, loading: actionLoading }}
+      >
+        <div className="mb-4">
+          <p className="mb-2 font-medium">
+            {t("Vui lòng nhập lý do từ chối:")}
+          </p>
+          <TextArea
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder={t("Nhập lý do từ chối sự kiện...")}
+            maxLength={500}
+            showCount
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

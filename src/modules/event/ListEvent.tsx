@@ -1,30 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Modal, Table, Tag, message } from "antd";
+import { Button, Modal, Table, Tag, Tooltip, message } from "antd";
 import { useRouter } from "next/navigation";
-import { Event } from "@/constant/types";
+import { Event, ListEventProps } from "@/constant/types";
 import {
   getEvents,
   deleteEvent,
   updateStatusEventByLeader,
   getEventByLeader,
+  moveEventToTrash,
+  triggerEventDone,
 } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
-import { getUser, isLeader } from "@/lib/utils";
-import { max } from "lodash";
-import { title } from "node:process";
-
-interface ListEventProps {
-  filters?: {
-    search?: string;
-    eventType?: string;
-    startTime?: string;
-    endTime?: string;
-    isDone?: boolean;
-    status?: string;
-  };
-}
+import { formatDate, getUser, isLeader } from "@/lib/utils";
+import { Check, Edit, Eye, Trash2, View, X, CheckCircle } from "lucide-react";
+import dayjs from "dayjs";
 
 export default function ListEvent({ filters }: ListEventProps) {
   const { t } = useTranslation("common");
@@ -33,9 +24,10 @@ export default function ListEvent({ filters }: ListEventProps) {
   const [loading, setLoading] = useState<boolean>(false);
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openMoveToTrashModal, setOpenMoveToTrashModal] = useState(false);
   const [openApproveModal, setOpenApproveModal] = useState(false);
   const [openRejectModal, setOpenRejectModal] = useState(false);
+  const [openDoneModal, setOpenDoneModal] = useState(false);
 
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
@@ -49,18 +41,25 @@ export default function ListEvent({ filters }: ListEventProps) {
           page: page - 1,
           size: 10,
           ...filters,
+          searchs: "deleted",
+          searchValues: "false",
         });
       } else {
         res = await getEventByLeader({
           page: page - 1,
           size: 10,
           ...filters,
+          searchs: "deleted",
+          searchValues: "false",
         });
       }
 
       if (Array.isArray(res._embedded?.eventWrapperDtoList)) {
         setEvents(res._embedded.eventWrapperDtoList);
         setTotal(res.page.totalElements);
+      } else {
+        setEvents([]);
+        setTotal(0);
       }
     } catch {
       message.error(t("Failed to fetch events"));
@@ -73,15 +72,15 @@ export default function ListEvent({ filters }: ListEventProps) {
     fetchEvents();
   }, [JSON.stringify(filters), page]);
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToTrash = async (id: string) => {
     try {
-      await deleteEvent(id);
-      message.success(t("Event deleted successfully"));
+      await moveEventToTrash(id);
+      message.success(t("Event moved to trash successfully"));
       fetchEvents();
     } catch {
-      message.error(t("Failed to delete event"));
+      message.error(t("Failed to move event to trash"));
     } finally {
-      setOpenDeleteModal(false);
+      setOpenMoveToTrashModal(false);
     }
   };
 
@@ -109,6 +108,18 @@ export default function ListEvent({ filters }: ListEventProps) {
     }
   };
 
+  const handleTriggerDone = async (id: string) => {
+    try {
+      await triggerEventDone(id);
+      message.success(t("Event marked as done successfully"));
+      fetchEvents();
+    } catch {
+      message.error(t("Failed to mark event as done"));
+    } finally {
+      setOpenDoneModal(false);
+    }
+  };
+
   const columns = [
     {
       title: t("Sự kiện"),
@@ -130,41 +141,18 @@ export default function ListEvent({ filters }: ListEventProps) {
         </div>
       ),
     },
-    // {
-    //   title: t("Category"),
-    //   dataIndex: "category",
-    //   key: "category",
-    // },
-    // {
-    //   title: t("Location"),
-    //   dataIndex: ["location", "destination"],
-    //   key: "destination",
-    //   width: "20%",
-    //   render: (text: string) => (
-    //     <span className="break-after-all !max-w-[300px]">{text}</span>
-    //   ),
-    // },
-    // {
-    //   title: t("Attendees"),
-    //   dataIndex: "currentRegistered",
-    //   key: "currentRegistered",
-    //   render: (count: number, record: Event) => (
-    //     <span>
-    //       {count} / {record.limitRegister}
-    //     </span>
-    //   ),
-    // },
     {
       title: t("Thời gian và địa điểm"),
       dataIndex: ["location", "startTime"],
       key: "startTime",
+      width: "30%",
       render: (date: string | undefined, record: Event) => (
         <div>
           <p>
-            {date ? new Date(date).toLocaleString() : ""} -{" "}
-            {record.location.endTime
-              ? new Date(record.location.endTime).toLocaleString()
-              : ""}
+            {formatDate(date || "").formattedTime}{" "}
+            {formatDate(date || "").formattedDate} -{" "}
+            {formatDate(record.location.endTime).formattedTime}{" "}
+            {formatDate(record.location.endTime).formattedDate}
           </p>
           <p>{record.location.destination}</p>
         </div>
@@ -174,18 +162,42 @@ export default function ListEvent({ filters }: ListEventProps) {
       title: t("Host"),
       dataIndex: ["host", "fullName"],
       key: "fullName",
-      render: (text: string) => <span>{text}</span>,
+      render: (text: string, record: Event) => (
+        <div>
+          <span className="font-semibold">{text}</span>
+          <p>
+            {formatDate(record.createdAt || "").formattedTime}{" "}
+            {formatDate(record.createdAt || "").formattedDate}{" "}
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: t("Lần chỉnh sửa gần nhất"),
+      dataIndex: "lastModifiedTime",
+      key: "lastModifiedTime",
+      render: (date: string) => (
+        <span>
+          {formatDate(date).formattedTime} {formatDate(date).formattedDate}
+        </span>
+      ),
     },
     {
       title: t("Status"),
       dataIndex: "status",
       key: "status",
-      render: (status: string) => {
+      render: (status: string, record: Event) => {
+        // Check if event is done
+        if (record.isDone) {
+          return <Tag color="purple">{t("DONE")}</Tag>;
+        }
+
         const colorMap: Record<string, string> = {
           ACCEPTED: "green",
           PENDING: "orange",
           REJECTED: "red",
           DISABLED: "gray",
+          ARCHIVED: "blue",
         };
         return <Tag color={colorMap[status] || "default"}>{t(status)}</Tag>;
       },
@@ -195,44 +207,74 @@ export default function ListEvent({ filters }: ListEventProps) {
       key: "action",
       render: (_: any, record: Event) => (
         <div className="flex flex-wrap gap-2">
-          <Button
-            danger
-            onClick={() => {
-              setSelectedEvent(record);
-              setOpenDeleteModal(true);
-            }}
-          >
-            {t("Delete")}
-          </Button>
+          <Tooltip title={t("Move to Trash")}>
+            <Button
+              danger
+              icon={<Trash2 size={22} />}
+              onClick={() => {
+                setSelectedEvent(record);
+                setOpenMoveToTrashModal(true);
+              }}
+            ></Button>
+          </Tooltip>
 
-          <Button
-            type="primary"
-            onClick={() => router.push(`/events/edit?id=${record.id}`)}
-          >
-            {t("Edit")}
-          </Button>
-          <Button onClick={() => router.push(`/events/view?id=${record.id}`)}>
-            Xem
-          </Button>
+          {/* Hide Edit button if event is done */}
+          {!record.isDone && (
+            <Tooltip title={t("Edit")}>
+              <Button
+                type="primary"
+                icon={<Edit size={22} />}
+                onClick={() => router.push(`/events/edit?id=${record.id}`)}
+              ></Button>
+            </Tooltip>
+          )}
+
+          <Tooltip title={t("View")}>
+            <Button
+              icon={<Eye size={22} />}
+              onClick={() => router.push(`/events/view?id=${record.id}`)}
+            ></Button>
+          </Tooltip>
+
+          {/* Trigger Done button - only for leaders and if not done yet */}
+          {isLeader() &&
+            record.status === "ACCEPTED" &&
+            !record.isDone &&
+            dayjs(record.location.startTime).isBefore(Date.now()) && (
+              <Tooltip title={t("Mark as Done")}>
+                <Button
+                  className="!text-purple-600 !border-purple-600 !bg-purple-50 hover:!bg-purple-100"
+                  icon={<CheckCircle size={22} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenDoneModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
+            )}
 
           {isLeader() && record.status === "PENDING" && (
             <>
-              <Button
-                onClick={() => {
-                  setSelectedEvent(record);
-                  setOpenApproveModal(true);
-                }}
-              >
-                {t("Approve")}
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedEvent(record);
-                  setOpenRejectModal(true);
-                }}
-              >
-                {t("Reject")}
-              </Button>
+              <Tooltip title={t("Approve")}>
+                <Button
+                  className="!text-green-600 !border-green-600 !bg-green-50 hover:!bg-green-100"
+                  icon={<Check size={22} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenApproveModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
+              <Tooltip title={t("Reject")}>
+                <Button
+                  className="!text-red-600 !border-red-600 !bg-red-50 hover:!bg-red-100"
+                  icon={<X size={22} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenRejectModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
             </>
           )}
         </div>
@@ -258,15 +300,17 @@ export default function ListEvent({ filters }: ListEventProps) {
       />
 
       <Modal
-        title={t("Confirm Delete")}
-        open={openDeleteModal}
-        onCancel={() => setOpenDeleteModal(false)}
-        onOk={() => selectedEvent && handleDelete(String(selectedEvent.id))}
+        title={t("Confirm Move to Trash")}
+        open={openMoveToTrashModal}
+        onCancel={() => setOpenMoveToTrashModal(false)}
+        onOk={() =>
+          selectedEvent && handleMoveToTrash(String(selectedEvent.id))
+        }
         okButtonProps={{ danger: true }}
-        okText={t("Delete")}
+        okText={t("Move to Trash")}
         cancelText={t("Cancel")}
       >
-        <p>{t("Are you sure you want to delete this event?")}</p>
+        <p>{t("Are you sure you want to move this event to trash?")}</p>
       </Modal>
 
       <Modal
@@ -280,7 +324,6 @@ export default function ListEvent({ filters }: ListEventProps) {
         <p>{t("Are you sure you want to approve this event?")}</p>
       </Modal>
 
-      {/* Reject Modal */}
       <Modal
         title={t("Confirm Reject")}
         open={openRejectModal}
@@ -290,6 +333,23 @@ export default function ListEvent({ filters }: ListEventProps) {
         cancelText={t("Cancel")}
       >
         <p>{t("Are you sure you want to reject this event?")}</p>
+      </Modal>
+
+      <Modal
+        title={t("Confirm Mark as Done")}
+        open={openDoneModal}
+        onCancel={() => setOpenDoneModal(false)}
+        onOk={() =>
+          selectedEvent && handleTriggerDone(String(selectedEvent.id))
+        }
+        okText={t("Mark as Done")}
+        cancelText={t("Cancel")}
+      >
+        <p>
+          {t(
+            "Are you sure you want to mark this event as done? This action cannot be undone."
+          )}
+        </p>
       </Modal>
     </div>
   );
