@@ -443,7 +443,7 @@ export interface Post {
   featureImageUrl?: string;
   eventId?: string;
   event?: Event;
-  deleted: boolean;
+  deleted?: boolean;
 }
 
 export interface CategoryOption {
