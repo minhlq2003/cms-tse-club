@@ -6,8 +6,18 @@ import {
   CaretDownOutlined,
   CaretUpOutlined,
   EditOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import { Button, Modal, Typography, message, Table, Row, Col } from "antd";
+import {
+  Button,
+  Modal,
+  Typography,
+  message,
+  Table,
+  Row,
+  Col,
+  Input,
+} from "antd";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getUser } from "../services/userService";
@@ -31,13 +41,13 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
   const [isListVisible, setIsListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [searchText, setSearchText] = useState("");
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  // ✅ Lấy danh sách member (lọc bỏ mentor)
-  const fetchMembers = async () => {
+  const fetchMembers = async (keyword: string = "") => {
     try {
       setLoadingMembers(true);
-      const res = await getUser({ keyword: "" });
+      const res = await getUser({ keyword, page: 0, size: 100 });
       if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
         const filtered = res._embedded.userShortInfoResponseDtoList.filter(
           (m: Member) => !mentors.some((mt) => mt.id === m.id)
@@ -51,20 +61,32 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     }
   };
 
-  // ✅ Mỗi khi danh sách mentor thay đổi, cập nhật lại list member
   useEffect(() => {
     if (isModalOpen) {
-      fetchMembers();
+      fetchMembers(searchText);
     }
   }, [mentors, isModalOpen]);
 
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const timeoutId = setTimeout(() => {
+      fetchMembers(searchText);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, isModalOpen]);
+
   const handleOpenModal = () => {
     setIsModalOpen(true);
-    fetchMembers();
+    setSearchText("");
+    fetchMembers("");
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSearchText("");
   };
 
   const handleSelectMentor = (member: Member) => {
@@ -84,13 +106,12 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     onChangeMentors(updated);
     message.success(t("Mentor removed"));
 
-    // ✅ Thêm lại người bị xóa vào danh sách member
+    // Refresh members list
     if (removed) {
-      setMembers((prev) => [...prev, removed]);
+      fetchMembers(searchText);
     }
   };
 
-  // ✅ Gọi API cập nhật (nếu có trainingId)
   const updateMentors = () => {
     const payload = mentors.map((m) => ({ id: m.id }));
     modifyTrainingMembers(trainingId!, { mentors: payload })
@@ -103,7 +124,6 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
       });
   };
 
-  // 🔹 Cột member (bên trái)
   const memberColumns = [
     {
       title: t("Full Name"),
@@ -132,7 +152,6 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     },
   ];
 
-  // 🔹 Cột mentor (bên phải) — ✅ có header
   const mentorColumnsModal = [
     {
       title: t("Full Name"),
@@ -166,7 +185,6 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
     },
   ];
 
-  // 🔹 Cột mentor hiển thị ngoài card
   const mentorColumns = [
     {
       dataIndex: "fullName",
@@ -232,9 +250,22 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
         }
       >
         <Row gutter={24}>
-          {/* LEFT: List Member */}
           <Col span={12}>
-            <Title level={5}>{t("Select a Member")}</Title>
+            <div className="flex items-center justify-between mb-4">
+              <Title level={5} className="!mb-0">
+                {t("Select a Member")}
+              </Title>
+            </div>
+
+            <Input
+              prefix={<SearchOutlined />}
+              placeholder={t("Search by name, username or email")}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="mb-4"
+              allowClear
+            />
+
             <Table
               rowKey="id"
               columns={memberColumns}
@@ -245,14 +276,13 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
             />
           </Col>
 
-          {/* RIGHT: Current Mentors */}
           <Col span={12}>
             <Title level={5}>{t("Current Mentors")}</Title>
             <Table
               rowKey="id"
               columns={mentorColumnsModal}
               dataSource={mentors}
-              showHeader={true} // ✅ hiển thị header
+              showHeader={true}
               pagination={false}
             />
           </Col>

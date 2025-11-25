@@ -61,7 +61,13 @@ function SignIn() {
 
     if (typeof window !== "undefined") {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (user && user.id && token && !isTokenExpired(token)) {
+      if (
+        user &&
+        user.id &&
+        token &&
+        !isTokenExpired(token) &&
+        user.role !== "NONE"
+      ) {
         router.push("/");
       }
     }

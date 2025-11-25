@@ -105,7 +105,6 @@ const EditTraining = () => {
         const data = res;
 
         if (data) {
-          // Set form values (chỉ title, limitRegister, description)
           form.setFieldsValue({
             title: data.title,
             limitRegister: data.limitRegister,

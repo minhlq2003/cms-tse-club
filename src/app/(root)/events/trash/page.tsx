@@ -24,7 +24,8 @@ import {
   getEventByLeader,
   recoverEventFromTrash,
 } from "@/modules/services/eventService";
-import { isLeader } from "@/lib/utils";
+import { getRoleUser, isLeader } from "@/lib/utils";
+import { toast } from "sonner";
 
 const { RangePicker } = DatePicker;
 
@@ -76,7 +77,7 @@ export default function TrashEventPage() {
         setTotal(0);
       }
     } catch {
-      message.error(t("Failed to fetch deleted events"));
+      toast.error(t("Failed to fetch deleted events"));
     } finally {
       setLoading(false);
     }
@@ -105,10 +106,10 @@ export default function TrashEventPage() {
   const handleRestore = async (id: string) => {
     try {
       await recoverEventFromTrash(id);
-      message.success(t("Event restored successfully"));
+      toast.success(t("Event restored successfully"));
       fetchDeletedEvents();
     } catch {
-      message.error(t("Failed to restore event"));
+      toast.error(t("Failed to restore event"));
     } finally {
       setOpenRestoreModal(false);
     }
@@ -117,10 +118,10 @@ export default function TrashEventPage() {
   const handlePermanentDelete = async (id: string) => {
     try {
       await deleteEvent(id);
-      message.success(t("Event permanently deleted"));
+      toast.success(t("Event permanently deleted"));
       fetchDeletedEvents();
     } catch {
-      message.error(t("Failed to delete event permanently"));
+      toast.error(t("Failed to delete event permanently"));
     } finally {
       setOpenDeleteModal(false);
     }
@@ -141,10 +142,10 @@ export default function TrashEventPage() {
           for (const event of events) {
             await deleteEvent(String(event.id));
           }
-          message.success(t("All events permanently deleted"));
+          toast.success(t("All events permanently deleted"));
           fetchDeletedEvents();
         } catch {
-          message.error(t("Failed to empty trash"));
+          toast.error(t("Failed to empty trash"));
         }
       },
     });
@@ -205,35 +206,37 @@ export default function TrashEventPage() {
         <span>{date ? new Date(date).toLocaleString() : ""}</span>
       ),
     },
-    {
-      title: t("Action"),
-      key: "action",
-      render: (_: any, record: Event) => (
-        <div className="flex flex-wrap gap-2">
-          <Tooltip title={t("Khôi phục")}>
-            <Button
-              type="primary"
-              icon={<RotateCcw size={16} />}
-              onClick={() => {
-                setSelectedEvent(record);
-                setOpenRestoreModal(true);
-              }}
-            ></Button>
-          </Tooltip>
+    getRoleUser() === "LEADER" || getRoleUser() === "ADMIN"
+      ? {
+          title: t("Action"),
+          key: "action",
+          render: (_: any, record: Event) => (
+            <div className="flex flex-wrap gap-2">
+              <Tooltip title={t("Khôi phục")}>
+                <Button
+                  type="primary"
+                  icon={<RotateCcw size={16} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenRestoreModal(true);
+                  }}
+                />
+              </Tooltip>
 
-          <Tooltip title={t("Xóa vĩnh viễn")}>
-            <Button
-              danger
-              icon={<Trash2 size={16} />}
-              onClick={() => {
-                setSelectedEvent(record);
-                setOpenDeleteModal(true);
-              }}
-            ></Button>
-          </Tooltip>
-        </div>
-      ),
-    },
+              <Tooltip title={t("Xóa vĩnh viễn")}>
+                <Button
+                  danger
+                  icon={<Trash2 size={16} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenDeleteModal(true);
+                  }}
+                />
+              </Tooltip>
+            </div>
+          ),
+        }
+      : {},
   ];
 
   return (
@@ -248,15 +251,17 @@ export default function TrashEventPage() {
             {t("Back to Events")}
           </Button>
 
-          <Button
-            className="h-[36px]"
-            danger
-            icon={<Trash2 size={16} />}
-            onClick={handleEmptyTrash}
-            disabled={events.length === 0}
-          >
-            {t("Empty Trash")}
-          </Button>
+          {(getRoleUser() === "LEADER" || getRoleUser() === "ADMIN") && (
+            <Button
+              className="h-[36px]"
+              danger
+              icon={<Trash2 size={16} />}
+              onClick={handleEmptyTrash}
+              disabled={events.length === 0}
+            >
+              {t("Empty Trash")}
+            </Button>
+          )}
         </div>
       </div>
 

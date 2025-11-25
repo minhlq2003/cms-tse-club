@@ -8,11 +8,11 @@ import { LayoutSider } from "@/components/Sidebar";
 import { I18nextProvider, useTranslation } from "react-i18next";
 import LocaleProvider from "@/components/locale-provider";
 import "../globals.css";
-import { Toaster } from "sonner";
+import { toast, Toaster } from "sonner";
 import HeaderCMS from "@/components/header";
 import { i18nInstance } from "@/language/i18n";
 import MobileNav from "@/components/MobileNav";
-import { isTokenExpired } from "@/lib/utils";
+import { getRoleUser, isTokenExpired } from "@/lib/utils";
 import "antd/dist/reset.css";
 
 export default function RootLayout({
@@ -34,7 +34,11 @@ export default function RootLayout({
     }
     const token = localStorage.getItem("accessToken");
     if (!token || isTokenExpired(token)) {
-      message.warning("Your session has expired. Please sign in again.");
+      toast.warning("Phiên đăng nhập hết hạn. Hãy đăng nhập lại");
+      router.push("/signin");
+    }
+    if (getRoleUser() === "NONE") {
+      toast.error("Bạn không có quyền truy cập vào trang này.");
       router.push("/signin");
     }
   }, [router]);

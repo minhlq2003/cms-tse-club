@@ -8,18 +8,15 @@ const BASE_URL =
 
 const http = new HttpClient(BASE_URL);
 
-// Tạo mới một training
 export const createTraining = (data: any) =>
   http.post<any>(`${API_PREFIX_TRAINING_PATH}`, data);
 
-// Đăng ký tham gia một training (self trigger)
 export const selfTriggerRegister = (trainingId: string, data: any) =>
   http.post<any>(
     `${API_PREFIX_TRAINING_PATH}/${trainingId}/self-trigger-register`,
     data
   );
 
-// Đăng ký tham gia training cho một hoặc nhiều người dùng (manual trigger)
 export const manualTriggerRegister = (trainingId: string, data: any) =>
   http.post<any>(
     `${API_PREFIX_TRAINING_PATH}/${trainingId}/manual-trigger-register`,
@@ -79,11 +76,7 @@ export const searchTrainingsByLeader = (params?: {
     .then((res) => res._embedded?.trainingWrapperDtoList ?? []);
 
 export const recoverTrainingFromTrash = (trainingId: string) =>
-  http.post<any>(
-    `${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/recover-from-trash`
-  );
+  http.post<any>(`${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/recover`);
 
 export const moveTrainingToTrash = (trainingId: string) =>
-  http.post<any>(
-    `${API_PREFIX_LEADER_TRAINING_PATH}/${trainingId}/move-to-trash`
-  );
+  http.post<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}/delete`);

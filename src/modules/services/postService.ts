@@ -83,3 +83,9 @@ export const searchByLeader = async (params?: {
   });
   return response;
 };
+
+export const recoverPostFromTrash = (postId: string) =>
+  http.post<PostResponse>(`${API_PREFIX_LEADER_POST_PATH}/${postId}/recover`);
+
+export const movePostToTrash = (postId: string) =>
+  http.post<PostResponse>(`${API_PREFIX_POST_PATH}/${postId}/delete`);

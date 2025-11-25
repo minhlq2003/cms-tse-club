@@ -8,7 +8,6 @@ import {
   Table,
   Tag,
   Modal,
-  message,
   Tooltip,
 } from "antd";
 import { Search, RotateCcw, Trash2 } from "lucide-react";
@@ -16,88 +15,63 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
+import { Post } from "@/constant/types";
 import {
-  searchMyTrainings,
-  searchTrainingsByLeader,
-  deleteTraining,
-  recoverTrainingFromTrash,
-} from "@/modules/services/trainingService";
-import { getRoleUser, isLeader } from "@/lib/utils";
-import { Member } from "@/constant/types";
+  getPosts,
+  deletePost,
+  recoverPostFromTrash,
+} from "@/modules/services/postService";
+import { formatDate, getRoleUser } from "@/lib/utils";
+import { toast } from "sonner";
+import Image from "next/image";
 
 const { RangePicker } = DatePicker;
 
-interface Training {
-  id: string;
-  title: string;
-  location?: {
-    destination?: string;
-    startTime?: string;
-    endTime?: string;
-  };
-  status: string;
-  creator?: Member;
-  createdAt?: string;
-  lastModifiedTime?: string;
-  currentRegistered?: number;
-  limitRegister?: number;
-  category?: string;
-}
-
-export default function TrashTrainingPage() {
+export default function TrashPostPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
-  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTraining, setSelectedTraining] = useState<Training | null>(
-    null
-  );
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [openRestoreModal, setOpenRestoreModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
 
   const [filters, setFilters] = useState({
-    category: undefined as string | undefined,
     startTime: undefined as string | undefined,
     endTime: undefined as string | undefined,
-    search: undefined as string | undefined,
+    keyword: undefined as string | undefined,
     sort: undefined as string | undefined,
-    searchs: "deleted",
-    searchValues: "true",
+    deleted: true,
   });
 
-  const fetchDeletedTrainings = async () => {
+  const fetchDeletedPosts = async () => {
     try {
       setLoading(true);
-      let res;
-      if (!isLeader()) {
-        res = await searchMyTrainings({
-          page: page - 1,
-          limit: 10,
-          ...filters,
-        });
-      } else {
-        res = await searchTrainingsByLeader({
-          page: page - 1,
-          limit: 10,
-          ...filters,
-        });
-      }
+      const response = await getPosts({
+        page: page - 1,
+        size: 10,
+        sort: filters.sort,
+        title: filters.keyword,
+        // Assuming the API supports deleted filter
+        // You may need to adjust this based on your actual API
+      });
 
-      if (Array.isArray(res.content)) {
-        setTrainings(res.content);
-        setTotal(res.totalElements);
-      } else if (Array.isArray(res)) {
-        setTrainings(res);
-        setTotal(res.length);
+      if (Array.isArray(response._embedded?.postWrapperDtoList)) {
+        // Filter deleted posts on client side if API doesn't support it
+        const deletedPosts = response._embedded.postWrapperDtoList.filter(
+          (post: Post) => post.deleted === true
+        );
+        setPosts(deletedPosts);
+        setTotal(deletedPosts.length);
       } else {
-        setTrainings([]);
+        setPosts([]);
         setTotal(0);
       }
     } catch {
-      message.error(t("Failed to fetch deleted trainings"));
+      toast.error(t("Failed to fetch deleted posts"));
     } finally {
       setLoading(false);
     }
@@ -125,11 +99,11 @@ export default function TrashTrainingPage() {
 
   const handleRestore = async (id: string) => {
     try {
-      await recoverTrainingFromTrash(id);
-      message.success(t("Training restored successfully"));
-      fetchDeletedTrainings();
+      await recoverPostFromTrash(id);
+      toast.success(t("Post restored successfully"));
+      fetchDeletedPosts();
     } catch {
-      message.error(t("Failed to restore training"));
+      toast.error(t("Failed to restore post"));
     } finally {
       setOpenRestoreModal(false);
     }
@@ -137,11 +111,11 @@ export default function TrashTrainingPage() {
 
   const handlePermanentDelete = async (id: string) => {
     try {
-      await deleteTraining(id);
-      message.success(t("Training permanently deleted"));
-      fetchDeletedTrainings();
+      await deletePost(id);
+      toast.success(t("Post permanently deleted"));
+      fetchDeletedPosts();
     } catch {
-      message.error(t("Failed to delete training permanently"));
+      toast.error(t("Failed to delete post permanently"));
     } finally {
       setOpenDeleteModal(false);
     }
@@ -151,106 +125,117 @@ export default function TrashTrainingPage() {
     Modal.confirm({
       title: t("Empty Trash"),
       content: t(
-        "Are you sure you want to permanently delete all trainings in trash? This action cannot be undone."
+        "Are you sure you want to permanently delete all posts in trash? This action cannot be undone."
       ),
       okText: t("Delete All"),
       cancelText: t("Cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          for (const training of trainings) {
-            await deleteTraining(String(training.id));
+          for (const post of posts) {
+            await deletePost(String(post.id));
           }
-          message.success(t("All trainings permanently deleted"));
-          fetchDeletedTrainings();
+          toast.success(t("All posts permanently deleted"));
+          fetchDeletedPosts();
         } catch {
-          message.error(t("Failed to empty trash"));
+          toast.error(t("Failed to empty trash"));
         }
       },
     });
   };
 
   useEffect(() => {
-    fetchDeletedTrainings();
+    fetchDeletedPosts();
   }, [JSON.stringify(filters), page]);
 
   const columns = [
     {
-      title: t("Training"),
+      title: t("Post"),
       dataIndex: "title",
       key: "title",
-      width: "25%",
-      render: (text: string, record: Training) => (
-        <div>
-          <span className="font-semibold break-before-all max-w-[300px]">
-            {text}
-          </span>
-          <div className="mt-2 flex gap-10">
-            <p>{record.category}</p>
-            <p>
-              {t("Số lượng đăng ký")}: {record.currentRegistered || 0}/
-              {record.limitRegister || "∞"}
-            </p>
+      width: "30%",
+      render: (text: string, record: Post) => (
+        <div className="flex gap-3 items-start">
+          {record.featureImageUrl && (
+            <Image
+              src={record.featureImageUrl}
+              alt="Post image"
+              width={80}
+              height={80}
+              className="rounded-md object-cover flex-shrink-0"
+            />
+          )}
+          <div className="flex-1">
+            <span className="font-semibold break-words">{text}</span>
           </div>
         </div>
       ),
     },
     {
-      title: t("Thời gian và địa điểm"),
-      dataIndex: ["location", "startTime"],
-      key: "startTime",
-      render: (date: string | undefined, record: Training) => (
+      title: t("Writer"),
+      dataIndex: ["writer", "fullName"],
+      key: "fullName",
+      render: (text: string, record: Post) => (
         <div>
+          <span className="font-semibold">{text}</span>
           <p>
-            {date ? new Date(date).toLocaleString() : ""} -{" "}
-            {record.location?.endTime
-              ? new Date(record.location.endTime).toLocaleString()
-              : ""}
+            {formatDate(record.postTime || "").formattedTime}{" "}
+            {formatDate(record.postTime || "").formattedDate}
           </p>
-          <p>{record.location?.destination || "-"}</p>
         </div>
       ),
     },
     {
-      title: t("Creator"),
-      dataIndex: ["creator", "fullName"],
-      key: "creator",
-      render: (text: string) => <span>{text || "-"}</span>,
+      title: t("Status"),
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => {
+        const colorMap: Record<string, string> = {
+          ACCEPTED: "green",
+          PENDING: "orange",
+          REJECTED: "red",
+          DISABLED: "gray",
+          ARCHIVED: "blue",
+        };
+        return <Tag color={colorMap[status] || "default"}>{t(status)}</Tag>;
+      },
     },
     {
       title: t("Deleted Date"),
       dataIndex: "lastModifiedTime",
       key: "lastModifiedTime",
       render: (date: string) => (
-        <span>{date ? new Date(date).toLocaleString() : ""}</span>
+        <span>
+          {formatDate(date).formattedTime} {formatDate(date).formattedDate}
+        </span>
       ),
     },
-    getRoleUser() === "ADMIN" || getRoleUser() === "LEADER"
+    getRoleUser() === "LEADER" || getRoleUser() === "ADMIN"
       ? {
           title: t("Action"),
           key: "action",
-          render: (_: any, record: Training) => (
+          render: (_: any, record: Post) => (
             <div className="flex flex-wrap gap-2">
-              <Tooltip title={t("Khôi phục")}>
+              <Tooltip title={t("Restore")}>
                 <Button
                   type="primary"
                   icon={<RotateCcw size={16} />}
                   onClick={() => {
-                    setSelectedTraining(record);
+                    setSelectedPost(record);
                     setOpenRestoreModal(true);
                   }}
-                ></Button>
+                />
               </Tooltip>
 
-              <Tooltip title={t("Xóa vĩnh viễn")}>
+              <Tooltip title={t("Delete Permanently")}>
                 <Button
                   danger
                   icon={<Trash2 size={16} />}
                   onClick={() => {
-                    setSelectedTraining(record);
+                    setSelectedPost(record);
                     setOpenDeleteModal(true);
                   }}
-                ></Button>
+                />
               </Tooltip>
             </div>
           ),
@@ -266,17 +251,17 @@ export default function TrashTrainingPage() {
         </h1>
 
         <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
-          <Button className="h-[36px]" onClick={() => router.push("/training")}>
-            {t("Back to Trainings")}
+          <Button className="h-[36px]" onClick={() => router.push("/posts")}>
+            {t("Back to Posts")}
           </Button>
 
-          {(getRoleUser() === "ADMIN" || getRoleUser() === "LEADER") && (
+          {(getRoleUser() === "LEADER" || getRoleUser() === "ADMIN") && (
             <Button
               className="h-[36px]"
               danger
               icon={<Trash2 size={16} />}
               onClick={handleEmptyTrash}
-              disabled={trainings.length === 0}
+              disabled={posts.length === 0}
             >
               {t("Empty Trash")}
             </Button>
@@ -286,19 +271,6 @@ export default function TrashTrainingPage() {
 
       <div className="flex w-full justify-between align-middle ml-4 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg px-4">
         <div className="flex gap-2 flex-wrap">
-          <Select
-            placeholder={t("Category")}
-            style={{ width: 150 }}
-            allowClear
-            onChange={(val) => setFilters({ ...filters, category: val })}
-            options={[
-              { label: t("Technical"), value: "TECHNICAL" },
-              { label: t("Soft Skills"), value: "SOFT_SKILLS" },
-              { label: t("Leadership"), value: "LEADERSHIP" },
-              { label: t("Other"), value: "OTHER" },
-            ]}
-          />
-
           <RangePicker onChange={handleDateChange} />
 
           <div className="flex items-center gap-1">
@@ -308,13 +280,13 @@ export default function TrashTrainingPage() {
               value={searchTerm}
               onChange={handleSearchChange}
               onPressEnter={() =>
-                setFilters({ ...filters, search: searchTerm })
+                setFilters({ ...filters, keyword: searchTerm })
               }
               className="px-2 rounded-md border border-gray-300 !w-[150px] md:!w-[200px] lg:!w-[250px]"
             />
             <Button
               className="h-[36px]"
-              onClick={() => setFilters({ ...filters, search: searchTerm })}
+              onClick={() => setFilters({ ...filters, keyword: searchTerm })}
             >
               <Search className="text-gray-600" />
             </Button>
@@ -322,7 +294,7 @@ export default function TrashTrainingPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <p className="!mb-0">{t("Sort by: ")}</p>
+          <p className="!mb-0">{t("Sort by:")}</p>
           <Select
             placeholder={t("Select sort")}
             style={{ width: 200 }}
@@ -331,16 +303,10 @@ export default function TrashTrainingPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              {
-                label: t("Deleted Date (Oldest)"),
-                value: "lastModifiedTime,asc",
-              },
-              {
-                label: t("Deleted Date (Newest)"),
-                value: "lastModifiedTime,desc",
-              },
-              { label: t("Start Time (Oldest)"), value: "startTime,asc" },
-              { label: t("Start Time (Newest)"), value: "startTime,desc" },
+              { label: t("Deleted Date (Oldest)"), value: "updatedAt,asc" },
+              { label: t("Deleted Date (Newest)"), value: "updatedAt,desc" },
+              { label: t("Post Time (Oldest)"), value: "postTime,asc" },
+              { label: t("Post Time (Newest)"), value: "postTime,desc" },
             ]}
           />
         </div>
@@ -350,7 +316,7 @@ export default function TrashTrainingPage() {
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={trainings}
+          dataSource={posts}
           loading={loading}
           pagination={{
             pageSize: 10,
@@ -359,7 +325,7 @@ export default function TrashTrainingPage() {
             total: total,
             showSizeChanger: false,
           }}
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1200 }}
         />
       </div>
 
@@ -367,13 +333,11 @@ export default function TrashTrainingPage() {
         title={t("Confirm Restore")}
         open={openRestoreModal}
         onCancel={() => setOpenRestoreModal(false)}
-        onOk={() =>
-          selectedTraining && handleRestore(String(selectedTraining.id))
-        }
+        onOk={() => selectedPost && handleRestore(String(selectedPost.id))}
         okText={t("Restore")}
         cancelText={t("Cancel")}
       >
-        <p>{t("Are you sure you want to restore this training?")}</p>
+        <p>{t("Are you sure you want to restore this post?")}</p>
       </Modal>
 
       <Modal
@@ -381,7 +345,7 @@ export default function TrashTrainingPage() {
         open={openDeleteModal}
         onCancel={() => setOpenDeleteModal(false)}
         onOk={() =>
-          selectedTraining && handlePermanentDelete(String(selectedTraining.id))
+          selectedPost && handlePermanentDelete(String(selectedPost.id))
         }
         okButtonProps={{ danger: true }}
         okText={t("Delete Permanently")}
@@ -389,7 +353,7 @@ export default function TrashTrainingPage() {
       >
         <p>
           {t(
-            "Are you sure you want to permanently delete this training? This action cannot be undone."
+            "Are you sure you want to permanently delete this post? This action cannot be undone."
           )}
         </p>
       </Modal>

@@ -1,36 +1,80 @@
 "use client";
 
 import ListPost from "@/modules/post/ListPost";
-import { Button, Input, Select } from "antd";
-import { Search } from "lucide-react";
+import { Button, DatePicker, Input, Select } from "antd";
+import { Search, PlusIcon, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
+
+const { RangePicker } = DatePicker;
 
 export default function PostPage() {
   const { t } = useTranslation("common");
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [filters, setFilters] = useState({
+    status: undefined as string | undefined,
+    startTime: undefined as string | undefined,
+    endTime: undefined as string | undefined,
+    keyword: undefined as string | undefined,
+    sort: undefined as string | undefined,
+  });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
+  const handleDateChange = (dates: any) => {
+    if (dates && dates.length === 2) {
+      setFilters({
+        ...filters,
+        startTime: dayjs(dates[0]).toISOString(),
+        endTime: dayjs(dates[1]).toISOString(),
+      });
+    } else {
+      setFilters({ ...filters, startTime: undefined, endTime: undefined });
+    }
+  };
+
+  const handleSortChange = (value: string) => {
+    setFilters({ ...filters, sort: value });
+  };
+
+  const handleStatusChange = (value: string) => {
+    setFilters({ ...filters, status: value });
+  };
+
   return (
     <div className="min-h-[85vh] bg-white flex flex-col items-center justify-start rounded-lg shadow-sm gap-4 px-4 pt-10">
-      {/* Header + Filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-3 md:gap-0">
-        <h1 className="text-2xl md:text-3xl font-bold ml-[10px]">
+      <div className="flex flex-col md:flex-row justify-between w-full items-center gap-4">
+        <h1 className="ml-[10px] text-2xl md:text-3xl font-bold text-center md:text-left">
           {t("List Posts")}
         </h1>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          {/* Status Filter */}
+        <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
+          <Link href="/posts/create">
+            <Button
+              icon={<PlusIcon size={16} />}
+              className="h-[36px]"
+              type="primary"
+            >
+              {t("Create Post")}
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex w-full justify-between align-middle ml-4 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg px-4">
+        <div className="flex gap-2 flex-wrap">
           <Select
             placeholder={t("Status")}
-            style={{ width: 180 }}
+            style={{ width: 150 }}
             allowClear
-            onChange={(val) => setStatusFilter(val)}
+            onChange={handleStatusChange}
+            value={filters.status}
             options={[
               { label: t("Pending"), value: "PENDING" },
               { label: t("Archived"), value: "ARCHIVED" },
@@ -40,33 +84,40 @@ export default function PostPage() {
             ]}
           />
 
-          {/* Search Input */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1">
             <Input
               type="text"
-              placeholder={t("Find post...")}
+              placeholder={t("Title...")}
               value={searchTerm}
               onChange={handleSearchChange}
-              className="px-2 rounded-md border border-gray-300 dark:border-gray-600 h-[36px] sm:w-[250px] md:w-[300px]"
+              className="px-2 rounded-md border border-gray-300 !w-[150px] md:!w-[200px] lg:!w-[250px]"
             />
-            <Button className="h-[36px] flex items-center justify-center">
+            <Button className="h-[36px]" onClick={() => {}}>
               <Search className="text-gray-600" />
             </Button>
           </div>
+        </div>
 
-          {/* Create Button */}
-          <Link href="/posts/create">
-            <Button type="primary" className="h-[36px] w-full sm:w-auto">
-              {t("Create Post")}
-            </Button>
-          </Link>
+        <div className="flex items-center gap-2">
+          <p className="!mb-0">{t("Sort by:")}</p>
+          <Select
+            placeholder={t("Select sort")}
+            style={{ width: 200 }}
+            allowClear
+            onChange={handleSortChange}
+            options={[
+              { label: t("Title (A-Z)"), value: "title,asc" },
+              { label: t("Title (Z-A)"), value: "title,desc" },
+              { label: t("Post Time (Oldest)"), value: "postTime,asc" },
+              { label: t("Post Time (Newest)"), value: "postTime,desc" },
+              { label: t("Created Date (Oldest)"), value: "createdAt,asc" },
+              { label: t("Created Date (Newest)"), value: "createdAt,desc" },
+            ]}
+          />
         </div>
       </div>
 
-      {/* List Component */}
-      <div className="w-full">
-        <ListPost status={statusFilter} searchTerm={searchTerm} />
-      </div>
+      <ListPost filters={{ ...filters, keyword: searchTerm }} />
     </div>
   );
 }

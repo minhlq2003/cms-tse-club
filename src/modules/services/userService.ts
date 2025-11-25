@@ -15,6 +15,7 @@ export const getUser = (params?: {
   size?: number;
   keyword?: string;
   sort?: string;
+  role?: string;
 }) => {
   const response = http.get(`${API_PREFIX_PATH}/search`, {
     params,

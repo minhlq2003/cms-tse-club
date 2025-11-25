@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { formatDate, getUser, isLeader } from "@/lib/utils";
 import { Check, Edit, Eye, Trash2, View, X, CheckCircle } from "lucide-react";
 import dayjs from "dayjs";
+import { toast } from "sonner";
 
 export default function ListEvent({ filters }: ListEventProps) {
   const { t } = useTranslation("common");
@@ -62,7 +63,7 @@ export default function ListEvent({ filters }: ListEventProps) {
         setTotal(0);
       }
     } catch {
-      message.error(t("Failed to fetch events"));
+      toast.error(t("Failed to fetch events"));
     } finally {
       setLoading(false);
     }
@@ -74,11 +75,17 @@ export default function ListEvent({ filters }: ListEventProps) {
 
   const handleMoveToTrash = async (id: string) => {
     try {
-      await moveEventToTrash(id);
-      message.success(t("Event moved to trash successfully"));
+      const response = await moveEventToTrash(id);
+      console.log(response);
+
+      if (response === null) {
+        toast.error(t("Bạn không có quyền xóa sự kiện này"));
+      } else {
+        toast.success(t("Xóa sự kiện thành công"));
+      }
       fetchEvents();
     } catch {
-      message.error(t("Failed to move event to trash"));
+      toast.error(t("Xóa sự kiện không thành công"));
     } finally {
       setOpenMoveToTrashModal(false);
     }
@@ -87,10 +94,10 @@ export default function ListEvent({ filters }: ListEventProps) {
   const handleApprove = async (id: string) => {
     try {
       await updateStatusEventByLeader(id, "ACCEPTED");
-      message.success(t("Event approved successfully"));
+      toast.success(t("Event approved successfully"));
       fetchEvents();
     } catch {
-      message.error(t("Failed to approve event"));
+      toast.error(t("Failed to approve event"));
     } finally {
       setOpenApproveModal(false);
     }
@@ -99,10 +106,10 @@ export default function ListEvent({ filters }: ListEventProps) {
   const handleReject = async (id: string) => {
     try {
       await updateStatusEventByLeader(id, "REJECTED");
-      message.success(t("Event rejected successfully"));
+      toast.success(t("Event rejected successfully"));
       fetchEvents();
     } catch {
-      message.error(t("Failed to reject event"));
+      toast.error(t("Failed to reject event"));
     } finally {
       setOpenRejectModal(false);
     }
@@ -111,10 +118,10 @@ export default function ListEvent({ filters }: ListEventProps) {
   const handleTriggerDone = async (id: string) => {
     try {
       await triggerEventDone(id);
-      message.success(t("Event marked as done successfully"));
+      toast.success(t("Event marked as done successfully"));
       fetchEvents();
     } catch {
-      message.error(t("Failed to mark event as done"));
+      toast.error(t("Failed to mark event as done"));
     } finally {
       setOpenDoneModal(false);
     }
@@ -188,7 +195,7 @@ export default function ListEvent({ filters }: ListEventProps) {
       key: "status",
       render: (status: string, record: Event) => {
         // Check if event is done
-        if (record.isDone) {
+        if (record.done) {
           return <Tag color="purple">{t("DONE")}</Tag>;
         }
 
@@ -219,7 +226,7 @@ export default function ListEvent({ filters }: ListEventProps) {
           </Tooltip>
 
           {/* Hide Edit button if event is done */}
-          {!record.isDone && (
+          {!record.done && (
             <Tooltip title={t("Edit")}>
               <Button
                 type="primary"
@@ -239,7 +246,7 @@ export default function ListEvent({ filters }: ListEventProps) {
           {/* Trigger Done button - only for leaders and if not done yet */}
           {isLeader() &&
             record.status === "ACCEPTED" &&
-            !record.isDone &&
+            !record.done &&
             dayjs(record.location.startTime).isBefore(Date.now()) && (
               <Tooltip title={t("Mark as Done")}>
                 <Button

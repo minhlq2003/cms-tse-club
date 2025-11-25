@@ -54,7 +54,7 @@ export const updateEvent = (id: string, data: Event) =>
   http.patch<Event>(`${API_PREFIX_EVENT_PATH}/${id}/update-event`, data);
 
 export const deleteEvent = (id: string) =>
-  http.delete<{ message: string }>(`${API_PREFIX_EVENT_PATH}/${id}`);
+  http.delete<{ message: string }>(`${API_PREFIX_LEADER_EVENT_PATH}/${id}`);
 
 export const modifyOrganizers = (id: string, organizers: any[]) =>
   http.put<Event>(`${API_PREFIX_EVENT_PATH}/${id}/modify-organizers`, {
@@ -118,7 +118,9 @@ export const recoverEventFromTrash = (id: string) =>
   );
 
 export const moveEventToTrash = (id: string) =>
-  http.post<{ message: string }>(`${API_PREFIX_EVENT_PATH}/${id}/delete-event`);
+  http.post<{ message: string; status: number }>(
+    `${API_PREFIX_EVENT_PATH}/${id}/delete-event`
+  );
 
 export const updateContestResults = (eventId: string, data: any) =>
   http.put<Event>(
@@ -138,8 +140,8 @@ export const getCodeCheckIn = (
     `${API_PREFIX_EVENT_PATH}/${eventId}/code?endTime=${endTime}&forceNew=${forceNew}`
   );
 
-
 export const triggerEventDone = (eventId: string) =>
-  http.post<{ message: string }>(
-    `${API_PREFIX_LEADER_EVENT_PATH}/${eventId}/trigger-done`
+  http.patch<{ message: string }>(
+    `${API_PREFIX_LEADER_EVENT_PATH}/${eventId}/trigger-done`,
+    {}
   );

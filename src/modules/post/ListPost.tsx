@@ -1,155 +1,154 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Button, Modal, Table, Tag, Tooltip } from "antd";
+import { useRouter } from "next/navigation";
 import { Post } from "@/constant/types";
-import { getRoleUser, getUser } from "@/lib/utils";
+import { formatDate, getRoleUser, getUser } from "@/lib/utils";
 import {
-  approvePostByLeader,
-  deletePost,
   getPosts,
+  deletePost,
+  approvePostByLeader,
   rejectPostByLeader,
 } from "@/modules/services/postService";
-import { Button, Table, Modal, Tag, message } from "antd";
-import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import type { SorterResult } from "antd/es/table/interface";
-import Image from "next/image";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Check, Edit, Eye, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import Image from "next/image";
 
 interface ListPostProps {
-  searchTerm: string;
-  status: string;
+  filters: {
+    status?: string;
+    keyword?: string;
+    sort?: string;
+  };
 }
 
-export default function ListPost({ searchTerm, status }: ListPostProps) {
+export default function ListPost({ filters }: ListPostProps) {
   const { t } = useTranslation("common");
-  const [data, setData] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(5);
-  const [totalPosts, setTotalPosts] = useState(0);
-  const [sortBy, setSortBy] = useState<string | undefined>();
-  const [sortOrder, setSortOrder] = useState<string | undefined>();
+  const router = useRouter();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // State cho các modal
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openApproveModal, setOpenApproveModal] = useState(false);
+  const [openRejectModal, setOpenRejectModal] = useState(false);
 
-  const fetchPosts = async (
-    pageNo: number,
-    pageSize: number,
-    sortBy?: string,
-    sortOrder?: string
-  ) => {
+  const [page, setPage] = useState<number>(1);
+  const [total, setTotal] = useState<number>(0);
+
+  const fetchPosts = async () => {
     try {
       setLoading(true);
       const response = await getPosts({
-        page: pageNo,
-        size: pageSize,
-        sort: sortBy,
-        title: searchTerm,
-        status: status,
+        page: page - 1,
+        size: 10,
+        sort: filters.sort,
+        title: filters.keyword,
+        status: filters.status,
       });
 
       if (Array.isArray(response._embedded?.postWrapperDtoList)) {
-        setData(response._embedded.postWrapperDtoList);
-        setTotalPosts(response.page.totalElements ?? 0);
+        setPosts(response._embedded.postWrapperDtoList);
+        setTotal(response.page.totalElements ?? 0);
+      } else {
+        setPosts([]);
+        setTotal(0);
       }
     } catch {
-      message.error(t("Failed to fetch posts"));
+      toast.error(t("Failed to fetch posts"));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPosts(currentPage, pageSize, sortBy, sortOrder);
-  }, [currentPage, pageSize, sortBy, sortOrder, searchTerm, status]);
+    fetchPosts();
+  }, [JSON.stringify(filters), page]);
 
-  // === Xử lý Delete / Approve / Reject ===
-  const handleDelete = async () => {
-    if (!selectedPost?.id) return;
+  const handleDelete = async (id: string) => {
     try {
-      await deletePost(String(selectedPost.id));
-      message.success(t("Post deleted successfully"));
-      fetchPosts(currentPage, pageSize);
+      await deletePost(id);
+      toast.success(t("Post deleted successfully"));
+      fetchPosts();
     } catch {
-      message.error(t("Failed to delete post"));
+      toast.error(t("Failed to delete post"));
     } finally {
-      setIsDeleteModalOpen(false);
+      setOpenDeleteModal(false);
     }
   };
 
-  const handleApprove = async () => {
-    if (!selectedPost?.id) return;
+  const handleApprove = async (id: string) => {
     try {
-      await approvePostByLeader(String(selectedPost.id));
-      message.success(t("Post approved successfully"));
-      fetchPosts(currentPage, pageSize);
+      await approvePostByLeader(id);
+      toast.success(t("Post approved successfully"));
+      fetchPosts();
     } catch {
-      message.error(t("Failed to approve post"));
+      toast.error(t("Failed to approve post"));
     } finally {
-      setIsApproveModalOpen(false);
+      setOpenApproveModal(false);
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedPost?.id) return;
+  const handleReject = async (id: string) => {
     try {
-      await rejectPostByLeader(String(selectedPost.id));
-      message.success(t("Post rejected successfully"));
-      fetchPosts(currentPage, pageSize);
+      await rejectPostByLeader(id);
+      toast.success(t("Post rejected successfully"));
+      fetchPosts();
     } catch {
-      message.error(t("Failed to reject post"));
+      toast.error(t("Failed to reject post"));
     } finally {
-      setIsRejectModalOpen(false);
+      setOpenRejectModal(false);
     }
   };
 
-  const handleTableChange = (
-    pagination: TablePaginationConfig,
-    _: Record<string, unknown>,
-    sorter: SorterResult<Post> | SorterResult<Post>[]
-  ) => {
-    setCurrentPage((pagination.current ?? 1) - 1);
-    setPageSize(pagination.pageSize ?? 5);
-    if (!Array.isArray(sorter)) {
-      setSortBy((sorter.field as string) || undefined);
-      setSortOrder(
-        sorter.order === "ascend"
-          ? "asc"
-          : sorter.order === "descend"
-          ? "desc"
-          : undefined
-      );
-    }
-  };
-
-  const columns: ColumnsType<Post> = [
+  const columns = [
     {
-      title: t("Image"),
-      dataIndex: "FeatureImageUrl",
-      key: "image",
-      render: (url: string | undefined) =>
-        url ? (
-          <Image
-            src={url}
-            alt="Post image"
-            width={100}
-            height={60}
-            className="rounded-md object-cover"
-          />
-        ) : (
-          t("No image")
-        ),
-    },
-    {
-      title: t("Title"),
+      title: t("Post"),
       dataIndex: "title",
       key: "title",
-      sorter: true,
-      width: 400,
+      width: "30%",
+      render: (text: string, record: Post) => (
+        <div className="flex gap-3 items-start">
+          {record.featureImageUrl && (
+            <Image
+              src={record.featureImageUrl}
+              alt="Post image"
+              width={80}
+              height={80}
+              className="rounded-md object-cover flex-shrink-0"
+            />
+          )}
+          <div className="flex-1">
+            <span className="font-semibold break-words">{text}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: t("Writer"),
+      dataIndex: ["writer", "fullName"],
+      key: "fullName",
+      render: (text: string, record: Post) => (
+        <div>
+          <span className="font-semibold">{text}</span>
+          <p>
+            {formatDate(record.postTime || "").formattedTime}{" "}
+            {formatDate(record.postTime || "").formattedDate}
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: t("Last Modified"),
+      dataIndex: "lastModifiedTime",
+      key: "lastModifiedTime",
+      render: (date: string) => (
+        <span>
+          {formatDate(date).formattedTime} {formatDate(date).formattedDate}
+        </span>
+      ),
     },
     {
       title: t("Status"),
@@ -161,58 +160,67 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
           PENDING: "orange",
           REJECTED: "red",
           DISABLED: "gray",
+          ARCHIVED: "blue",
         };
         return <Tag color={colorMap[status] || "default"}>{t(status)}</Tag>;
       },
     },
     {
-      title: t("Created Date (MM/DD/YYYY)"),
-      dataIndex: "postTime",
-      key: "postTime",
-      sorter: true,
-      render: (date: string | undefined) =>
-        date ? new Date(date).toLocaleString() : "",
-    },
-    {
       title: t("Action"),
       key: "action",
-      render: (_, record) => (
+      render: (_: any, record: Post) => (
         <div className="flex flex-wrap gap-2">
-          <Button
-            danger
-            onClick={() => {
-              setSelectedPost(record);
-              setIsDeleteModalOpen(true);
-            }}
-          >
-            {t("Delete")}
-          </Button>
+          <Tooltip title={t("Delete")}>
+            <Button
+              danger
+              icon={<Trash2 size={22} />}
+              onClick={() => {
+                setSelectedPost(record);
+                setOpenDeleteModal(true);
+              }}
+            ></Button>
+          </Tooltip>
 
           {getUser().id === record.writer?.id && (
-            <Button type="primary">
-              <a href={`/posts/edit?id=${record.id}`}>{t("Edit")}</a>
-            </Button>
+            <Tooltip title={t("Edit")}>
+              <Button
+                type="primary"
+                icon={<Edit size={22} />}
+                onClick={() => router.push(`/posts/edit?id=${record.id}`)}
+              ></Button>
+            </Tooltip>
           )}
+
+          <Tooltip title={t("View")}>
+            <Button
+              icon={<Eye size={22} />}
+              onClick={() => router.push(`/posts/view?id=${record.id}`)}
+            ></Button>
+          </Tooltip>
 
           {(getRoleUser() === "ADMIN" || getRoleUser() === "LEADER") &&
             record.status === "PENDING" && (
               <>
-                <Button
-                  onClick={() => {
-                    setSelectedPost(record);
-                    setIsApproveModalOpen(true);
-                  }}
-                >
-                  {t("Approve")}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedPost(record);
-                    setIsRejectModalOpen(true);
-                  }}
-                >
-                  {t("Reject")}
-                </Button>
+                <Tooltip title={t("Approve")}>
+                  <Button
+                    className="!text-green-600 !border-green-600 !bg-green-50 hover:!bg-green-100"
+                    icon={<Check size={22} />}
+                    onClick={() => {
+                      setSelectedPost(record);
+                      setOpenApproveModal(true);
+                    }}
+                  ></Button>
+                </Tooltip>
+                <Tooltip title={t("Reject")}>
+                  <Button
+                    className="!text-red-600 !border-red-600 !bg-red-50 hover:!bg-red-100"
+                    icon={<X size={22} />}
+                    onClick={() => {
+                      setSelectedPost(record);
+                      setOpenRejectModal(true);
+                    }}
+                  ></Button>
+                </Tooltip>
               </>
             )}
         </div>
@@ -223,51 +231,48 @@ export default function ListPost({ searchTerm, status }: ListPostProps) {
   return (
     <div className="w-full mt-5">
       <Table
-        columns={columns}
-        dataSource={data}
-        loading={loading}
         rowKey="id"
+        columns={columns}
+        dataSource={posts}
+        loading={loading}
         pagination={{
-          current: currentPage + 1,
-          pageSize,
-          total: totalPosts,
+          pageSize: 10,
+          current: page,
+          onChange: setPage,
+          total: total,
           showSizeChanger: false,
         }}
-        onChange={handleTableChange}
-        scroll={{ x: "max-content" }}
+        scroll={{ x: 1200 }}
       />
 
-      {/* Modal Delete */}
       <Modal
         title={t("Confirm Delete")}
-        open={isDeleteModalOpen}
-        onOk={handleDelete}
-        onCancel={() => setIsDeleteModalOpen(false)}
+        open={openDeleteModal}
+        onCancel={() => setOpenDeleteModal(false)}
+        onOk={() => selectedPost && handleDelete(String(selectedPost.id))}
+        okButtonProps={{ danger: true }}
         okText={t("Delete")}
         cancelText={t("Cancel")}
-        okButtonProps={{ danger: true }}
       >
         <p>{t("Are you sure you want to delete this post?")}</p>
       </Modal>
 
-      {/* Modal Approve */}
       <Modal
         title={t("Confirm Approve")}
-        open={isApproveModalOpen}
-        onOk={handleApprove}
-        onCancel={() => setIsApproveModalOpen(false)}
+        open={openApproveModal}
+        onCancel={() => setOpenApproveModal(false)}
+        onOk={() => selectedPost && handleApprove(String(selectedPost.id))}
         okText={t("Approve")}
         cancelText={t("Cancel")}
       >
         <p>{t("Are you sure you want to approve this post?")}</p>
       </Modal>
 
-      {/* Modal Reject */}
       <Modal
         title={t("Confirm Reject")}
-        open={isRejectModalOpen}
-        onOk={handleReject}
-        onCancel={() => setIsRejectModalOpen(false)}
+        open={openRejectModal}
+        onCancel={() => setOpenRejectModal(false)}
+        onOk={() => selectedPost && handleReject(String(selectedPost.id))}
         okText={t("Reject")}
         cancelText={t("Cancel")}
       >

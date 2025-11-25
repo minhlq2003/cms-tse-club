@@ -41,7 +41,7 @@ export class HttpClient {
         return res as T;
       }
 
-      return res?.data ?? null;
+      return res?.data ?? res;
     } catch (err: any) {
       console.log("HTTP Error:", err);
       return null;

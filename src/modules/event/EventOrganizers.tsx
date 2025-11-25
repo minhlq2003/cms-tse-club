@@ -7,6 +7,7 @@ import {
   CaretUpOutlined,
   EditOutlined,
   EyeOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -32,7 +33,7 @@ interface EventOrganizersProps {
   organizers: Organizer[];
   onChangeOrganizers: (organizers: Organizer[]) => void;
   eventId?: string;
-  isView?: boolean; // 👈 thêm prop
+  isView?: boolean;
 }
 
 const EventOrganizers: React.FC<EventOrganizersProps> = ({
@@ -45,21 +46,21 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   const [isPublishListVisible, setPublishListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [searchText, setSearchText] = useState("");
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [form] = Form.useForm();
 
-  // 🧠 Lấy danh sách thành viên
-  const fetchMembers = async () => {
+  const fetchMembers = async (keyword: string = "") => {
     try {
       setLoadingMembers(true);
-      const res = await getUser({ keyword: "" });
+      const res = await getUser({ keyword, page: 0, size: 100 });
       if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
         const allMembers = res._embedded.userShortInfoResponseDtoList;
-        const filteredMembers = allMembers.filter(
+        const filtered = allMembers.filter(
           (m: Member) => !organizers.some((o) => o.organizerId === m.id)
         );
-        setMembers(filteredMembers);
+        setMembers(filtered);
       }
     } catch {
       message.error(t("Failed to fetch members"));
@@ -69,20 +70,35 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   };
 
   useEffect(() => {
-    fetchMembers();
-  }, [organizers]);
+    if (isModalOpen) {
+      fetchMembers(searchText);
+    }
+  }, [organizers, isModalOpen]);
+
+  // Debounce search to avoid too many API calls
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const timeoutId = setTimeout(() => {
+      fetchMembers(searchText);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, isModalOpen]);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
     if (!isView) {
       setSelectedMember(null);
       form.resetFields();
-      fetchMembers();
+      setSearchText("");
+      fetchMembers("");
     }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSearchText("");
   };
 
   const handleAddOrganizer = () => {
@@ -125,9 +141,8 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
     message.success(t("Organizer removed"));
 
     if (removed) {
-      await fetchMembers();
+      fetchMembers(searchText);
     }
-    console.log("member:", members);
   };
 
   const updateOrganizer = () => {
@@ -147,7 +162,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       });
   };
 
-  // 🧩 Cột bảng
   const memberColumns = [
     {
       title: t("Full Name"),
@@ -238,7 +252,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         />
       </div>
 
-      {/* List hiển thị */}
       {isPublishListVisible && (
         <div>
           <Table
@@ -276,7 +289,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         </div>
       )}
 
-      {/* Modal */}
       <Modal
         title={<p className="pb-2 text-2xl">{t("Event Organizers")}</p>}
         open={isModalOpen}
@@ -294,7 +306,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
         }
       >
         {isView ? (
-          // 👁️ View mode — chỉ hiển thị danh sách Organizer
           <Table
             rowKey="organizerId"
             columns={organizerColumnsModal}
@@ -303,11 +314,23 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
             scroll={{ x: true }}
           />
         ) : (
-          // ✏️ Edit mode
           <Row gutter={[16, 16]} className="flex flex-col md:flex-row">
-            {/* LEFT: List Member */}
             <Col xs={24} md={12}>
-              <Title level={5}>{t("Select a Member")}</Title>
+              <div className="flex items-center justify-between mb-4">
+                <Title level={5} className="!mb-0">
+                  {t("Select a Member")}
+                </Title>
+              </div>
+
+              <Input
+                prefix={<SearchOutlined />}
+                placeholder={t("Search by name, username or email")}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="mb-4"
+                allowClear
+              />
+
               <Table
                 rowKey="id"
                 columns={memberColumns}
@@ -318,7 +341,6 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
               />
             </Col>
 
-            {/* RIGHT: Form + List Organizer */}
             <Col xs={24} md={12}>
               <Title level={5}>{t("Organizer Info")}</Title>
               <Form form={form} layout="vertical" className="mb-6">

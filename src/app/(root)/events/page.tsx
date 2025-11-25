@@ -48,7 +48,6 @@ export default function EventPage() {
   };
 
   const handleImport = () => {
-    // TODO: Implement import logic
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv,.xlsx";
@@ -56,7 +55,6 @@ export default function EventPage() {
       const file = e.target?.files?.[0];
       if (file) {
         message.success(t("Importing file: ") + file.name);
-        // Process file here
       }
     };
     input.click();
@@ -67,7 +65,6 @@ export default function EventPage() {
   };
 
   const handleStatusChange = (value: string) => {
-    // If "DONE" is selected, set isDone filter
     if (value === "DONE") {
       setFilters({ ...filters, status: undefined, isDone: true });
     } else {

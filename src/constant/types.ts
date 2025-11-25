@@ -443,6 +443,7 @@ export interface Post {
   featureImageUrl?: string;
   eventId?: string;
   event?: Event;
+  deleted: boolean;
 }
 
 export interface CategoryOption {
@@ -479,7 +480,7 @@ export interface Event {
   currentRegistered?: number;
   createdAt?: string;
   lastModifiedTime?: string;
-  isDone?: boolean;
+  done?: boolean;
 }
 export interface Location {
   destination: string;
@@ -510,6 +511,7 @@ export interface Training {
   plans?: string;
   allowedType?: number;
   allowedArray?: number[];
+  isPublic?: boolean;
 }
 
 export interface Member {
