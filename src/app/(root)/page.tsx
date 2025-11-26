@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Avatar, Button, Select } from "antd";
+import { Card, Avatar, Button, Select, Image } from "antd";
 import {
   DoubleLeftOutlined,
   DoubleRightOutlined,
@@ -14,6 +14,7 @@ import { set } from "lodash";
 import { Event } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@/lib/utils";
+import { Images } from "@/constant/image";
 
 export default function Dashboard() {
   const { t } = useTranslation("common");
@@ -150,11 +151,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow md:col-span-2 rounded-2xl">
           <div className="flex flex-col md:flex-row items-start md:items-center space-y-3 md:space-y-0 md:space-x-4">
-            <Avatar
-              size={64}
-              icon={<i className="fas fa-user-graduate"></i>}
-              className=" !md:mb-0 !mb-[10px]"
-            />
+            <Image src={Images.avtDefault.src} />
             <div className="pl-0 md:pl-3 w-full">
               <h3 className="font-bold text-blue-900 mb-2">
                 {t("THÔNG TIN CÁ NHÂN")}

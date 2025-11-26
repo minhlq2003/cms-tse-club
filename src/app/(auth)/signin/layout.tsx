@@ -50,7 +50,10 @@ export default function RootLayout({
         <Suspense fallback={<div>Loading...</div>}>
           <LocaleProvider>
             {() => (
-              <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>
+              <I18nextProvider i18n={i18nInstance}>
+                <Toaster richColors position="top-center" duration={2000} />
+                {children}
+              </I18nextProvider>
             )}
           </LocaleProvider>
         </Suspense>

@@ -117,8 +117,8 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
           <Select.Option value="en">English</Select.Option>
         </Select>
         <Image
-          className="w-8 h-8 md:block hidden rounded-full border-2 border-indigo-400 cursor-pointer"
-          src={`/default-image.jpg`}
+          className="w-10 h-8 md:block hidden rounded-full border-2 border-indigo-400 cursor-pointer"
+          src={Images.avtDefault.src}
           alt="User Avatar"
           onClick={handleUserMenuClick}
           width={32}

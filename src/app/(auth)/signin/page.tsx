@@ -41,11 +41,15 @@ function SignIn() {
         throw new Error("Invalid credentials");
       }
       const data = await response.json();
+      if (data.role === "NONE") {
+        toast.warning("Tài khoản không có quyền truy cập vào trang này.");
+        return;
+      }
       if (data.accessToken != undefined) {
         router.push("/");
-        toast.success("Login successful!");
+        toast.success("Đăng nhập thành công!");
       } else {
-        toast.error("Login failed!");
+        toast.error("Đăng nhập thất bại!");
       }
       localStorage.setItem("user", JSON.stringify(data));
       localStorage.setItem("accessToken", data.accessToken);
@@ -61,6 +65,9 @@ function SignIn() {
 
     if (typeof window !== "undefined") {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user.role === "NONE") {
+        toast.warning("Bạn không có quyền truy cập vào trang này.");
+      }
       if (
         user &&
         user.id &&

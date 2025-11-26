@@ -18,6 +18,7 @@ interface PublishProps {
   eventId?: string;
   postId?: string;
   setEventId?: (id: string) => void;
+  disabled?: boolean;
 }
 
 export default function Publish({
@@ -28,6 +29,7 @@ export default function Publish({
   eventId,
   postId,
   setEventId,
+  disabled = false,
 }: PublishProps) {
   const { t } = useTranslation("common");
   const [isPublishListVisible, setPublishListVisible] = useState(true);
@@ -39,7 +41,7 @@ export default function Publish({
   useEffect(() => {
     if (type === "post") {
       setLoadingEvents(true);
-      getEvents({ status: "ACCEPTED" })
+      getEvents({ status: "ACCEPTED", isDone: false })
         .then((res) => {
           if (Array.isArray(res?._embedded?.eventWrapperDtoList)) {
             setEvents(
@@ -97,6 +99,7 @@ export default function Publish({
               label: event.title,
               value: event.id,
             }))}
+            disabled={disabled}
           />
         </Space>
       );
@@ -133,6 +136,7 @@ export default function Publish({
               onChange={(value) => setStatus(value)}
               defaultValue={status}
               className="w-[120px] !h-[28px]"
+              disabled={disabled}
             >
               {getRoleUser() === "ADMIN" || getRoleUser() === "LEADER" ? (
                 <Select.Option value="PENDING">{t("Publish")}</Select.Option>
@@ -146,7 +150,7 @@ export default function Publish({
 
           <div className="flex justify-end border-t bg-[#f6f7f7] border-gray-300 rounded-b-[10px]">
             <div className="px-4 py-3">
-              <Button type="primary" onClick={onSubmit}>
+              <Button type="primary" onClick={onSubmit} disabled={disabled}>
                 {status.match("ARCHIVED")
                   ? t("Save Draft")
                   : isLeader()

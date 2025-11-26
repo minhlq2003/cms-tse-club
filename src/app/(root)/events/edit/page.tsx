@@ -42,13 +42,11 @@ const EditEvent = () => {
   const [status, setStatus] = useState<string>("PENDING");
   const [post, setPost] = useState<Post | undefined>(undefined);
 
-  // --- Plan builder states ---
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [planData, setPlanData] = useState<Record<string, any>>({});
 
-  // --- Permission & Event Status states ---
   const [eventData, setEventData] = useState<any>(null);
   const [canModify, setCanModify] = useState(false);
   const [canCheckIn, setCanCheckIn] = useState(false);
@@ -56,19 +54,16 @@ const EditEvent = () => {
   const [eventStarted, setEventStarted] = useState(false);
   const [eventDone, setEventDone] = useState(false);
 
-  // --- Check-in Code Modal states ---
   const [checkInModalVisible, setCheckInModalVisible] = useState(false);
   const [checkInCode, setCheckInCode] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
 
-  // Load basic + custom templates
   useEffect(() => {
     const customRaw = localStorage.getItem("plan_block_templates") || "[]";
     const custom = JSON.parse(customRaw);
     setTemplates([...BasicBlocks, ...custom]);
   }, []);
 
-  // Handle add new block to sidebar
   const handleAddBlock = useCallback(
     (block: BlockTemplate | "__REMOVE__") => {
       if (block === "__REMOVE__") return;
@@ -86,18 +81,15 @@ const EditEvent = () => {
     [templates]
   );
 
-  // Check permissions based on event data
   const checkPermissions = (data: any) => {
     const currentUser = getUser();
     if (!currentUser) return;
 
     const userId = currentUser.id;
 
-    // Check if user is host
     const isUserHost = data.host?.id === userId || data.isHost === true;
     setIsHost(isUserHost);
 
-    // Check event timing
     const now = dayjs();
     const startTime = data.location?.startTime
       ? dayjs(data.location.startTime)
@@ -105,27 +97,21 @@ const EditEvent = () => {
     const hasStarted = startTime ? now.isAfter(startTime) : false;
     setEventStarted(hasStarted);
 
-    // Check if event is done
     setEventDone(data.done === true);
 
-    // Check organizer permissions
     const userAsOrganizer = data.userAsOrganizer;
     const roles = userAsOrganizer?.roles || [];
 
-    // Host has full permissions
-    if (isUserHost) {
-      setCanModify(!hasStarted && !data.done); // Can modify before event starts and not done
-      setCanCheckIn(!data.done); // Can check-in if not done
+    if (isUserHost || getRoleUser() === "LEADER" || getRoleUser() === "ADMIN") {
+      setCanModify(!hasStarted && !data.done);
+      setCanCheckIn(!data.done);
     } else {
-      // Check MODIFY permission (before event starts only)
       setCanModify(roles.includes("MODIFY") && !hasStarted && !data.done);
 
-      // Check CHECK_IN permission (if not done)
       setCanCheckIn(roles.includes("CHECK_IN") && !data.done);
     }
   };
 
-  // Fetch event data
   const fetchEvent = useCallback(
     async (id: string) => {
       setLoading(true);
@@ -165,7 +151,6 @@ const EditEvent = () => {
               : []
           );
 
-          // parse plan
           if (data.plans) {
             try {
               const parsed = JSON.parse(data.plans);
@@ -209,7 +194,6 @@ const EditEvent = () => {
     }
   };
 
-  // Trigger Event Done
   const handleTriggerDone = async () => {
     if (!id) return;
 
@@ -351,6 +335,7 @@ const EditEvent = () => {
                 onFinish={onFinish}
                 uploadedImages={uploadedImage}
                 setUploadedImages={setUploadedImage}
+                disabled={!canModify}
               />
 
               <PlanFormDynamic
@@ -376,6 +361,7 @@ const EditEvent = () => {
                 type="event"
                 eventId={id || ""}
                 postId={post?.id}
+                disabled={!canModify}
               />
 
               {/* Trigger Done Button (Leader only) */}

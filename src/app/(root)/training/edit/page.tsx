@@ -36,7 +36,6 @@ const EditTraining = () => {
   const [status, setStatus] = useState<string>("PENDING");
   const [trainingEvents, setTrainingEvents] = useState<Event[]>([]);
 
-  // Dynamic plan states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     "basic_thoi_gian",
     "basic_mentor",
@@ -48,7 +47,6 @@ const EditTraining = () => {
   const [templates, setTemplates] = useState<any[]>([]);
   const [planData, setPlanData] = useState<Record<string, any>>({});
 
-  // Fetch templates
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
@@ -118,7 +116,6 @@ const EditTraining = () => {
               : "ARCHIVED"
           );
 
-          // Set mentors
           setMentors(
             Array.isArray(data.mentors)
               ? data.mentors.map((m: any) => ({
@@ -132,12 +129,10 @@ const EditTraining = () => {
               : []
           );
 
-          // Set training events
           setTrainingEvents(
             Array.isArray(data.trainingEvents) ? data.trainingEvents : []
           );
 
-          // Parse and restore plans
           if (data.plans) {
             try {
               const parsedPlans = JSON.parse(data.plans);
@@ -165,8 +160,6 @@ const EditTraining = () => {
                 setPlanData(parsedPlans.data);
               }
             } catch (e) {
-              console.error("Failed to parse plans:", e);
-              // Fallback: populate planData from location và mentors
               setPlanData({
                 basic_thoi_gian: {
                   "Thời gian":
@@ -187,7 +180,6 @@ const EditTraining = () => {
               });
             }
           } else {
-            // No plans data → create from location and mentors
             setPlanData({
               basic_thoi_gian: {
                 "Thời gian":
@@ -217,7 +209,6 @@ const EditTraining = () => {
   );
 
   const onFinish = async (values: Training) => {
-    // Lấy thông tin từ planData
     const locationFromPlan = planData["basic_thoi_gian"];
 
     if (locationFromPlan) {
@@ -250,7 +241,6 @@ const EditTraining = () => {
       return;
     }
 
-    // Lấy mentors từ planData
     const mentorsFromPlan = planData["basic_mentor"]?.["Mentors"] || [];
     const mentorIds = mentorsFromPlan
       .map((m: any) => m.mentorId)

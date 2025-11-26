@@ -10,6 +10,7 @@ export interface EventFormProps {
   onFinish: (values: Event) => void;
   uploadedImages: string;
   setUploadedImages: React.Dispatch<React.SetStateAction<string>>;
+  disabled?: boolean;
 }
 
 const EventForm: React.FC<EventFormProps> = ({
@@ -17,6 +18,7 @@ const EventForm: React.FC<EventFormProps> = ({
   onFinish,
   uploadedImages,
   setUploadedImages,
+  disabled = false,
 }) => {
   const { t } = useTranslation("common");
 
@@ -56,6 +58,7 @@ const EventForm: React.FC<EventFormProps> = ({
       onFinish={handleSubmit}
       layout="vertical"
       autoComplete="off"
+      disabled={disabled}
     >
       <div className="border border-gray-300 p-2 md:p-4 rounded-md mb-4">
         <Form.Item
@@ -121,7 +124,7 @@ const EventForm: React.FC<EventFormProps> = ({
           ]}
         >
           <Checkbox.Group
-            disabled={isPublic}
+            disabled={isPublic || disabled}
             onChange={(checkedValues: number[]) => {
               const total = checkedValues.reduce((acc, val) => acc + val, 0);
               form.setFieldsValue({ allowedType: total });
