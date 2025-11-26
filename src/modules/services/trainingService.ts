@@ -53,6 +53,7 @@ export const searchMyTrainings = (params?: {
   status?: string;
   searchs?: string;
   searchValues?: string;
+  isDone?: boolean;
 }) =>
   http
     .get(`${API_PREFIX_TRAINING_PATH}/me/search`, {

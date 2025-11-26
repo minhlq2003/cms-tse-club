@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { BlockTemplate, Event, Member, Training } from "@/constant/types";
+import { BlockTemplate, Event, Member, Post, Training } from "@/constant/types";
 import {
   getTrainingById,
   updateStatusTrainingByLeader,
@@ -35,6 +35,7 @@ const EditTraining = () => {
   const [mentors, setMentors] = useState<Member[]>([]);
   const [status, setStatus] = useState<string>("PENDING");
   const [trainingEvents, setTrainingEvents] = useState<Event[]>([]);
+  const [post, setPost] = useState<Post>();
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     "basic_thoi_gian",
@@ -115,6 +116,7 @@ const EditTraining = () => {
               ? "PENDING"
               : "ARCHIVED"
           );
+          setPost(data.post);
 
           setMentors(
             Array.isArray(data.mentors)
@@ -342,6 +344,9 @@ const EditTraining = () => {
                 onSubmit={() => onFinish(form.getFieldsValue())}
                 setStatus={setStatus}
                 status={status}
+                type="event"
+                eventId={id || ""}
+                postId={post?.id}
               />
 
               <PlanBuilderSidebar

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { getRoleUser, isLeader } from "@/lib/utils";
 import Link from "next/link";
 import { getEvents } from "@/modules/services/eventService";
+import { searchMyTrainings } from "@/modules/services/trainingService";
 
 const { Title } = Typography;
 
@@ -40,22 +41,46 @@ export default function Publish({
 
   useEffect(() => {
     if (type === "post") {
-      setLoadingEvents(true);
-      getEvents({ status: "ACCEPTED", isDone: false })
-        .then((res) => {
-          if (Array.isArray(res?._embedded?.eventWrapperDtoList)) {
-            setEvents(
-              res._embedded?.eventWrapperDtoList.map((e: any) => ({
+      async function fetchData() {
+        setLoadingEvents(true);
+
+        try {
+          const [eventRes, trainingRes] = await Promise.all([
+            getEvents({ status: "ACCEPTED", isDone: false }),
+            searchMyTrainings({ status: "ACCEPTED", isDone: false }),
+          ]);
+
+          let newEvents: any[] = [];
+
+          if (Array.isArray(eventRes?._embedded?.eventWrapperDtoList)) {
+            newEvents = eventRes._embedded.eventWrapperDtoList.map(
+              (e: any) => ({
                 id: e.id,
                 title: e.title || e.name || "Không có tiêu đề",
-              }))
+              })
             );
           }
-        })
-        .catch((err) => console.error("Lỗi khi tải sự kiện:", err))
-        .finally(() => setLoadingEvents(false));
+
+          if (Array.isArray(trainingRes)) {
+            const trainingEvents = trainingRes.map((e: any) => ({
+              id: e.id,
+              title: e.title || e.name || "Không có tiêu đề",
+            }));
+
+            newEvents = [...newEvents, ...trainingEvents];
+          }
+
+          setEvents(newEvents);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoadingEvents(false);
+        }
+      }
+
+      fetchData();
     }
-  }, [type]);
+  }, []);
 
   const renderLinkButton = () => {
     if (type === "event") {
@@ -79,6 +104,8 @@ export default function Publish({
     }
 
     if (type === "post") {
+      console.log(events);
+
       return (
         <Space direction="horizontal" className="px-4 pb-2">
           <p>Sự kiện: </p>
