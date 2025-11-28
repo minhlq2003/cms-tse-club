@@ -168,8 +168,8 @@ export default function TrainingPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              { label: t("Start Time (Oldest)"), value: "startTime,asc" },
-              { label: t("Start Time (Newest)"), value: "startTime,desc" },
+              { label: t("Start Time (Oldest)"), value: "location.startTime,asc" },
+              { label: t("Start Time (Newest)"), value: "location.startTime,desc" },
               { label: t("Created Date (Oldest)"), value: "createdAt,asc" },
               { label: t("Created Date (Newest)"), value: "createdAt,desc" },
             ]}
