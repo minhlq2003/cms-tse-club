@@ -83,6 +83,7 @@ const EventForm: React.FC<EventFormProps> = ({
               options={[
                 { label: t("Seminar"), value: "SEMINAR" },
                 { label: t("Contest"), value: "CONTEST" },
+                { label: t("Other"), value: "SIMPLE" },
               ]}
             />
           </Form.Item>

@@ -33,18 +33,14 @@ export default function ProfilePage() {
       setUserInfo(info);
 
       form.setFieldsValue(info);
-    } catch (err) {
-      toast.error("Failed to load profile");
-    }
+    } catch (err) {}
   };
 
   const fetchEvents = async () => {
     try {
       const res = await getRegisteredEvents();
       setEvents(res);
-    } catch (err) {
-      toast.error("Failed to load registered events");
-    }
+    } catch (err) {}
   };
 
   const handleUpdateInfo = async () => {

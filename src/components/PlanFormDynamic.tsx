@@ -519,7 +519,12 @@ export default function PlanFormDynamic({
               key={t.id}
               className="border border-gray-300 p-4 rounded-lg bg-white shadow-sm"
             >
-              <Title level={5}>{t.title}</Title>
+              <Title level={5}>
+                {id === "basic_thoi_gian" && (
+                  <span className="text-red-600 pr-1">*</span>
+                )}
+                {t.title}
+              </Title>
               {renderBasicBlocks(id)}
             </div>
           );

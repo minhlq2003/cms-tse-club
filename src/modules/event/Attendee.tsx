@@ -91,7 +91,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
   const end = endTime ? new Date(endTime) : null;
-  const isDuringEvent = Boolean(start && end && now >= start && now <= end);
+  const isDuringEvent = Boolean(start && now >= start);
   const isEventEnded = Boolean(end && now > end);
 
   const canUpdateContest =
@@ -140,8 +140,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     try {
       const formattedEndTime = dayjs(endTime).format("YYYY-MM-DDTHH:mm:ss");
       const res = await getCodeCheckIn(eventId, formattedEndTime, forceNew);
-      if (res?.checkInCode) {
-        setCheckInCode(res.checkInCode);
+      if (res?.code) {
+        setCheckInCode(res.code);
         message.success(
           forceNew ? t("Đã tạo mã mới thành công") : t("Lấy mã thành công")
         );
@@ -526,7 +526,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
               {t("View Full List")}
             </Button>
 
-            {canCheckIn && !eventDone && (
+            {canCheckIn && !eventDone && isDuringEvent && (
               <Button
                 onClick={openCheckInCodeModal}
                 icon={<QrcodeOutlined />}
@@ -590,12 +590,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         onCancel={() => setIsModalOpen(false)}
         footer={
           <div className="flex flex-col items-end gap-2">
-            {(!canCheckIn || eventDone) && (
+            {(!canCheckIn || eventDone || !isDuringEvent) && (
               <Alert
                 type="warning"
                 message={
                   eventDone
                     ? t("Sự kiện đã kết thúc, không thể điểm danh")
+                    : !isDuringEvent
+                    ? t("Sự kiện chưa bắt đầu, bạn không thể điểm danh")
                     : t("Bạn không có quyền điểm danh")
                 }
                 showIcon
@@ -608,7 +610,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
               <Button
                 type="primary"
                 onClick={handleSave}
-                disabled={!canCheckIn || eventDone}
+                disabled={!canCheckIn || eventDone || !isDuringEvent}
               >
                 {t("Save")}
               </Button>

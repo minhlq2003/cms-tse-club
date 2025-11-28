@@ -136,7 +136,7 @@ export const getCodeCheckIn = (
   endTime: string,
   forceNew: boolean
 ) =>
-  http.get<{ checkInCode: string }>(
+  http.get<{ code: string }>(
     `${API_PREFIX_EVENT_PATH}/${eventId}/code?endTime=${endTime}&forceNew=${forceNew}`
   );
 

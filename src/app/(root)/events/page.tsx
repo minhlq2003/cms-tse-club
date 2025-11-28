@@ -127,6 +127,7 @@ export default function EventPage() {
               { label: t("Seminar"), value: "SEMINAR" },
               { label: t("Contest"), value: "CONTEST" },
               { label: t("Training"), value: "TRAINING_EVENT" },
+              { label: t("Other"), value: "SIMPLE" },
             ]}
           />
 
