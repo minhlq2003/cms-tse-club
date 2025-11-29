@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { Button, Modal, Table, Tag, Tooltip } from "antd";
 import { useRouter } from "next/navigation";
 import { Post } from "@/constant/types";
-import { formatDate, getRoleUser, getUser } from "@/lib/utils";
+import { formatDate, getRoleUser, getUser, isLeader } from "@/lib/utils";
 import {
   getPosts,
   deletePost,
   approvePostByLeader,
   rejectPostByLeader,
+  getPostsByLeader,
 } from "@/modules/services/postService";
 import { useTranslation } from "react-i18next";
 import { Check, Edit, Eye, Trash2, X } from "lucide-react";
@@ -41,14 +42,26 @@ export default function ListPost({ filters }: ListPostProps) {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await getPosts({
-        page: page - 1,
-        size: 10,
-        sort: filters.sort,
-        title: filters.keyword,
-        status: filters.status,
-      });
-
+      let response;
+      if (!isLeader()) {
+        response = await getPosts({
+          ...filters,
+          page: page - 1,
+          size: 10,
+          sort: filters.sort,
+          title: filters.keyword,
+          status: filters.status
+        });
+      } else {
+        response = await getPostsByLeader({
+          ...filters,
+          page: page - 1,
+          size: 10,
+          sort: filters.sort,
+          title: filters.keyword,
+          status: filters.status
+        });
+      }
       if (Array.isArray(response._embedded?.postWrapperDtoList)) {
         setPosts(response._embedded.postWrapperDtoList);
         setTotal(response.page.totalElements ?? 0);
