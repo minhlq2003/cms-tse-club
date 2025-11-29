@@ -181,8 +181,8 @@ const EditEvent = () => {
         "YYYY-MM-DDTHH:mm:ss"
       );
       const res = await getCodeCheckIn(id, endTime, forceNew);
-      if (res?.checkInCode) {
-        setCheckInCode(res.checkInCode);
+      if (res?.code) {
+        setCheckInCode(res.code);
         message.success(
           forceNew ? t("Đã tạo mã mới thành công") : t("Lấy mã thành công")
         );
