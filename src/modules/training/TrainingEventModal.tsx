@@ -15,6 +15,7 @@ import dayjs from "dayjs";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { Event } from "@/constant/types";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const { RangePicker } = DatePicker;
 const daysOfWeek = [
@@ -26,6 +27,8 @@ const daysOfWeek = [
   { label: "Friday", value: 5 },
   { label: "Saturday", value: 6 },
 ];
+
+
 
 interface Props {
   open: boolean;
@@ -40,6 +43,7 @@ export default function TrainingEventModal({
 }: Props) {
   const [formLesson] = Form.useForm();
   const [formSchedule] = Form.useForm();
+  const { t } = useTranslation("common");
 
   const handleAddLesson = async () => {
     try {
@@ -53,6 +57,7 @@ export default function TrainingEventModal({
           startTime: values.time[0].toISOString(),
           endTime: values.time[1].toISOString(),
         },
+        multiple: values.multiple || 1,
         organizers: [],
       };
       onAddLesson(newLesson);
@@ -154,6 +159,14 @@ export default function TrainingEventModal({
                   rules={[{ required: true }]}
                 >
                   <DatePicker.RangePicker showTime format="YYYY-MM-DD HH:mm" />
+                </Form.Item>
+                
+                <Form.Item
+                  name="multiple"
+                  label={t("Multiple")}
+                  rules={[{ required: false }]}
+                >
+                  <Input placeholder={t("Multiple")} type="number"/>
                 </Form.Item>
 
                 <Button type="primary" htmlType="submit" block>
