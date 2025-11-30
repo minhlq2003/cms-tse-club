@@ -90,9 +90,18 @@ const EventForm: React.FC<EventFormProps> = ({
 
           <Form.Item
             className="w-full md:w-1/4"
-            name="multiple"
+            name="limitRegister"
             label={t("Limit Attendees")}
             rules={[{ required: true, message: t("Please enter number!") }]}
+          >
+            <Input type="number" min={1} />
+          </Form.Item>
+
+          <Form.Item
+            className="w-full md:w-1/8"
+            name="multiple"
+            label={t("Multiple")}
+            rules={[{ required: false, message: t("Please enter number!") }]}
           >
             <Input type="number" min={1} />
           </Form.Item>

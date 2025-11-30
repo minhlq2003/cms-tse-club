@@ -354,12 +354,14 @@ const ViewEvent = () => {
                 {t("Loại đối tượng")}
               </span>
             }
+            span={2}
           >
             {event.allowedType ? (
               <Space wrap>
                 {(event.allowedType & 1) > 0 && <Tag>Sinh viên</Tag>}
                 {(event.allowedType & 2) > 0 && <Tag>Giảng viên</Tag>}
                 {(event.allowedType & 4) > 0 && <Tag>Khách mời</Tag>}
+                {(event.allowedType & 8) > 0 && <Tag>Nghiên cứu sinh</Tag>}
               </Space>
             ) : (
               t("Tất cả")
@@ -370,12 +372,12 @@ const ViewEvent = () => {
             label={
               <span>
                 <FileTextOutlined className="mr-2" />
-                {t("Mô tả")}
+                {t("Multiple")}
               </span>
             }
             span={2}
           >
-            {event.description || t("Không có mô tả")}
+            {event.multiple || t("Không có mô tả")}
           </Descriptions.Item>
         </Descriptions>
       </Card>

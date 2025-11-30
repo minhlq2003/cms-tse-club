@@ -82,7 +82,7 @@
   "Select event type": "Chọn loại sự kiện",
   "Add media to description": "Thêm hình ảnh hoặc video vào mô tả",
   "Description": "Mô tả",
-  "Multiple": "Số lượng tham gia",
+  "Number of Attendees": "Số lượng tham gia",
   "Please enter number!": "Vui lòng nhập số lượng!",
   "Training ID": "Mã khóa đào tạo",
   "Enter training ID": "Nhập mã khóa đào tạo (nếu có)",
@@ -155,5 +155,6 @@
   "Start date": "Ngày bắt đầu",
   "End date": "Ngày kết thúc",
   "Other": "Khác",
-  "Host": "Người tạo"
+  "Host": "Người tạo",
+  "Multiple": "Hệ số"
 }

@@ -129,7 +129,7 @@ export default function AddEvent() {
       title: values.title,
       description: values.description || "none",
       status,
-      limitRegister: values.multiple,
+      limitRegister: values.limitRegister || 0,
       category: values.category,
       isPublic: true,
       allowedType: allowedType,
