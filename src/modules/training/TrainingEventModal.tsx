@@ -20,6 +20,8 @@ import { useTranslation } from "react-i18next";
 
 const { RangePicker } = DatePicker;
 
+
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -215,6 +217,13 @@ export default function TrainingEventModal({
                       placeholder={[t("Start time"), t("End time")]}
                     />
                   </Form.Item>
+                  <Form.Item
+                  name="multiple"
+                  label={t("Multiple")}
+                  rules={[{ required: false }]}
+                >
+                  <Input placeholder={t("Multiple")} type="number"/>
+                </Form.Item>
                 </div>
 
                 {mentors.length > 0 && (
