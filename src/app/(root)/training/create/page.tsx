@@ -213,6 +213,7 @@ export default function AddTraining() {
             <TrainingEventTable
               trainingEvent={trainingEvents}
               setTrainingEvent={setTrainingEvents}
+              mentors={mentors}
             />
           </div>
 

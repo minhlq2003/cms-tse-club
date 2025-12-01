@@ -4,7 +4,7 @@ import { Button, Select, Space, Typography } from "antd";
 import { CaretDownOutlined, CaretUpOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getRoleUser, isLeader } from "@/lib/utils";
+import { getRoleUser, isLeader, getUser } from "@/lib/utils";
 import Link from "next/link";
 import { getEvents } from "@/modules/services/eventService";
 import { searchMyTrainings } from "@/modules/services/trainingService";
@@ -20,6 +20,9 @@ interface PublishProps {
   postId?: string;
   setEventId?: (id: string) => void;
   disabled?: boolean;
+  // 🆕 Props cho event permission check
+  isHost?: boolean;
+  userAsOrganizer?: { roles: string[] };
 }
 
 export default function Publish({
@@ -31,6 +34,8 @@ export default function Publish({
   postId,
   setEventId,
   disabled = false,
+  isHost = false,
+  userAsOrganizer,
 }: PublishProps) {
   const { t } = useTranslation("common");
   const [isPublishListVisible, setPublishListVisible] = useState(true);
@@ -38,6 +43,24 @@ export default function Publish({
   const [loadingEvents, setLoadingEvents] = useState(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+  // 🆕 Kiểm tra quyền chỉnh sửa bài truyền thông
+  const canEditPost = () => {
+    if (type !== "event") return true;
+
+    const userRole = getRoleUser();
+
+    // Host, Leader, Admin luôn có quyền
+    if (isHost || userRole === "LEADER" || userRole === "ADMIN") {
+      return true;
+    }
+
+    // Kiểm tra role POST của organizer
+    const roles = userAsOrganizer?.roles || [];
+    return roles.includes("POST");
+  };
+
+  const showPostLink = canEditPost();
 
   useEffect(() => {
     if (type === "post") {
@@ -80,13 +103,25 @@ export default function Publish({
 
       fetchData();
     }
-  }, []);
+  }, [type]);
 
   const renderLinkButton = () => {
     if (type === "event") {
+      // 🆕 Chỉ hiển thị nếu có quyền
+      if (!showPostLink) {
+        return (
+          <Space direction="horizontal" className="px-4 pb-2">
+            <p className="text-gray-400">{t("Bài truyền thông")}: </p>
+            <span className="text-sm text-gray-500">
+              {t("Bạn không có quyền chỉnh sửa")}
+            </span>
+          </Space>
+        );
+      }
+
       return (
         <Space direction="horizontal" className="px-4 pb-2">
-          <p>Bài truyền thông: </p>
+          <p>{t("Bài truyền thông")}: </p>
           <Link
             href={`${
               postId
@@ -96,7 +131,7 @@ export default function Publish({
             target="_blank"
           >
             <Button className="!h-[28px]" type="default">
-              {postId ? "Sửa bài" : "Tạo bài"}
+              {postId ? t("Sửa bài") : t("Tạo bài")}
             </Button>
           </Link>
         </Space>
@@ -104,14 +139,12 @@ export default function Publish({
     }
 
     if (type === "post") {
-      console.log(events);
-
       return (
         <Space direction="horizontal" className="px-4 pb-2">
-          <p>Sự kiện: </p>
+          <p>{t("Sự kiện")}: </p>
           <Select<string>
             showSearch
-            placeholder="Chọn sự kiện"
+            placeholder={t("Chọn sự kiện")}
             className="!max-w-[200px]"
             loading={loadingEvents}
             value={eventId || undefined}
