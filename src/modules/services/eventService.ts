@@ -145,3 +145,8 @@ export const triggerEventDone = (eventId: string) =>
     `${API_PREFIX_LEADER_EVENT_PATH}/${eventId}/trigger-done`,
     {}
   );
+
+export const addAttendees = (eventId: string, attendeeIds: string[]) =>
+  http.post<Event>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-user-register`, {
+    userIds: { attendeeIds },
+  });

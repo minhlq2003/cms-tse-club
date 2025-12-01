@@ -352,7 +352,6 @@ const EditEvent = () => {
               />
             </div>
 
-            {/* SIDEBAR */}
             <div className="w-full lg:w-[22%] space-y-4">
               <Publish
                 onSubmit={() => onFinish(form.getFieldsValue())}
@@ -362,9 +361,10 @@ const EditEvent = () => {
                 eventId={id || ""}
                 postId={post?.id}
                 disabled={!canModify}
+                // 🆕 Truyền thêm permission props
+                isHost={isHost}
+                userAsOrganizer={eventData?.userAsOrganizer}
               />
-
-              {/* Trigger Done Button (Leader only) */}
               {getRoleUser() === "LEADER" && !eventDone && (
                 <Button
                   type="primary"

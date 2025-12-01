@@ -50,6 +50,10 @@ body {
   color: #1664ca
 }
 
+:where(.css-1v28nim).ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):not(.ant-menu-submenu-selected):hover{
+  color: #1664ca
+}
+
 
 .ck-content .image-align-left {
   float: left;

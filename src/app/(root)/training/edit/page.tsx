@@ -336,6 +336,7 @@ const EditTraining = () => {
               <TrainingEventTable
                 trainingEvent={trainingEvents}
                 setTrainingEvent={setTrainingEvents}
+                mentors={mentors} // 🆕 Truyền mentors từ state
               />
             </div>
 

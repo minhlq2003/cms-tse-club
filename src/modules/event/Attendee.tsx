@@ -1,4 +1,3 @@
-// Attendee.tsx - Enhanced version with Check-in Code
 "use client";
 
 import React, { useEffect, useState } from "react";

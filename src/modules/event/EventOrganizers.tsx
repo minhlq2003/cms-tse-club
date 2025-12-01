@@ -395,7 +395,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                     <Checkbox value="MODIFY">{t("Modify")}</Checkbox>
                     <Checkbox value="CHECK_IN">{t("Check In")}</Checkbox>
                     <Checkbox value="REGISTER">{t("Register")}</Checkbox>
-                    <Checkbox value="BAN">{t("Ban")}</Checkbox>
+                    <Checkbox value="POST">{t("Post")}</Checkbox>
                   </Checkbox.Group>
                 </Form.Item>
 
