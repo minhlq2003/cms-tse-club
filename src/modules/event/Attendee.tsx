@@ -76,6 +76,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 8,
+    total: 0,
+  });
 
   const [contestResults, setContestResults] = useState<ExamResult[]>([]);
   const [isContestModalOpen, setIsContestModalOpen] = useState(false);
@@ -107,18 +112,22 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    fetchAttendees();
-    console.log("Fetching attendees with keyword:", keyword);
-  }, [eventId, keyword]);
+    if (isModalOpen) {
+      fetchAttendees(pagination.current, pagination.pageSize);
+    }
+  }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
 
-  const fetchAttendees = async () => {
+  const fetchAttendees = async (page: number, size: number) => {
     if (!eventId) return;
     try {
       setLoading(true);
       const modifiedKeyWord = "*" + keyword.trim() + "*";
       const res = await getEventAttendees(eventId, {
+        page: page - 1,
+        size,
         searchs: ["fullName", "nickname", "email"],
         searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
+        status: statusFilter,
       });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
@@ -137,6 +146,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           checkIn: a.checkIn || false,
         }))
       );
+      setPagination(prev => ({
+        ...prev,
+        total: res.page?.totalElements || 0,
+      }));
     } catch (err) {
       message.error(t("Failed to fetch attendees"));
     } finally {
@@ -314,7 +327,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
         setIsModalOpen(false);
-        fetchAttendees();
+        fetchAttendees(pagination.current, pagination.pageSize);
       } else {
         message.error(
           `${t("Failed to save check-in")} ${
@@ -329,9 +342,16 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
+  const handleTableChange = (pagination: any) => {
+    setPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
+  };
+
   const openModal = () => {
     setIsModalOpen(true);
-    fetchAttendees();
   };
   const filteredAttendees = attendees;
 
@@ -654,7 +674,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           columns={attendeeColumns}
           dataSource={filteredAttendees}
           loading={loading}
-          pagination={{ pageSize: 8 }}
+          pagination={pagination}
+          onChange={handleTableChange}
         />
       </Modal>
 
