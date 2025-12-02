@@ -98,9 +98,9 @@ function HeaderCMS({ collapsed, setCollapsed, userAvatar }: HeaderCMSProps) {
         <Image
           src={Images.logoIUH.src}
           alt=""
-          width={120}
+          width={220}
           height={50}
-          className="md:pl-3 pl-0 md:w-[120px] md:h-[50px] w-[60px] h-[25px]"
+          className="md:pl-3 pl-0 md:w-[220px] md:h-[50px] w-[110px] h-[25px]"
         />
       </div>
       <div
