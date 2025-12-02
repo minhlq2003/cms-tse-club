@@ -7,11 +7,12 @@ import {
   updateUserInfo,
   changePassword,
 } from "@/modules/services/userService";
-import { getRegisteredEvents } from "@/modules/services/eventService";
+import { getEvents, getRegisteredEvents } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import { Event } from "@/constant/types";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const router = useRouter();
 
   useEffect(() => {
     fetchData();
@@ -38,8 +40,13 @@ export default function ProfilePage() {
 
   const fetchEvents = async () => {
     try {
-      const res = await getRegisteredEvents();
-      setEvents(res);
+      const res = await getEvents({
+        page: 0,
+        size: 5,
+        isHost: true,
+      });
+      console.log("Event: ", res._embedded?.eventWrapperDtoList);
+      setEvents(res._embedded?.eventWrapperDtoList || []);
     } catch (err) {}
   };
 
@@ -73,7 +80,7 @@ export default function ProfilePage() {
       dataIndex: "title",
       key: "title",
       render: (text: string, record: Event) => (
-        <a href={`/events/${record.id}`} className="text-blue-600">
+        <a onClick={() => router.push(`/events/view?id=${record.id}`)} className="text-blue-600">
           {text}
         </a>
       ),
@@ -96,7 +103,7 @@ export default function ProfilePage() {
     <div className="p-6 space-y-6">
       <Card className="shadow rounded-2xl">
         <div className="flex flex-col md:flex-row items-start w-full md:items-center space-y-3 md:space-y-0 md:space-x-4">
-          <Avatar size={64} icon={<i className="fas fa-user"></i>} />
+          <Avatar size={128} icon={<i className="fas fa-user"></i>} src="/images/usrLogo.png"/>
           <div className="pl-0 md:pl-10 w-full">
             <h2 className="font-bold text-blue-900 mb-2 text-xl">
               {t("THÔNG TIN CÁ NHÂN")}
@@ -147,8 +154,8 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="shadow rounded-2xl">
-        <h3 className="font-bold text-blue-900 mb-4">
-          {t("SỰ KIỆN ĐÃ THAM GIA")}
+        <h3 className="font-bold text-blue-900 mb-4 text-xl">
+          {t("Events You Are Hosting")}
         </h3>
         <Table
           columns={columns}
