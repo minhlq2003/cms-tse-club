@@ -22,6 +22,7 @@ export const getEvents = (params?: {
   status?: string;
   searchs?: string;
   searchValues?: string;
+  isHost?: boolean;
 }) => {
   const response = http.get(`${API_PREFIX_EVENT_PATH}/me/search`, {
     params,
