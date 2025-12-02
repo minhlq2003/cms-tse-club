@@ -141,7 +141,7 @@ export const getCodeCheckIn = (
   );
 
 export const triggerEventDone = (eventId: string) =>
-  http.patch<{ message: string }>(
+  http.patch<{ message: string, code: string, status: number, response: any}>(
     `${API_PREFIX_LEADER_EVENT_PATH}/${eventId}/trigger-done`,
     {}
   );
