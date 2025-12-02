@@ -41,10 +41,6 @@ function SignIn() {
         throw new Error("Invalid credentials");
       }
       const data = await response.json();
-      if (data.role === "NONE") {
-        toast.warning("Tài khoản không có quyền truy cập vào trang này.");
-        return;
-      }
       if (data.accessToken != undefined) {
         router.push("/");
         toast.success("Đăng nhập thành công!");
@@ -64,16 +60,12 @@ function SignIn() {
     const token = localStorage.getItem("accessToken");
 
     if (typeof window !== "undefined") {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (user.role === "NONE") {
-        toast.warning("Bạn không có quyền truy cập vào trang này.");
-      }
+      const user = JSON.parse(localStorage.getItem("user") || "{}");1
       if (
         user &&
         user.id &&
         token &&
-        !isTokenExpired(token) &&
-        user.role !== "NONE"
+        !isTokenExpired(token)
       ) {
         router.push("/");
       }
