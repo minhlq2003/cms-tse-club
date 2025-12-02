@@ -42,10 +42,14 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 
 export interface Attendee {
-  id?: string;
+  id: string;
   user: Member;
   status: string;
   checkIn?: boolean;
+  fullName?: string;
+  nickname?: string;
+  email?: string;
+  dateOfBirth?: string;
 }
 
 interface EventAttendeesProps {
@@ -104,13 +108,18 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   useEffect(() => {
     fetchAttendees();
-  }, [eventId]);
+    console.log("Fetching attendees with keyword:", keyword);
+  }, [eventId, keyword]);
 
   const fetchAttendees = async () => {
     if (!eventId) return;
     try {
       setLoading(true);
-      const res = await getEventAttendees(eventId);
+      const modifiedKeyWord = "*" + keyword.trim() + "*";
+      const res = await getEventAttendees(eventId, {
+        searchs: ["fullName", "nickname", "email"],
+        searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
+      });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
         : Array.isArray(res)
@@ -119,6 +128,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       setAttendees(
         list.map((a: any) => ({
           id: a.id,
+          fullName: a.fullName,
+          nickname: a.nickname,
+          email: a.email,
+          dateOfBirth: a.dateOfBirth,
           user: a.user || a.attendee || a.userDto || {},
           status: a.status || a.attendeeStatus || "UNKNOWN",
           checkIn: a.checkIn || false,
@@ -258,9 +271,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   // Standard check-in functions
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
-      prev.map((a) =>
-        a.user.id === userId ? { ...a, checkIn: !a.checkIn } : a
-      )
+      prev.map((a) => (a.id === userId ? { ...a, checkIn: !a.checkIn } : a))
     );
   };
 
@@ -298,9 +309,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!eventId) return;
     try {
       setLoading(true);
-      const checkedIds = attendees
-        .filter((a) => a.checkIn)
-        .map((a) => a.user.id);
+      const checkedIds = attendees.filter((a) => a.checkIn).map((a) => a.id);
       const res = await manualCheckIn(eventId, checkedIds);
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
@@ -324,38 +333,35 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     setIsModalOpen(true);
     fetchAttendees();
   };
-
-  const filteredAttendees = attendees.filter((a) => {
-    const kw = keyword.trim().toLowerCase();
-    const matchesKeyword =
-      !kw ||
-      (a.user?.fullName || "").toLowerCase().includes(kw) ||
-      (a.user?.username || "").toLowerCase().includes(kw) ||
-      (a.user?.email || "").toLowerCase().includes(kw);
-    const matchesStatus = statusFilter ? a.status === statusFilter : true;
-    return matchesKeyword && matchesStatus;
-  });
+  const filteredAttendees = attendees;
 
   // Table columns
   const attendeeColumns = [
+    {
+      title: t("ID"),
+      key: "id",
+      render: (_: any, record: Attendee) => record.id || record.user?.id || "-",
+    },
     {
       title: t("Full Name"),
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.user?.fullName || record.user?.username}
+          {record.fullName || record.user?.fullName}
         </span>
       ),
     },
     {
-      title: t("Username"),
+      title: t("Username / Nickname"),
       key: "username",
-      render: (_: any, record: Attendee) => record.user?.username || "-",
+      render: (_: any, record: Attendee) =>
+        record.nickname || record.user?.username || "-",
     },
     {
       title: t("Email"),
       key: "email",
-      render: (_: any, record: Attendee) => record.user?.email || "-",
+      render: (_: any, record: Attendee) =>
+        record.email || record.user?.email || "-",
     },
     {
       title: t("Status"),
@@ -375,7 +381,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       render: (_: any, record: Attendee) => (
         <Checkbox
           checked={Boolean(record.checkIn)}
-          onChange={() => toggleCheckInLocal(record.user.id)}
+          onChange={() => toggleCheckInLocal(record.id)}
           disabled={!canCheckIn || eventDone}
         />
       ),
@@ -452,7 +458,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.user?.fullName || record.user?.username}
+          {record.fullName ||
+            record.nickname ||
+            record.user?.fullName ||
+            record.user?.username}
         </span>
       ),
     },
@@ -493,7 +502,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <div>
           <div className="block md:hidden">
             <Table
-              rowKey={(record: Attendee) => record.user.id}
+              rowKey={(record: Attendee) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -506,7 +515,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           <div className="hidden md:block">
             <Table
               className="p-2"
-              rowKey={(record: Attendee) => record.user.id}
+              rowKey={(record: Attendee) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -641,7 +650,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
 
         <Table
-          rowKey={(record: Attendee) => record.user.id}
+          rowKey={(record: Attendee) => record.id}
           columns={attendeeColumns}
           dataSource={filteredAttendees}
           loading={loading}

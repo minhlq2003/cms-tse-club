@@ -95,7 +95,7 @@ export const updateStatusEventByLeader = (id: string, status: string) =>
 
 export const getEventAttendees = (
   id: string,
-  params?: { page?: number; size?: number }
+  params?: { page?: number; size?: number, searchs?: string[], searchValues?: string[] }
 ) => {
   const response = http.get(`${API_PREFIX_EVENT_PATH}/${id}/attendees`, {
     params,

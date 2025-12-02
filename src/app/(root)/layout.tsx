@@ -37,10 +37,6 @@ export default function RootLayout({
       toast.warning("Phiên đăng nhập hết hạn. Hãy đăng nhập lại");
       router.push("/signin");
     }
-    if (getRoleUser() === "NONE") {
-      toast.error("Bạn không có quyền truy cập vào trang này.");
-      router.push("/signin");
-    }
   }, [router]);
 
   useEffect(() => {

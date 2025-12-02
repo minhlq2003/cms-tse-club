@@ -1,4 +1,4 @@
-import axios, { AxiosHeaders, AxiosRequestHeaders, AxiosInstance } from "axios";
+import axios, { AxiosHeaders, AxiosRequestHeaders, AxiosInstance, CustomParamsSerializer } from "axios";
 
 export const getToken = (): string | null => {
   try {
@@ -21,6 +21,7 @@ interface RequestConfig {
   data?: object;
   apiName?: string;
   responseType?: "json" | "blob" | "arraybuffer" | "text" | "stream";
+  paramsSerializer?: CustomParamsSerializer;
 }
 
 export class HttpClient {
@@ -53,6 +54,17 @@ export class HttpClient {
       this.axios.get(url, {
         headers: withAuth(new AxiosHeaders(cfg.headers)),
         ...cfg,
+        paramsSerializer: (params) => {
+          const searchParams = new URLSearchParams();
+          Object.entries(params).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach((v) => searchParams.append(key, v));
+            } else if (value !== undefined) {
+              searchParams.append(key, value as string);
+            }
+          });
+          return searchParams.toString();
+        }
       })
     );
 
