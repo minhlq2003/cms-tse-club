@@ -154,7 +154,7 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="shadow rounded-2xl">
-        <h3 className="font-bold text-blue-900 mb-4">
+        <h3 className="font-bold text-blue-900 mb-4 text-xl">
           {t("Events You Are Hosting")}
         </h3>
         <Table
