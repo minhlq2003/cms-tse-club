@@ -353,7 +353,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const openModal = () => {
     setIsModalOpen(true);
   };
-  const filteredAttendees = attendees;
 
   // Table columns
   const attendeeColumns = [
@@ -672,7 +671,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <Table
           rowKey={(record: Attendee) => record.id}
           columns={attendeeColumns}
-          dataSource={filteredAttendees}
+          dataSource={attendees}
           loading={loading}
           pagination={pagination}
           onChange={handleTableChange}
