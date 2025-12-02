@@ -120,6 +120,9 @@ export default function ProfilePage() {
               </div>
               <div className="w-full md:w-1/2 flex flex-col justify-end mt-4 md:mt-0">
                 <p>
+                  <b>{t("Full Name")}:</b> {userInfo?.fullName}
+                </p>
+                <p>
                   <b>{t("Role")}:</b> {userInfo?.role}
                 </p>
                 <p>
@@ -164,13 +167,16 @@ export default function ProfilePage() {
         cancelText="Hủy"
       >
         <Form layout="vertical" form={form}>
-          <Form.Item name="nickname" label="Nickname">
+          <Form.Item name="fullName" label={t("Full Name")}>
             <Input />
           </Form.Item>
-          <Form.Item name="email" label="Email">
+          <Form.Item name="nickname" label={t("Nickname")}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="email" label={t("Email")}>
             <Input disabled />
           </Form.Item>
-          <Form.Item name="dateOfBirth" label="Ngày sinh">
+          <Form.Item name="dateOfBirth" label={t("Date of Birth")}>
             <Input type="date" />
           </Form.Item>
         </Form>

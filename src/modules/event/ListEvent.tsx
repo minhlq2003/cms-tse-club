@@ -14,7 +14,7 @@ import {
 } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import { formatDate, getUser, isLeader } from "@/lib/utils";
-import { Check, Edit, Eye, Trash2, View, X, CheckCircle } from "lucide-react";
+import { Check, Edit, Eye, Trash2, View, X, CheckCircle, Redo } from "lucide-react";
 import dayjs from "dayjs";
 import { toast } from "sonner";
 
@@ -29,14 +29,15 @@ export default function ListEvent({ filters }: ListEventProps) {
   const [openApproveModal, setOpenApproveModal] = useState(false);
   const [openRejectModal, setOpenRejectModal] = useState(false);
   const [openDoneModal, setOpenDoneModal] = useState(false);
+  const [openRevertDoneModal, setOpenRevertDoneModal] = useState(false);
 
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
 
   const fetchEvents = async () => {
+    let res;
     try {
       setLoading(true);
-      let res;
       if (!isLeader()) {
         res = await getEvents({
           page: page - 1,
@@ -117,13 +118,30 @@ export default function ListEvent({ filters }: ListEventProps) {
 
   const handleTriggerDone = async (id: string) => {
     try {
-      await triggerEventDone(id);
+      const response = await triggerEventDone(id);
       toast.success(t("Event marked as done successfully"));
       fetchEvents();
     } catch {
       toast.error(t("Failed to mark event as done"));
     } finally {
       setOpenDoneModal(false);
+    }
+  };
+
+  const handleRevertDone = async (id: string) => {
+    let response
+    try {
+      response = await triggerEventDone(id);
+      if (response?.status === 400) {
+        throw new Error("Bad Request");
+      }
+      toast.success(t("Event reverted successfully"));
+      fetchEvents();
+    } catch (e) {
+      
+      toast.error(response?.response?.data.detail || t("Failed to revert event"));
+    } finally {
+      setOpenRevertDoneModal(false);
     }
   };
 
@@ -260,6 +278,22 @@ export default function ListEvent({ filters }: ListEventProps) {
               </Tooltip>
             )}
 
+            {isLeader() &&
+            record.status === "ACCEPTED" &&
+            record.done &&
+            dayjs(record.location.startTime).isBefore(Date.now()) && (
+              <Tooltip title={t("Revert done attempt")}>
+                <Button
+                  className="!text-yellow-600 !border-yellow-600 !bg-yellow-50 hover:!bg-yellow-100"
+                  icon={<Redo size={22} />}
+                  onClick={() => {
+                    setSelectedEvent(record);
+                    setOpenRevertDoneModal(true);
+                  }}
+                ></Button>
+              </Tooltip>
+            )}
+
           {isLeader() && record.status === "PENDING" && (
             <>
               <Tooltip title={t("Approve")}>
@@ -355,6 +389,22 @@ export default function ListEvent({ filters }: ListEventProps) {
         <p>
           {t(
             "Are you sure you want to mark this event as done? This action cannot be undone."
+          )}
+        </p>
+      </Modal>
+      <Modal
+        title={t("Revert done attempt")}
+        open={openRevertDoneModal}
+        onCancel={() => setOpenRevertDoneModal(false)}
+        onOk={() =>
+          selectedEvent && handleRevertDone(String(selectedEvent.id))
+        }
+        okText={t("Revert done attempt")}
+        cancelText={t("Cancel")}
+      >
+        <p>
+          {t(
+            "Are you sure you want to revert the done status of this event? This action may not be accepted."
           )}
         </p>
       </Modal>
