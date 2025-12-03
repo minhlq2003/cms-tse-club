@@ -95,7 +95,13 @@ export const updateStatusEventByLeader = (id: string, status: string) =>
 
 export const getEventAttendees = (
   id: string,
-  params?: { page?: number; size?: number, searchs?: string[], searchValues?: string[], status?: string }
+  params?: {
+    page?: number;
+    size?: number;
+    searchs?: string[];
+    searchValues?: string[];
+    status?: string;
+  }
 ) => {
   const response = http.get(`${API_PREFIX_EVENT_PATH}/${id}/attendees`, {
     params,
@@ -142,7 +148,7 @@ export const getCodeCheckIn = (
   );
 
 export const triggerEventDone = (eventId: string) =>
-  http.patch<{ message: string, code: string, status: number, response: any}>(
+  http.patch<{ message: string; code: string; status: number; response: any }>(
     `${API_PREFIX_LEADER_EVENT_PATH}/${eventId}/trigger-done`,
     {}
   );
@@ -151,3 +157,11 @@ export const addAttendees = (eventId: string, attendeeIds: string[]) =>
   http.post<Event>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-user-register`, {
     userIds: { attendeeIds },
   });
+
+export const removeAttendees = (eventId: string, attendeeIds: string[]) =>
+  http.post<Event>(
+    `${API_PREFIX_EVENT_PATH}/${eventId}/manual-rmove-attendees`,
+    {
+      attendeeIds: { attendeeIds },
+    }
+  );

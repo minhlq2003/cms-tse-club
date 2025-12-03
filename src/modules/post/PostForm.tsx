@@ -71,10 +71,8 @@ const PostForm: React.FC<PostFormProps> = ({
     setIsModalOpen(false);
 
     if (modalAction === "selectMedia") {
-      // Set the selected image to uploadedImages
       setUploadedImages(media);
     } else if (modalAction === "addToContent") {
-      // Add the selected image to CKEditor content
       const currentContent = form.getFieldValue("content") || "";
       const updatedContent = `${currentContent}<img src="${media}" alt="Selected Media" />`;
       form.setFieldsValue({ content: updatedContent });

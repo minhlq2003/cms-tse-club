@@ -12,8 +12,6 @@ import {
   Alert,
   Input,
   Select,
-  InputNumber,
-  Tabs,
   Spin,
 } from "antd";
 import {
@@ -23,33 +21,34 @@ import {
   TrophyOutlined,
   StarOutlined,
   QrcodeOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import {
   exportEventAttendees,
   getEventAttendees,
   manualCheckIn,
+  getCodeCheckIn,
+  addAttendees,
+  removeAttendees,
   updateContestResults,
   getSeminarReview,
-  getCodeCheckIn,
 } from "../services/eventService";
+import { getUser } from "../services/userService";
 import { Member, ExamResult } from "@/constant/types";
 import dayjs from "dayjs";
+import ContestResultsModal from "./ContestResultModal";
+import SeminarReviewsModal from "./SeminarReviewModal";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 export interface Attendee {
-  id: string;
+  id?: string;
   user: Member;
   status: string;
   checkIn?: boolean;
-  fullName?: string;
-  nickname?: string;
-  email?: string;
-  dateOfBirth?: string;
 }
 
 interface EventAttendeesProps {
@@ -60,6 +59,9 @@ interface EventAttendeesProps {
   eventCategory?: string;
   canCheckIn?: boolean;
   eventDone?: boolean;
+  // 🆕 Props cho permission
+  isHost?: boolean;
+  userAsOrganizer?: { roles: string[] };
 }
 
 const EventAttendees: React.FC<EventAttendeesProps> = ({
@@ -70,17 +72,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   eventCategory,
   canCheckIn = false,
   eventDone = false,
+  isHost = false,
+  userAsOrganizer,
 }) => {
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 8,
-    total: 0,
-  });
 
   const [contestResults, setContestResults] = useState<ExamResult[]>([]);
   const [isContestModalOpen, setIsContestModalOpen] = useState(false);
@@ -88,10 +87,17 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [seminarReviews, setSeminarReviews] = useState<any[]>([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  // Check-in Code states
   const [checkInModalVisible, setCheckInModalVisible] = useState(false);
   const [checkInCode, setCheckInCode] = useState("");
   const [loadingCode, setLoadingCode] = useState(false);
+
+  // 🆕 States for adding participants
+  const [addParticipantModalVisible, setAddParticipantModalVisible] =
+    useState(false);
+  const [availableUsers, setAvailableUsers] = useState<Member[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [searchUserKeyword, setSearchUserKeyword] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
@@ -101,6 +107,13 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const end = endTime ? new Date(endTime) : null;
   const isDuringEvent = Boolean(start && now >= start);
   const isEventEnded = Boolean(end && now > end);
+
+  // 🆕 Kiểm tra quyền REGISTER
+  const canRegister = () => {
+    if (isHost || userRole === "LEADER" || userRole === "ADMIN") return true;
+    const roles = userAsOrganizer?.roles || [];
+    return roles.includes("REGISTER");
+  };
 
   const canUpdateContest =
     isEventEnded &&
@@ -112,23 +125,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    if (isModalOpen) {
-      fetchAttendees(pagination.current, pagination.pageSize);
-    }
-  }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
+    fetchAttendees();
+  }, [eventId]);
 
-  const fetchAttendees = async (page: number, size: number) => {
+  const fetchAttendees = async () => {
     if (!eventId) return;
     try {
       setLoading(true);
-      const modifiedKeyWord = "*" + keyword.trim() + "*";
-      const res = await getEventAttendees(eventId, {
-        page: page - 1,
-        size,
-        searchs: ["fullName", "nickname", "email"],
-        searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
-        status: statusFilter,
-      });
+      const res = await getEventAttendees(eventId);
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
         : Array.isArray(res)
@@ -137,19 +141,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       setAttendees(
         list.map((a: any) => ({
           id: a.id,
-          fullName: a.fullName,
-          nickname: a.nickname,
-          email: a.email,
-          dateOfBirth: a.dateOfBirth,
           user: a.user || a.attendee || a.userDto || {},
           status: a.status || a.attendeeStatus || "UNKNOWN",
           checkIn: a.checkIn || false,
         }))
       );
-      setPagination(prev => ({
-        ...prev,
-        total: res.page?.totalElements || 0,
-      }));
     } catch (err) {
       message.error(t("Failed to fetch attendees"));
     } finally {
@@ -157,7 +153,66 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  // Generate Check-in Code
+  // 🆕 Fetch available users for adding
+  const fetchAvailableUsers = async (keyword: string = "") => {
+    try {
+      setLoadingUsers(true);
+      const res = await getUser({ keyword, page: 0, size: 100 });
+      if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
+        const allUsers = res._embedded.userShortInfoResponseDtoList;
+        // Lọc ra những user chưa là attendee
+        const attendeeIds = attendees.map((a) => a.user.id);
+        const filtered = allUsers.filter(
+          (u: Member) => !attendeeIds.includes(u.id)
+        );
+        setAvailableUsers(filtered);
+      }
+    } catch (err) {
+      message.error(t("Failed to fetch users"));
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // 🆕 Open add participant modal
+  const openAddParticipantModal = () => {
+    setAddParticipantModalVisible(true);
+    setSelectedUserIds([]);
+    setSearchUserKeyword("");
+    fetchAvailableUsers();
+  };
+
+  // 🆕 Handle add participants
+  const handleAddParticipants = async () => {
+    if (!eventId || selectedUserIds.length === 0) {
+      message.warning(t("Vui lòng chọn ít nhất một người"));
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await addAttendees(eventId, selectedUserIds);
+      message.success(t("Đã thêm người tham gia thành công"));
+      setAddParticipantModalVisible(false);
+      fetchAttendees();
+    } catch (err) {
+      message.error(t("Không thể thêm người tham gia"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounce search users
+  useEffect(() => {
+    if (!addParticipantModalVisible) return;
+
+    const timeoutId = setTimeout(() => {
+      fetchAvailableUsers(searchUserKeyword);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchUserKeyword, addParticipantModalVisible, attendees]);
+
   const handleGenerateCode = async (forceNew: boolean = false) => {
     if (!eventId || !endTime) return;
 
@@ -178,7 +233,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  // Contest Results Functions
   const fetchContestResults = async () => {
     if (!eventId) return;
     try {
@@ -199,55 +253,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  const handleContestResultChange = (
-    userId: string,
-    field: "rank" | "point",
-    value: number | null
-  ) => {
-    setContestResults((prev) =>
-      prev.map((result) =>
-        result.userId === userId ? { ...result, [field]: value || 0 } : result
-      )
-    );
-  };
-
-  const handleSaveContestResults = async () => {
-    if (!eventId) return;
-
-    const invalid = contestResults.some(
-      (r) => r.rank === undefined || r.point === undefined
-    );
-    if (invalid) {
-      message.warning(t("Vui lòng nhập đầy đủ thứ hạng và điểm số"));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const payload = {
-        examResults: contestResults.map((r) => ({
-          userId: r.userId,
-          rank: r.rank,
-          point: r.point,
-        })),
-      };
-
-      const res = await updateContestResults(eventId, payload);
-      if (res) {
-        message.success(t("Đã cập nhật kết quả thi thành công"));
-        setIsContestModalOpen(false);
-      } else {
-        message.error(t("Không thể cập nhật kết quả"));
-      }
-    } catch (err) {
-      console.error("Error updating contest results:", err);
-      message.error(t("Có lỗi xảy ra khi cập nhật kết quả"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Seminar Review Functions
   const fetchSeminarReviews = async () => {
     if (!eventId) return;
     try {
@@ -281,10 +286,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     handleGenerateCode(false);
   };
 
-  // Standard check-in functions
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
-      prev.map((a) => (a.id === userId ? { ...a, checkIn: !a.checkIn } : a))
+      prev.map((a) =>
+        a.user.id === userId ? { ...a, checkIn: !a.checkIn } : a
+      )
     );
   };
 
@@ -322,12 +328,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!eventId) return;
     try {
       setLoading(true);
-      const checkedIds = attendees.filter((a) => a.checkIn).map((a) => a.id);
+      const checkedIds = attendees
+        .filter((a) => a.checkIn)
+        .map((a) => a.user.id);
       const res = await manualCheckIn(eventId, checkedIds);
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
         setIsModalOpen(false);
-        fetchAttendees(pagination.current, pagination.pageSize);
+        fetchAttendees();
       } else {
         message.error(
           `${t("Failed to save check-in")} ${
@@ -342,45 +350,41 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  const handleTableChange = (pagination: any) => {
-    setPagination({
-      current: pagination.current,
-      pageSize: pagination.pageSize,
-      total: pagination.total,
-    });
-  };
-
   const openModal = () => {
     setIsModalOpen(true);
+    fetchAttendees();
   };
 
-  // Table columns
+  const filteredAttendees = attendees.filter((a) => {
+    const kw = keyword.trim().toLowerCase();
+    const matchesKeyword =
+      !kw ||
+      (a.user?.fullName || "").toLowerCase().includes(kw) ||
+      (a.user?.username || "").toLowerCase().includes(kw) ||
+      (a.user?.email || "").toLowerCase().includes(kw);
+    const matchesStatus = statusFilter ? a.status === statusFilter : true;
+    return matchesKeyword && matchesStatus;
+  });
+
   const attendeeColumns = [
-    {
-      title: t("ID"),
-      key: "id",
-      render: (_: any, record: Attendee) => record.id || record.user?.id || "-",
-    },
     {
       title: t("Full Name"),
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.fullName || record.user?.fullName}
+          {record.user?.fullName || record.user?.username}
         </span>
       ),
     },
     {
-      title: t("Username / Nickname"),
+      title: t("Username"),
       key: "username",
-      render: (_: any, record: Attendee) =>
-        record.nickname || record.user?.username || "-",
+      render: (_: any, record: Attendee) => record.user?.username || "-",
     },
     {
       title: t("Email"),
       key: "email",
-      render: (_: any, record: Attendee) =>
-        record.email || record.user?.email || "-",
+      render: (_: any, record: Attendee) => record.user?.email || "-",
     },
     {
       title: t("Status"),
@@ -400,75 +404,28 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       render: (_: any, record: Attendee) => (
         <Checkbox
           checked={Boolean(record.checkIn)}
-          onChange={() => toggleCheckInLocal(record.id)}
+          onChange={() => toggleCheckInLocal(record.user.id)}
           disabled={!canCheckIn || eventDone}
         />
       ),
     },
   ];
 
-  const contestColumns = [
+  const userColumns = [
     {
-      title: t("Sinh viên"),
-      key: "student",
-      render: (_: any, record: ExamResult) => (
-        <div>
-          <div className="font-semibold">{record.student?.fullName}</div>
-          <div className="text-sm text-gray-500">{record.student?.email}</div>
-        </div>
-      ),
+      title: t("Full Name"),
+      dataIndex: "fullName",
+      key: "fullName",
     },
     {
-      title: t("Thứ hạng"),
-      key: "rank",
-      render: (_: any, record: ExamResult) => (
-        <InputNumber
-          min={1}
-          value={record.rank}
-          onChange={(val) =>
-            handleContestResultChange(record.userId!, "rank", val)
-          }
-          style={{ width: "100%" }}
-        />
-      ),
+      title: t("Username"),
+      dataIndex: "username",
+      key: "username",
     },
     {
-      title: t("Điểm số"),
-      key: "point",
-      render: (_: any, record: ExamResult) => (
-        <InputNumber
-          min={0}
-          max={100}
-          value={record.point}
-          onChange={(val) =>
-            handleContestResultChange(record.userId!, "point", val)
-          }
-          style={{ width: "100%" }}
-        />
-      ),
-    },
-  ];
-
-  const reviewColumns = [
-    {
-      title: t("Người đánh giá"),
-      dataIndex: ["user", "fullName"],
-      key: "reviewer",
-    },
-    {
-      title: t("Nội dung"),
-      dataIndex: "content",
-      key: "content",
-    },
-    {
-      title: t("Đánh giá"),
-      dataIndex: "rating",
-      key: "rating",
-      render: (rating: number) => (
-        <span>
-          {rating} <StarOutlined style={{ color: "#faad14" }} />
-        </span>
-      ),
+      title: t("Email"),
+      dataIndex: "email",
+      key: "email",
     },
   ];
 
@@ -477,10 +434,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.fullName ||
-            record.nickname ||
-            record.user?.fullName ||
-            record.user?.username}
+          {record.user?.fullName || record.user?.username}
         </span>
       ),
     },
@@ -503,7 +457,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   return (
     <div className="event-attendees border border-gray-300 rounded-[10px] mb-5">
-      {/* Header */}
       <div className="flex justify-between items-center px-4 py-2 border-b border-gray-300">
         <Title level={4} className="!m-0">
           {t("Attendees")}
@@ -516,12 +469,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         />
       </div>
 
-      {/* Main content */}
       {isListVisible && (
         <div>
           <div className="block md:hidden">
             <Table
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: Attendee) => record.user.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -534,7 +486,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           <div className="hidden md:block">
             <Table
               className="p-2"
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: Attendee) => record.user.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -552,6 +504,17 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             >
               {t("View Full List")}
             </Button>
+
+            {/* 🆕 Nút thêm người tham gia */}
+            {canRegister() && !eventDone && (
+              <Button
+                onClick={openAddParticipantModal}
+                icon={<UserAddOutlined />}
+                type="default"
+              >
+                {t("Thêm người tham gia")}
+              </Button>
+            )}
 
             {canCheckIn && !eventDone && isDuringEvent && (
               <Button
@@ -669,12 +632,62 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
 
         <Table
-          rowKey={(record: Attendee) => record.id}
+          rowKey={(record: Attendee) => record.user.id}
           columns={attendeeColumns}
-          dataSource={attendees}
+          dataSource={filteredAttendees}
           loading={loading}
-          pagination={pagination}
-          onChange={handleTableChange}
+          pagination={{ pageSize: 8 }}
+        />
+      </Modal>
+
+      {/* 🆕 Add Participant Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <UserAddOutlined style={{ fontSize: 24 }} />
+            <span>{t("Thêm người tham gia")}</span>
+          </div>
+        }
+        open={addParticipantModalVisible}
+        onCancel={() => setAddParticipantModalVisible(false)}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => setAddParticipantModalVisible(false)}
+          >
+            {t("Hủy")}
+          </Button>,
+          <Button
+            key="add"
+            type="primary"
+            onClick={handleAddParticipants}
+            loading={loading}
+            disabled={selectedUserIds.length === 0}
+          >
+            {t("Thêm")} ({selectedUserIds.length})
+          </Button>,
+        ]}
+        width={700}
+      >
+        <div className="mb-4">
+          <Search
+            placeholder={t("Tìm kiếm theo tên, username hoặc email")}
+            value={searchUserKeyword}
+            onChange={(e) => setSearchUserKeyword(e.target.value)}
+            allowClear
+          />
+        </div>
+
+        <Table
+          rowKey="id"
+          columns={userColumns}
+          dataSource={availableUsers}
+          loading={loadingUsers}
+          rowSelection={{
+            selectedRowKeys: selectedUserIds,
+            onChange: (keys) => setSelectedUserIds(keys as string[]),
+          }}
+          pagination={{ pageSize: 5 }}
         />
       </Modal>
 
@@ -735,80 +748,23 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       </Modal>
 
       {/* Contest Results Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <TrophyOutlined style={{ fontSize: 24, color: "#faad14" }} />
-            <span className="text-xl font-semibold">
-              {t("Cập nhật kết quả thi")}
-            </span>
-          </div>
-        }
-        open={isContestModalOpen}
-        onCancel={() => setIsContestModalOpen(false)}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setIsContestModalOpen(false)}>
-              {t("Hủy")}
-            </Button>
-            <Button
-              type="primary"
-              onClick={handleSaveContestResults}
-              loading={loading}
-            >
-              {t("Lưu kết quả")}
-            </Button>
-          </div>
-        }
-        width="90%"
-        className="!max-w-[900px]"
-      >
-        <Alert
-          message={t("Lưu ý")}
-          description={t(
-            "Chỉ sinh viên đã điểm danh mới được hiển thị để cập nhật kết quả"
-          )}
-          type="info"
-          showIcon
-          className="mb-4"
+      {eventId && (
+        <ContestResultsModal
+          open={isContestModalOpen}
+          onClose={() => setIsContestModalOpen(false)}
+          eventId={eventId}
+          attendees={attendees}
         />
-        <Table
-          rowKey={(record: ExamResult) => record.userId!}
-          columns={contestColumns}
-          dataSource={contestResults}
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
-      </Modal>
+      )}
 
       {/* Seminar Reviews Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <StarOutlined style={{ fontSize: 24, color: "#faad14" }} />
-            <span className="text-xl font-semibold">
-              {t("Đánh giá seminar")}
-            </span>
-          </div>
-        }
-        open={isReviewModalOpen}
-        onCancel={() => setIsReviewModalOpen(false)}
-        footer={
-          <Button type="primary" onClick={() => setIsReviewModalOpen(false)}>
-            {t("Đóng")}
-          </Button>
-        }
-        width="90%"
-        className="!max-w-[900px]"
-      >
-        <Table
-          rowKey={(record: any) => record.id || Math.random()}
-          columns={reviewColumns}
-          dataSource={seminarReviews}
-          loading={loading}
-          pagination={{ pageSize: 10 }}
+      {eventId && (
+        <SeminarReviewsModal
+          open={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          eventId={eventId}
         />
-      </Modal>
+      )}
     </div>
   );
 };
