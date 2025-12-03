@@ -220,7 +220,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       await addAttendees(eventId, selectedUserIds);
       message.success(t("Đã thêm người tham gia thành công"));
       setAddParticipantModalVisible(false);
-      fetchAttendees();
+      fetchAttendees(pagination.current, pagination.pageSize);
     } catch (err) {
       message.error(t("Không thể thêm người tham gia"));
     } finally {
@@ -382,6 +382,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const openModal = () => {
     setIsModalOpen(true);
+    fetchAttendees(pagination.current, pagination.pageSize);
   };
 
   const attendeeColumns = [
