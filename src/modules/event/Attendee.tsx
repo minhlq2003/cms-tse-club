@@ -45,10 +45,14 @@ const { Search } = Input;
 const { Option } = Select;
 
 export interface Attendee {
-  id?: string;
+  id: string;
   user: Member;
   status: string;
   checkIn?: boolean;
+  fullName?: string;
+  nickname?: string;
+  email?: string;
+  dateOfBirth?: string;
 }
 
 interface EventAttendeesProps {
@@ -80,6 +84,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 8,
+    total: 0,
+  });
 
   const [contestResults, setContestResults] = useState<ExamResult[]>([]);
   const [isContestModalOpen, setIsContestModalOpen] = useState(false);
@@ -125,14 +134,23 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    fetchAttendees();
-  }, [eventId]);
+    if (isModalOpen) {
+      fetchAttendees(pagination.current, pagination.pageSize);
+    }
+  }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
 
-  const fetchAttendees = async () => {
+  const fetchAttendees = async (page: number, size: number) => {
     if (!eventId) return;
     try {
       setLoading(true);
-      const res = await getEventAttendees(eventId);
+      const modifiedKeyWord = "*" + keyword.trim() + "*";
+      const res = await getEventAttendees(eventId, {
+        page: page - 1,
+        size,
+        searchs: ["fullName", "nickname", "email"],
+        searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
+        status: statusFilter,
+      });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
         : Array.isArray(res)
@@ -141,11 +159,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       setAttendees(
         list.map((a: any) => ({
           id: a.id,
+          fullName: a.fullName,
+          nickname: a.nickname,
+          email: a.email,
+          dateOfBirth: a.dateOfBirth,
           user: a.user || a.attendee || a.userDto || {},
           status: a.status || a.attendeeStatus || "UNKNOWN",
           checkIn: a.checkIn || false,
         }))
       );
+      setPagination(prev => ({
+        ...prev,
+        total: res.page?.totalElements || 0,
+      }));
     } catch (err) {
       message.error(t("Failed to fetch attendees"));
     } finally {
@@ -194,7 +220,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       await addAttendees(eventId, selectedUserIds);
       message.success(t("Đã thêm người tham gia thành công"));
       setAddParticipantModalVisible(false);
-      fetchAttendees();
+      fetchAttendees(pagination.current, pagination.pageSize);
     } catch (err) {
       message.error(t("Không thể thêm người tham gia"));
     } finally {
@@ -288,9 +314,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
-      prev.map((a) =>
-        a.user.id === userId ? { ...a, checkIn: !a.checkIn } : a
-      )
+      prev.map((a) => (a.id === userId ? { ...a, checkIn: !a.checkIn } : a))
     );
   };
 
@@ -328,14 +352,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!eventId) return;
     try {
       setLoading(true);
-      const checkedIds = attendees
-        .filter((a) => a.checkIn)
-        .map((a) => a.user.id);
+      const checkedIds = attendees.filter((a) => a.checkIn).map((a) => a.id);
       const res = await manualCheckIn(eventId, checkedIds);
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
         setIsModalOpen(false);
-        fetchAttendees();
+        fetchAttendees(pagination.current, pagination.pageSize);
       } else {
         message.error(
           `${t("Failed to save check-in")} ${
@@ -350,41 +372,45 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  const openModal = () => {
-    setIsModalOpen(true);
-    fetchAttendees();
+  const handleTableChange = (pagination: any) => {
+    setPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
   };
 
-  const filteredAttendees = attendees.filter((a) => {
-    const kw = keyword.trim().toLowerCase();
-    const matchesKeyword =
-      !kw ||
-      (a.user?.fullName || "").toLowerCase().includes(kw) ||
-      (a.user?.username || "").toLowerCase().includes(kw) ||
-      (a.user?.email || "").toLowerCase().includes(kw);
-    const matchesStatus = statusFilter ? a.status === statusFilter : true;
-    return matchesKeyword && matchesStatus;
-  });
+  const openModal = () => {
+    setIsModalOpen(true);
+    fetchAttendees(pagination.current, pagination.pageSize);
+  };
 
   const attendeeColumns = [
+    {
+      title: t("ID"),
+      key: "id",
+      render: (_: any, record: Attendee) => record.id || record.user?.id || "-",
+    },
     {
       title: t("Full Name"),
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.user?.fullName || record.user?.username}
+          {record.fullName || record.user?.fullName}
         </span>
       ),
     },
     {
-      title: t("Username"),
+      title: t("Username / Nickname"),
       key: "username",
-      render: (_: any, record: Attendee) => record.user?.username || "-",
+      render: (_: any, record: Attendee) =>
+        record.nickname || record.user?.username || "-",
     },
     {
       title: t("Email"),
       key: "email",
-      render: (_: any, record: Attendee) => record.user?.email || "-",
+      render: (_: any, record: Attendee) =>
+        record.email || record.user?.email || "-",
     },
     {
       title: t("Status"),
@@ -404,7 +430,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       render: (_: any, record: Attendee) => (
         <Checkbox
           checked={Boolean(record.checkIn)}
-          onChange={() => toggleCheckInLocal(record.user.id)}
+          onChange={() => toggleCheckInLocal(record.id)}
           disabled={!canCheckIn || eventDone}
         />
       ),
@@ -434,7 +460,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       key: "fullName",
       render: (_: any, record: Attendee) => (
         <span className="font-semibold">
-          {record.user?.fullName || record.user?.username}
+          {record.fullName ||
+            record.nickname ||
+            record.user?.fullName ||
+            record.user?.username}
         </span>
       ),
     },
@@ -473,7 +502,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <div>
           <div className="block md:hidden">
             <Table
-              rowKey={(record: Attendee) => record.user.id}
+              rowKey={(record: Attendee) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -486,7 +515,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           <div className="hidden md:block">
             <Table
               className="p-2"
-              rowKey={(record: Attendee) => record.user.id}
+              rowKey={(record: Attendee) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -632,11 +661,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
 
         <Table
-          rowKey={(record: Attendee) => record.user.id}
+          rowKey={(record: Attendee) => record.id}
           columns={attendeeColumns}
-          dataSource={filteredAttendees}
+          dataSource={attendees}
           loading={loading}
-          pagination={{ pageSize: 8 }}
+          pagination={pagination}
+          onChange={handleTableChange}
         />
       </Modal>
 
