@@ -33,12 +33,14 @@ import {
   removeAttendees,
   updateContestResults,
   getSeminarReview,
+  getAvailableUsersToBecomeAttendee,
 } from "../services/eventService";
 import { getUser } from "../services/userService";
 import { Member, ExamResult } from "@/constant/types";
 import dayjs from "dayjs";
 import ContestResultsModal from "./ContestResultModal";
 import SeminarReviewsModal from "./SeminarReviewModal";
+import { get } from "lodash";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -55,6 +57,15 @@ export interface Attendee {
   dateOfBirth?: string;
 }
 
+enum OrganizerRole {
+  MODIFY = "MODIFY",
+  REGISTER = "REGISTER",
+  CHECK_IN = "CHECK_IN",
+  REMOVE = "REMOVE",
+  POST = "POST",
+  BAN = "BAN"
+}
+
 interface EventAttendeesProps {
   eventId?: string;
   startTime?: string;
@@ -65,7 +76,7 @@ interface EventAttendeesProps {
   eventDone?: boolean;
   // 🆕 Props cho permission
   isHost?: boolean;
-  userAsOrganizer?: { roles: string[] };
+  userAsOrganizer?: { roles: OrganizerRole[] };
 }
 
 const EventAttendees: React.FC<EventAttendeesProps> = ({
@@ -79,6 +90,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   isHost = false,
   userAsOrganizer,
 }) => {
+  
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,36 +119,43 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [searchUserKeyword, setSearchUserKeyword] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userPagination, setUserPagination] = useState({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+  });
 
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
+  
   const end = endTime ? new Date(endTime) : null;
-  const isDuringEvent = Boolean(start && now >= start);
+  const isEventStarted = Boolean(start && now >= start);
+  const isDuringEvent = Boolean(start && now >= start && end && now <= end);
   const isEventEnded = Boolean(end && now > end);
+
 
   // 🆕 Kiểm tra quyền REGISTER
   const canRegister = () => {
     if (isHost || userRole === "LEADER" || userRole === "ADMIN") return true;
     const roles = userAsOrganizer?.roles || [];
-    return roles.includes("REGISTER");
+    return roles.includes(OrganizerRole.REGISTER);
   };
 
   const canUpdateContest =
     isEventEnded &&
     eventCategory === "CONTEST" &&
-    ["MODIFY"].includes(userRole || "");
+  ( isHost || userAsOrganizer?.roles.includes(OrganizerRole.MODIFY))
+    ;
   const canViewReviews =
     isEventEnded &&
     eventCategory === "SEMINAR" &&
     ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    if (isModalOpen) {
-      fetchAttendees(pagination.current, pagination.pageSize);
-    }
+    fetchAttendees(pagination.current, pagination.pageSize);
   }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
 
   const fetchAttendees = async (page: number, size: number) => {
@@ -147,8 +166,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const res = await getEventAttendees(eventId, {
         page: page - 1,
         size,
-        searchs: ["fullName", "nickname", "email"],
-        searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
+        searchs: ["nickname"],
+        searchValues: [modifiedKeyWord],
         status: statusFilter,
       });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
@@ -180,18 +199,30 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   };
 
   // 🆕 Fetch available users for adding
-  const fetchAvailableUsers = async (keyword: string = "") => {
+  const fetchAvailableUsers = async (keyword: string = "", page: number = 1, size: number = 5) => {
+    if (!eventId) return;
     try {
       setLoadingUsers(true);
-      const res = await getUser({ keyword, page: 0, size: 100 });
+      const res = await getAvailableUsersToBecomeAttendee(eventId, {
+        page: page - 1,
+        size,
+        searchs: ["username"],
+        searchValues: [`*${keyword.trim()}*`],
+      });
       if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
         const allUsers = res._embedded.userShortInfoResponseDtoList;
-        // Lọc ra những user chưa là attendee
-        const attendeeIds = attendees.map((a) => a.user.id);
-        const filtered = allUsers.filter(
-          (u: Member) => !attendeeIds.includes(u.id)
-        );
-        setAvailableUsers(filtered);
+        setAvailableUsers(allUsers);
+        setUserPagination(prev => ({
+          ...prev,
+          total: res.page?.totalElements || 0,
+        }));
+      }
+      else{
+        setAvailableUsers([]);
+        setUserPagination(prev => ({
+          ...prev,
+          total: 0,
+        }));
       }
     } catch (err) {
       message.error(t("Failed to fetch users"));
@@ -205,7 +236,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     setAddParticipantModalVisible(true);
     setSelectedUserIds([]);
     setSearchUserKeyword("");
-    fetchAvailableUsers();
+    fetchAvailableUsers("", 1, 5);
   };
 
   // 🆕 Handle add participants
@@ -233,11 +264,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!addParticipantModalVisible) return;
 
     const timeoutId = setTimeout(() => {
-      fetchAvailableUsers(searchUserKeyword);
+      fetchAvailableUsers(searchUserKeyword, userPagination.current, userPagination.pageSize);
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchUserKeyword, addParticipantModalVisible, attendees]);
+  }, [searchUserKeyword, addParticipantModalVisible, userPagination.current, userPagination.pageSize]);
+
+  const handleUserTableChange = (pagination: any) => {
+    setUserPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
+  };
 
   const handleGenerateCode = async (forceNew: boolean = false) => {
     if (!eventId || !endTime) return;
@@ -271,6 +310,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           rank: 0,
           point: 0,
         }));
+      // const initialResults =
       setContestResults(initialResults);
     } catch (err) {
       message.error(t("Failed to load contest results"));
@@ -609,13 +649,13 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         onCancel={() => setIsModalOpen(false)}
         footer={
           <div className="flex flex-col items-end gap-2">
-            {(!canCheckIn || eventDone || !isDuringEvent) && (
+            {(!canCheckIn || eventDone || !isEventStarted) && (
               <Alert
                 type="warning"
                 message={
                   eventDone
                     ? t("Sự kiện đã kết thúc, không thể điểm danh")
-                    : !isDuringEvent
+                    : !isEventStarted
                     ? t("Sự kiện chưa bắt đầu, bạn không thể điểm danh")
                     : t("Bạn không có quyền điểm danh")
                 }
@@ -629,7 +669,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
               <Button
                 type="primary"
                 onClick={handleSave}
-                disabled={!canCheckIn || eventDone || !isDuringEvent}
+                disabled={!canCheckIn || eventDone || !isEventStarted}
               >
                 {t("Save")}
               </Button>
@@ -717,7 +757,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             selectedRowKeys: selectedUserIds,
             onChange: (keys) => setSelectedUserIds(keys as string[]),
           }}
-          pagination={{ pageSize: 5 }}
+          pagination={userPagination}
+          onChange={handleUserTableChange}
         />
       </Modal>
 

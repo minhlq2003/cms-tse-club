@@ -48,19 +48,33 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   const [members, setMembers] = useState<Member[]>([]);
   const [searchText, setSearchText] = useState("");
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [memberPagination, setMemberPagination] = useState({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+  });
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [form] = Form.useForm();
 
-  const fetchMembers = async (keyword: string = "") => {
+  const fetchMembers = async (keyword: string = "", page: number = 1, size: number = 5) => {
     try {
       setLoadingMembers(true);
-      const res = await getUser({ keyword, page: 0, size: 100 });
+
+      let searchs = [];
+      let searchValues = [];
+
+      for (const org of organizers) {
+        searchs.push( "id");
+        searchValues.push("!" + org.organizerId);
+      }
+
+      const res = await getUser({ keyword, page: page - 1, size, searchs, searchValues });
       if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
-        const allMembers = res._embedded.userShortInfoResponseDtoList;
-        const filtered = allMembers.filter(
-          (m: Member) => !organizers.some((o) => o.organizerId === m.id)
-        );
-        setMembers(filtered);
+        setMembers(res._embedded.userShortInfoResponseDtoList);
+        setMemberPagination(prev => ({
+          ...prev,
+          total: res.page.totalElements,
+        }));
       }
     } catch {
       message.error(t("Failed to fetch members"));
@@ -71,16 +85,16 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
 
   useEffect(() => {
     if (isModalOpen) {
-      fetchMembers(searchText);
+      fetchMembers(searchText, memberPagination.current, memberPagination.pageSize);
     }
-  }, [organizers, isModalOpen]);
+  }, [organizers, isModalOpen, memberPagination.current, memberPagination.pageSize]);
 
   // Debounce search to avoid too many API calls
   useEffect(() => {
     if (!isModalOpen) return;
 
     const timeoutId = setTimeout(() => {
-      fetchMembers(searchText);
+      fetchMembers(searchText, 1, memberPagination.pageSize);
     }, 500);
 
     return () => clearTimeout(timeoutId);
@@ -92,8 +106,16 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
       setSelectedMember(null);
       form.resetFields();
       setSearchText("");
-      fetchMembers("");
+      fetchMembers("", 1, 5);
     }
+  };
+
+  const handleMemberTableChange = (pagination: any) => {
+    setMemberPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
   };
 
   const handleCloseModal = () => {
@@ -336,7 +358,8 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
                 columns={memberColumns}
                 dataSource={members}
                 loading={loadingMembers}
-                pagination={{ pageSize: 5 }}
+                pagination={memberPagination}
+                onChange={handleMemberTableChange}
                 scroll={{ x: true }}
               />
             </Col>

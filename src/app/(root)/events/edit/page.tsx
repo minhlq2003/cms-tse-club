@@ -415,6 +415,7 @@ const EditEvent = () => {
                 userRole={getRoleUser()}
                 eventCategory={form.getFieldValue("category")}
                 canCheckIn={canCheckIn}
+                isHost={isHost}
               />
             </div>
           </div>
