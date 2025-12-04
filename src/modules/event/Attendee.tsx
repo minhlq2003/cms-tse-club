@@ -33,12 +33,14 @@ import {
   removeAttendees,
   updateContestResults,
   getSeminarReview,
+  getAvailableUsersToBecomeAttendee,
 } from "../services/eventService";
 import { getUser } from "../services/userService";
 import { Member, ExamResult } from "@/constant/types";
 import dayjs from "dayjs";
 import ContestResultsModal from "./ContestResultModal";
 import SeminarReviewsModal from "./SeminarReviewModal";
+import { get } from "lodash";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -107,6 +109,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [searchUserKeyword, setSearchUserKeyword] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userPagination, setUserPagination] = useState({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+  });
 
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
@@ -134,9 +141,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     ["LEADER"].includes(userRole || "");
 
   useEffect(() => {
-    if (isModalOpen) {
-      fetchAttendees(pagination.current, pagination.pageSize);
-    }
+    fetchAttendees(pagination.current, pagination.pageSize);
   }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
 
   const fetchAttendees = async (page: number, size: number) => {
@@ -180,18 +185,21 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   };
 
   // 🆕 Fetch available users for adding
-  const fetchAvailableUsers = async (keyword: string = "") => {
+  const fetchAvailableUsers = async (keyword: string = "", page: number = 1, size: number = 5) => {
+    if (!eventId) return;
     try {
       setLoadingUsers(true);
-      const res = await getUser({ keyword, page: 0, size: 100 });
+      const res = await getAvailableUsersToBecomeAttendee(eventId, {
+        page: page - 1,
+        size,
+      });
       if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
         const allUsers = res._embedded.userShortInfoResponseDtoList;
-        // Lọc ra những user chưa là attendee
-        const attendeeIds = attendees.map((a) => a.user.id);
-        const filtered = allUsers.filter(
-          (u: Member) => !attendeeIds.includes(u.id)
-        );
-        setAvailableUsers(filtered);
+        setAvailableUsers(allUsers);
+        setUserPagination(prev => ({
+          ...prev,
+          total: res.page?.totalElements || 0,
+        }));
       }
     } catch (err) {
       message.error(t("Failed to fetch users"));
@@ -205,7 +213,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     setAddParticipantModalVisible(true);
     setSelectedUserIds([]);
     setSearchUserKeyword("");
-    fetchAvailableUsers();
+    fetchAvailableUsers("", 1, 5);
   };
 
   // 🆕 Handle add participants
@@ -233,11 +241,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!addParticipantModalVisible) return;
 
     const timeoutId = setTimeout(() => {
-      fetchAvailableUsers(searchUserKeyword);
+      fetchAvailableUsers(searchUserKeyword, userPagination.current, userPagination.pageSize);
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchUserKeyword, addParticipantModalVisible, attendees]);
+  }, [searchUserKeyword, addParticipantModalVisible, userPagination.current, userPagination.pageSize]);
+
+  const handleUserTableChange = (pagination: any) => {
+    setUserPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
+  };
 
   const handleGenerateCode = async (forceNew: boolean = false) => {
     if (!eventId || !endTime) return;
@@ -717,7 +733,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
             selectedRowKeys: selectedUserIds,
             onChange: (keys) => setSelectedUserIds(keys as string[]),
           }}
-          pagination={{ pageSize: 5 }}
+          pagination={userPagination}
+          onChange={handleUserTableChange}
         />
       </Modal>
 

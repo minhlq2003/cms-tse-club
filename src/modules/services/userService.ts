@@ -10,11 +10,16 @@ const BASE_URL =
 
 const http = new HttpClient(BASE_URL);
 
-export const getUser = (params?: {
+interface SearchDto{
   page?: number;
   size?: number;
-  keyword?: string;
   sort?: string;
+  searchs?: string[];
+  searchValues?: string[];
+}
+
+export const getUser = (params?: SearchDto & {
+  keyword?: string;
   role?: string;
 }) => {
   const response = http.get(`${API_PREFIX_PATH}/search`, {
