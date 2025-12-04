@@ -7,12 +7,16 @@ import {
   updateUserInfo,
   changePassword,
 } from "@/modules/services/userService";
-import { getEvents, getRegisteredEvents } from "@/modules/services/eventService";
+import {
+  getEvents,
+  getRegisteredEvents,
+} from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
 import { Event } from "@/constant/types";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { CopyIcon } from "lucide-react";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
@@ -80,7 +84,10 @@ export default function ProfilePage() {
       dataIndex: "title",
       key: "title",
       render: (text: string, record: Event) => (
-        <a onClick={() => router.push(`/events/view?id=${record.id}`)} className="text-blue-600">
+        <a
+          onClick={() => router.push(`/events/view?id=${record.id}`)}
+          className="text-blue-600"
+        >
           {text}
         </a>
       ),
@@ -103,13 +110,28 @@ export default function ProfilePage() {
     <div className="p-6 space-y-6">
       <Card className="shadow rounded-2xl">
         <div className="flex flex-col md:flex-row items-start w-full md:items-center space-y-3 md:space-y-0 md:space-x-4">
-          <Avatar size={128} icon={<i className="fas fa-user"></i>} src="/images/usrLogo.png"/>
+          <Avatar
+            size={128}
+            icon={<i className="fas fa-user"></i>}
+            src="/images/usrLogo.png"
+          />
           <div className="pl-0 md:pl-10 w-full">
             <h2 className="font-bold text-blue-900 mb-2 text-xl">
               {t("THÔNG TIN CÁ NHÂN")}
             </h2>
             <div className="flex justify-between w-full">
               <div className="w-full md:w-1/2">
+                <p className="flex items-center gap-2">
+                  <b>UID:</b> {userInfo?.id}
+                  <Button
+                    size="small"
+                    icon={<CopyIcon size={14} />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(userInfo?.id || "");
+                      toast.success("Copied UID!");
+                    }}
+                  ></Button>
+                </p>
                 <p>
                   <b>Username:</b> {userInfo?.username}
                 </p>
@@ -138,6 +160,10 @@ export default function ProfilePage() {
                 <p>
                   <b>{t("Contribution Point")}:</b>{" "}
                   {userInfo?.contributionPoint}
+                </p>
+                <p>
+                  <b>{t("Nhóm người dùng")}:</b>{" "}
+                  {userInfo?.type == 2 ? "Giảng viên" : "Sinh viên"}
                 </p>
               </div>
             </div>

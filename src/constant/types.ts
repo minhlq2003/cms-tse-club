@@ -435,7 +435,7 @@ export interface Post {
   content?: string;
   category?: string;
   postTime?: string;
-  updated_at?: string;
+  lastModifiedTime?: string;
   status?: string;
   image?: string;
   excerpt?: string;
@@ -444,6 +444,7 @@ export interface Post {
   eventId?: string;
   event?: Event;
   deleted?: boolean;
+  author?: Member;
 }
 
 export interface CategoryOption {
