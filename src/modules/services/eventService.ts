@@ -181,3 +181,10 @@ export const getAvailableUsersToBecomeAttendee = (eventId: string, params?: Sear
   });
   return response.then((res) => res);
 }
+
+export const getContestExamResults = (eventId: string, params?: SearchDto) => {
+  const response = http.get(`${API_PREFIX_EVENT_PATH}/contest/${eventId}/exam-results`, {
+    params,
+  });
+  return response.then((res) => res);
+}

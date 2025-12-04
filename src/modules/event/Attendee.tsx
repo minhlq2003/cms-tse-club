@@ -57,6 +57,15 @@ export interface Attendee {
   dateOfBirth?: string;
 }
 
+enum OrganizerRole {
+  MODIFY = "MODIFY",
+  REGISTER = "REGISTER",
+  CHECK_IN = "CHECK_IN",
+  REMOVE = "REMOVE",
+  POST = "POST",
+  BAN = "BAN"
+}
+
 interface EventAttendeesProps {
   eventId?: string;
   startTime?: string;
@@ -67,7 +76,7 @@ interface EventAttendeesProps {
   eventDone?: boolean;
   // 🆕 Props cho permission
   isHost?: boolean;
-  userAsOrganizer?: { roles: string[] };
+  userAsOrganizer?: { roles: OrganizerRole[] };
 }
 
 const EventAttendees: React.FC<EventAttendeesProps> = ({
@@ -81,6 +90,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   isHost = false,
   userAsOrganizer,
 }) => {
+  
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,21 +130,25 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
+  
   const end = endTime ? new Date(endTime) : null;
-  const isDuringEvent = Boolean(start && now >= start);
+  const isEventStarted = Boolean(start && now >= start);
+  const isDuringEvent = Boolean(start && now >= start && end && now <= end);
   const isEventEnded = Boolean(end && now > end);
+
 
   // 🆕 Kiểm tra quyền REGISTER
   const canRegister = () => {
     if (isHost || userRole === "LEADER" || userRole === "ADMIN") return true;
     const roles = userAsOrganizer?.roles || [];
-    return roles.includes("REGISTER");
+    return roles.includes(OrganizerRole.REGISTER);
   };
 
   const canUpdateContest =
     isEventEnded &&
     eventCategory === "CONTEST" &&
-    ["MODIFY"].includes(userRole || "");
+  ( isHost || userAsOrganizer?.roles.includes(OrganizerRole.MODIFY))
+    ;
   const canViewReviews =
     isEventEnded &&
     eventCategory === "SEMINAR" &&
@@ -152,8 +166,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const res = await getEventAttendees(eventId, {
         page: page - 1,
         size,
-        searchs: ["fullName", "nickname", "email"],
-        searchValues: [modifiedKeyWord, modifiedKeyWord, modifiedKeyWord],
+        searchs: ["nickname"],
+        searchValues: [modifiedKeyWord],
         status: statusFilter,
       });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
@@ -192,6 +206,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const res = await getAvailableUsersToBecomeAttendee(eventId, {
         page: page - 1,
         size,
+        searchs: ["username"],
+        searchValues: [`*${keyword.trim()}*`],
       });
       if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
         const allUsers = res._embedded.userShortInfoResponseDtoList;
@@ -199,6 +215,13 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         setUserPagination(prev => ({
           ...prev,
           total: res.page?.totalElements || 0,
+        }));
+      }
+      else{
+        setAvailableUsers([]);
+        setUserPagination(prev => ({
+          ...prev,
+          total: 0,
         }));
       }
     } catch (err) {
@@ -287,6 +310,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           rank: 0,
           point: 0,
         }));
+      // const initialResults =
       setContestResults(initialResults);
     } catch (err) {
       message.error(t("Failed to load contest results"));
@@ -625,13 +649,13 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         onCancel={() => setIsModalOpen(false)}
         footer={
           <div className="flex flex-col items-end gap-2">
-            {(!canCheckIn || eventDone || !isDuringEvent) && (
+            {(!canCheckIn || eventDone || !isEventStarted) && (
               <Alert
                 type="warning"
                 message={
                   eventDone
                     ? t("Sự kiện đã kết thúc, không thể điểm danh")
-                    : !isDuringEvent
+                    : !isEventStarted
                     ? t("Sự kiện chưa bắt đầu, bạn không thể điểm danh")
                     : t("Bạn không có quyền điểm danh")
                 }
@@ -645,7 +669,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
               <Button
                 type="primary"
                 onClick={handleSave}
-                disabled={!canCheckIn || eventDone || !isDuringEvent}
+                disabled={!canCheckIn || eventDone || !isEventStarted}
               >
                 {t("Save")}
               </Button>
