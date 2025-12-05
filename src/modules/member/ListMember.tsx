@@ -28,6 +28,7 @@ import {
 import { getRoleUser, isLeader } from "@/lib/utils";
 import { toast } from "sonner";
 import dayjs from "dayjs"; // Sử dụng dayjs
+import UpdateUserInfoModal from "./UpdateUserInfoModal";
 
 interface Member {
   id: string;
@@ -145,19 +146,7 @@ export default function ListMember({
     }
   };
 
-const decodeBitwiseType = (bitwiseValue?: number): number[] => {
-    if (!bitwiseValue || bitwiseValue === 0) return [];
-    
-    const selectedValues: number[] = [];
-    
-    for (const [_, value] of Object.entries(USER_TYPES)) {
-      if ((bitwiseValue & value) === value) {
-        selectedValues.push(value);
-      }
-    }
-    
-    return selectedValues;
-  };
+
 
   const openChangeUserInfo = (member: Member) => {
     setSelectedMember(member);
@@ -318,111 +307,13 @@ const decodeBitwiseType = (bitwiseValue?: number): number[] => {
       </Modal>
 
       {/* --- Bổ sung: Modal Cập nhật thông tin người dùng --- */}
-      <Modal
-        title={
-          <p>
-            {t("Update User Info for ")}
-            {`${selectedMember?.username}`}
-          </p>
-        }
-        open={isUserInfoModalOpen}
-        onCancel={() => setIsUserInfoModalOpen(false)}
-        okText={t("Save changes")}
-        cancelText={t("Cancel")}
-        // Khi nhấn OK, tự động submit form
-        onOk={() => {
-          userInfoForm
-            .validateFields()
-            .then((values) => {
-              handleUpdateUserInfo(values);
-            })
-            .catch((info) => {
-              console.log("Validate Failed:", info);
-            });
-        }}
-      >
-        <Form
-          form={userInfoForm}
-          layout="vertical"
-          name="user_info_form"
-          initialValues={{
-            fullName: selectedMember?.fullName,
-            email: selectedMember?.email,
-            dateOfBirth: dayjs(selectedMember?.dateOfBirth, "YYYY-MM-DD"), 
-            nickname: selectedMember?.nickname,
-            studentId: selectedMember?.studentId,
-            type: decodeBitwiseType(selectedMember?.type), // Giải mã bitwise thành mảng
-          }}
-        >
-          <Form.Item
-            name="fullName"
-            label={t("Full Name")}
-            rules={[
-              {
-                required: true,
-                message: t("Please input the full name!"),
-              },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="email"
-            label={t("Email")}
-            rules={[
-              { required: true, message: t("Please input the email!") },
-              { type: "email", message: t("The input is not valid E-mail!") },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="dateOfBirth"
-            label={t("Date of Birth")}
-            rules={[
-              { required: true, message: t("Please input the date of birth!") },
-            ]}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
-
-          <Form.Item
-            name="nickname"
-            label={t("Nickname")}
-            rules={[
-              { required: false, message: t("Please input the nickname!") },
-            ]}
-          >
-            <Input className="w-full" />
-          </Form.Item>
-          <Form.Item
-            name="studentId"
-            label={t("Student ID")}
-            rules={[
-              { required: false, message: t("Please input the student ID!") },
-            ]}
-          >
-            <Input className="w-full" />
-          </Form.Item>
-          <Form.Item
-            name="type"
-            label={t("User type ")}
-            tooltip={t("Selected values are summed using Bitwise OR (|) for saving.")}
-          >
-            <Checkbox.Group
-              options={USER_TYPE_OPTIONS.map((option) => ({
-                label: option.label,
-                value: option.value,
-              
-              }))}
-              className="flex flex-col"
-              
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <UpdateUserInfoModal
+        member={selectedMember}
+        isOpen={isUserInfoModalOpen}
+        onClose={() => setIsUserInfoModalOpen(false)}
+        onFinish={handleUpdateUserInfo} // Hàm xử lý submit form
+        // Truyền các options và logic decode bitwise vào Modal
+      />
     </div>
   );
 }
