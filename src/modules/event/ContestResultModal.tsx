@@ -4,7 +4,10 @@ import React, { useEffect, useState } from "react";
 import { Modal, Table, Button, InputNumber, Alert, message } from "antd";
 import { TrophyOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { updateContestResults } from "../services/eventService";
+import {
+  getContestExamResults,
+  updateContestResults,
+} from "../services/eventService";
 import { Member, ExamResult } from "@/constant/types";
 
 interface ContestResultsModalProps {
@@ -26,32 +29,64 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
   const { t } = useTranslation("common");
   const [contestResults, setContestResults] = useState<ExamResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 5,
+    total: 0,
+    
+  });
+
+  const fetchResults = async (page: number = 1, size: number = 10) => {
+    if (open) {
+      setLoading(true);
+      try {
+        const res = await getContestExamResults(eventId, {
+          page: page - 1,
+          size,
+          sort: "point,desc",
+        });
+        const initialResults: ExamResult[] = Array.isArray(
+          res._embedded?.examResultDtoList
+        )
+          ? res._embedded.examResultDtoList
+          : Array.isArray(res)
+          ? res
+          : [];
+        setContestResults(initialResults);
+        setPagination(prev => ({
+          ...prev,
+          total: res.page?.totalElements || 0,
+        }));
+      } catch (error) {
+        message.error(t("Failed to fetch contest results"));
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setContestResults([]);
+    }
+  };
 
   useEffect(() => {
-    if (open) {
-      // Initialize results for checked attendees
-      const initialResults: ExamResult[] = attendees
-        .filter((a) => a.status === "CHECKED")
-        .map((a) => ({
-          userId: a.user.id,
-          student: a.user,
-          rank: 0,
-          point: 0,
-        }));
-      setContestResults(initialResults);
-    }
-  }, [open, attendees]);
-
-  const handleResultChange = (
+    fetchResults(pagination.current, pagination.pageSize);
+  }, [open, pagination.current, pagination.pageSize]);  const handleResultChange = (
     userId: string,
     field: "rank" | "point",
     value: number | null
   ) => {
     setContestResults((prev) =>
       prev.map((result) =>
-        result.userId === userId ? { ...result, [field]: value || 0 } : result
+        result.student?.id === userId ? { ...result, [field]: value || 0 } : result
       )
     );
+  };
+
+  const handleTableChange = (pagination: any) => {
+    setPagination({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      total: pagination.total,
+    });
   };
 
   const handleSave = async () => {
@@ -68,7 +103,7 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
       setLoading(true);
       const payload = {
         examResults: contestResults.map((r) => ({
-          userId: r.userId,
+          userId: r.student?.id,
           rank: r.rank,
           point: r.point,
         })),
@@ -108,7 +143,7 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
         <InputNumber
           min={1}
           value={record.rank}
-          onChange={(val) => handleResultChange(record.userId!, "rank", val)}
+          onChange={(val) => handleResultChange(record.student?.id!, "rank", val)}
           style={{ width: "100%" }}
           placeholder={t("Nhập thứ hạng")}
         />
@@ -123,7 +158,7 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
           min={0}
           max={100}
           value={record.point}
-          onChange={(val) => handleResultChange(record.userId!, "point", val)}
+          onChange={(val) => handleResultChange(record.student?.id!, "point", val)}
           style={{ width: "100%" }}
           placeholder={t("Nhập điểm")}
         />
@@ -164,11 +199,12 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
         className="mb-4"
       />
       <Table
-        rowKey={(record: ExamResult) => record.userId!}
+        rowKey={(record: ExamResult) => record.student?.id!}
         columns={columns}
         dataSource={contestResults}
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={pagination}
+        onChange={handleTableChange}
         scroll={{ x: 600 }}
       />
     </Modal>

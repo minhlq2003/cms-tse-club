@@ -20,6 +20,7 @@ interface SearchDto{
   searchValues?: string[];
 }
 
+
 interface EventSearchRequestDto extends SearchDto{
   isDone?: boolean;
   eventType?: "SEMINAR" | "CONTEST" | "TRAINING_EVENT" | "SIMPLE" | "ALL";
@@ -172,13 +173,28 @@ export const triggerEventDone = (eventId: string) =>
 
 export const addAttendees = (eventId: string, attendeeIds: string[]) =>
   http.post<Event>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-user-register`, {
-    userIds: { attendeeIds },
+    userIds: [...attendeeIds],
   });
 
 export const removeAttendees = (eventId: string, attendeeIds: string[]) =>
   http.post<Event>(
-    `${API_PREFIX_EVENT_PATH}/${eventId}/manual-rmove-attendees`,
+    `${API_PREFIX_EVENT_PATH}/${eventId}/manual-remove-attendees`,
     {
       attendeeIds: { attendeeIds },
     }
   );
+
+
+export const getAvailableUsersToBecomeAttendee = (eventId: string, params?: SearchDto) => {
+  const response = http.get(`${API_PREFIX_EVENT_PATH}/${eventId}/search/available-attendees`, {
+    params,
+  });
+  return response.then((res) => res);
+}
+
+export const getContestExamResults = (eventId: string, params?: SearchDto) => {
+  const response = http.get(`${API_PREFIX_EVENT_PATH}/contest/${eventId}/exam-results`, {
+    params,
+  });
+  return response.then((res) => res);
+}
