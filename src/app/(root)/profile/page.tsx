@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, Avatar, Button, Form, Input, Modal, Table, message } from "antd";
 import {
-  getInfoUser,
+  getMyInfoUser,
   updateUserInfo,
   changePassword,
 } from "@/modules/services/userService";
@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
   const fetchData = async () => {
     try {
-      const info = await getInfoUser();
+      const info = await getMyInfoUser();
       setUserInfo(info);
 
       form.setFieldsValue(info);

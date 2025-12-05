@@ -12,16 +12,33 @@ const http = new HttpClient(BASE_URL);
 export const createEvent = (data: Event) =>
   http.post<Event>(`${API_PREFIX_EVENT_PATH}`, data);
 
-export const getEvents = (params?: {
+interface SearchDto{
   page?: number;
   size?: number;
-  eventType?: string;
+  sort?: string;
+  searchs?: string[];
+  searchValues?: string[];
+}
+
+interface EventSearchRequestDto extends SearchDto{
   isDone?: boolean;
+  eventType?: "SEMINAR" | "CONTEST" | "TRAINING_EVENT" | "SIMPLE" | "ALL";
   keyword?: string;
-  category?: string;
-  status?: string;
-  searchs?: string;
-  searchValues?: string;
+  startTime?: string;
+  endTime?: string;
+  rangeTimeType?: "UPCOMING" | "ONGOING" | "PAST";
+}
+
+enum FunctionStatus{
+  PENDING = "PENDING",
+  ARCHIVED = "ARCHIVED",
+  ACCEPTED = "ACCEPTED",
+  REJECTED = "REJECTED",
+  DISABLED = "DISABLED",
+}
+
+export const getEvents = (params?: EventSearchRequestDto & {
+  status?: FunctionStatus;
   isHost?: boolean;
 }) => {
   const response = http.get(`${API_PREFIX_EVENT_PATH}/me/search`, {
