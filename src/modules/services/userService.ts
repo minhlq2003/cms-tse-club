@@ -1,4 +1,5 @@
 import { Event, MediaData, MediaResponse } from "@/constant/types";
+import { UserUpdateDto } from "@/interfaces/userInterface";
 import { HttpClient } from "@/lib/HttpClient";
 import { AxiosRequestHeaders } from "axios";
 
@@ -9,6 +10,22 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
 
 const http = new HttpClient(BASE_URL);
+
+export const USER_TYPES = {
+  STUDENT: 1 << 0, // 1 (001)
+  MEMBER: 1 << 1, // 2 (010)
+  LECTURER: 1 << 2, // 4 (100)
+  POST_STUDENT: 1 << 3, // 8 (1000)
+};
+
+// Mảng cho Checkbox Group
+export const USER_TYPE_OPTIONS = [
+  { label: "Sinh viên", value: USER_TYPES.STUDENT },
+  { label: "Hội viên", value: USER_TYPES.MEMBER },
+  { label: "Giảng viên", value: USER_TYPES.LECTURER },
+  { label: "Nghiên cứu sinh", value: USER_TYPES.POST_STUDENT },
+];
+
 
 interface SearchDto{
   page?: number;
@@ -28,8 +45,13 @@ export const getUser = (params?: SearchDto & {
   return response.then((res) => res);
 };
 
-export const getInfoUser = () => {
+export const getMyInfoUser = () => {
   const response = http.get(`${API_PREFIX_PATH}/me`);
+  return response.then((res) => res);
+};
+
+export const getUserInfo = (userId: string) => {
+  const response = http.get(`${API_PREFIX_LEADER_PATH}/${userId}`);
   return response.then((res) => res);
 };
 
@@ -60,6 +82,11 @@ export const changeRole = (userId: string, role: string) => {
     newRole: role,
     accepted: true,
   });
+  return response.then((res) => res);
+};
+
+export const updateUserInfoByLeader = (userId: string, data: UserUpdateDto) => {
+  const response = http.put(`${API_PREFIX_LEADER_PATH}/${userId}`, data);
   return response.then((res) => res);
 };
 

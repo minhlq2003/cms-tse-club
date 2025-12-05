@@ -8,8 +8,8 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import { getInfoUser } from "@/modules/services/userService";
-import { getRegisteredEvents } from "@/modules/services/eventService";
+import { getMyInfoUser } from "@/modules/services/userService";
+import { getEvents, getRegisteredEvents } from "@/modules/services/eventService";
 import { set } from "lodash";
 import { Event } from "@/constant/types";
 import { useTranslation } from "react-i18next";
@@ -19,7 +19,7 @@ import { Images } from "@/constant/image";
 export default function Dashboard() {
   const { t } = useTranslation("common");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
+  const [myEvents, setMyEvents] = useState<Event[]>([]);
   interface UserInfo {
     username: string;
     email: string;
@@ -33,7 +33,7 @@ export default function Dashboard() {
   const [info, setInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
-    getInfoUser()
+    getMyInfoUser()
       .then((res) => {
         setInfo(res);
       })
@@ -41,9 +41,13 @@ export default function Dashboard() {
         console.error("Failed to fetch user info:", error);
       });
 
-    getRegisteredEvents()
+    getEvents({size: 50,
+      sort: "location.startTime,asc",
+      startTime: currentDate.toISOString(),
+      endTime: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString(),
+    })
       .then((res) => {
-        setRegisteredEvents(res);
+        setMyEvents(res._embedded?.eventWrapperDtoList || []);
       })
       .catch((error) => {
         console.error("Failed to fetch registered events:", error);
@@ -99,7 +103,7 @@ export default function Dashboard() {
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = new Date(year, month, 1).getDay();
 
-    const eventsInMonth = registeredEvents.filter((event) => {
+    const eventsInMonth = myEvents.filter((event) => {
       const eventDate = new Date(event.location.startTime);
       return eventDate.getFullYear() === year && eventDate.getMonth() === month;
     });

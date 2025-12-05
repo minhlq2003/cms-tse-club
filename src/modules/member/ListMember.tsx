@@ -1,12 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Popconfirm, Table, Modal, Select, Form, Alert } from "antd";
+import {
+  Button,
+  Popconfirm,
+  Table,
+  Modal,
+  Select,
+  Form,
+  Alert,
+  Input, // Thêm Input cho form
+  InputNumber,
+  DatePicker,
+  Checkbox, // Thêm InputNumber cho điểm
+} from "antd";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { changeRole, getUser, resetPassword } from "../services/userService";
+import {
+  changeRole,
+  getUser,
+  getUserInfo,
+  resetPassword,
+  updateUserInfoByLeader,
+  USER_TYPE_OPTIONS,
+  USER_TYPES, // Đã được import
+} from "../services/userService";
 import { getRoleUser, isLeader } from "@/lib/utils";
 import { toast } from "sonner";
+import dayjs from "dayjs"; // Sử dụng dayjs
+import UpdateUserInfoModal from "./UpdateUserInfoModal";
 
 interface Member {
   id: string;
@@ -16,6 +38,10 @@ interface Member {
   role: string;
   attendancePoint?: number;
   contributionPoint?: number;
+  dateOfBirth?: string;
+  nickname?: string;
+  studentId?: string;
+  type?: number;
 }
 
 export default function ListMember({
@@ -32,11 +58,15 @@ export default function ListMember({
   const leader = isLeader();
   const currentUserRole = getRoleUser();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal đổi role
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
 
   const [showConfirmTransfer, setShowConfirmTransfer] = useState(false);
+
+  // --- Bổ sung cho Modal cập nhật thông tin người dùng ---
+  const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false); // Modal cập nhật thông tin
+  const [userInfoForm] = Form.useForm(); // Hook form của Ant Design
 
   const fetchMembers = async () => {
     try {
@@ -72,6 +102,7 @@ export default function ListMember({
     }
   };
 
+  // --- Hàm mở Modal đổi role ---
   const openChangeRoleModal = (member: Member) => {
     setSelectedMember(member);
     setSelectedRole(member.role);
@@ -79,6 +110,7 @@ export default function ListMember({
     setIsModalOpen(true);
   };
 
+  // --- Hàm xử lý đổi role ---
   const handleConfirmChangeRole = async () => {
     if (!selectedMember) return;
 
@@ -111,6 +143,58 @@ export default function ListMember({
       toast.error(t("Failed to change role"));
     } finally {
       setIsModalOpen(false);
+    }
+  };
+
+
+
+  const openChangeUserInfo = (member: Member) => {
+    setSelectedMember(member);
+    setIsUserInfoModalOpen(true);
+    // Thiết lập giá trị ban đầu cho form
+    userInfoForm.setFieldsValue({
+      fullName: member.fullName,
+      email: member.email,
+      dateOfBirth: dayjs(member.dateOfBirth),
+      nickname: member.nickname,
+      studentId: member.studentId,
+    });
+    console.log("Opening user info modal for:", member);
+  };
+
+  const encodeBitwiseType = (selectedValues: number[]): number => {
+      // Sử dụng Array.prototype.reduce() và toán tử Bitwise OR (|)
+      // Ví dụ: [1, 4] -> 1 | 4 = 5
+      return selectedValues.reduce((acc, current) => acc | current, 0);
+      // Hoặc nếu không cần tính bitwise, có thể dùng phép cộng đơn giản:
+      // return selectedValues.reduce((acc, current) => acc + current, 0);
+  };
+
+  // --- Bổ sung: Hàm xử lý cập nhật thông tin người dùng ---
+  const handleUpdateUserInfo = async (values: any) => {
+    if (!selectedMember) return;
+
+    console.log("Updating user info with values:", values);
+
+    try {
+      // API có thể cần user ID và data
+      await updateUserInfoByLeader(selectedMember.id, {
+        fullName: values.fullName,
+        email: values.email,
+        dateOfBirth: values.dateOfBirth
+          ? values.dateOfBirth.format("YYYY-MM-DD")
+          : undefined,
+        nickname: values.nickname,
+        studentId: values.studentId,
+        type: encodeBitwiseType(values.type), // Mã hóa lại thành bitwise
+      });
+      toast.success(t("User information updated successfully"));
+      fetchMembers(); // Lấy lại danh sách để cập nhật dữ liệu
+    } catch (error) {
+      toast.error(t("Failed to update user information"));
+    } finally {
+      setIsUserInfoModalOpen(false);
+      userInfoForm.resetFields();
     }
   };
 
@@ -155,6 +239,9 @@ export default function ListMember({
 
             <Button type="link" onClick={() => openChangeRoleModal(record)}>
               {t("Change role")}
+            </Button>
+            <Button type="link" onClick={() => openChangeUserInfo(record)}>
+              {t("Change user info")}
             </Button>
           </div>
         ),
@@ -218,6 +305,15 @@ export default function ListMember({
           )}
         </Form>
       </Modal>
+
+      {/* --- Bổ sung: Modal Cập nhật thông tin người dùng --- */}
+      <UpdateUserInfoModal
+        member={selectedMember}
+        isOpen={isUserInfoModalOpen}
+        onClose={() => setIsUserInfoModalOpen(false)}
+        onFinish={handleUpdateUserInfo} // Hàm xử lý submit form
+        // Truyền các options và logic decode bitwise vào Modal
+      />
     </div>
   );
 }
