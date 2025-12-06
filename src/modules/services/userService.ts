@@ -1,5 +1,4 @@
-import { Event, MediaData, MediaResponse } from "@/constant/types";
-import { UserUpdateDto } from "@/lib/interfaces/userInterface";
+import { Event, UserShortInfoResponseDto as ShortUserInfoResponseDto, UserUpdateDto, PageWrapperDto   } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 import { AxiosRequestHeaders } from "axios";
 
@@ -46,7 +45,7 @@ export const getUser = (params?: SearchDto & {
 };
 
 export const getMyInfoUser = () => {
-  const response = http.get<UserShortInfoResponseDto>(`${API_PREFIX_PATH}/me`);
+  const response = http.get<ShortUserInfoResponseDto>(`${API_PREFIX_PATH}/me`);
   return response.then((res) => res);
 };
 
@@ -103,3 +102,14 @@ export const changePassword = (data: {
   const response = http.put(`${API_PREFIX_PATH}/update-my-password`, data);
   return response.then((res) => res);
 };
+
+export const getMyPointHistory = (params?: SearchDto & {
+  startTime?: string;
+  endTime?: string;
+  pointHistoryType: "CONTRIBUTION" | "ATTENDANCE" | "ALL";
+}) : Promise<PageWrapperDto | null>  => {
+  const response = http.get<PageWrapperDto>(`${API_PREFIX_PATH}/me/point-history`, {
+    params,
+  });
+  return response;
+}

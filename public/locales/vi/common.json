@@ -182,5 +182,6 @@
   "LEADER": "quản lý clb",
   "MEMBER": "thành viên clb",
   "NONE": "thành viên thường",
-  "ADMIN": "quản trị viên"
+  "ADMIN": "quản trị viên",
+  "Point History": "Lịch sử điểm"
 }

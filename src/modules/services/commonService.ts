@@ -1,5 +1,4 @@
-import { GlobalConfigurationDto } from "@/lib/interfaces/commons";
-import { Post, PostListResponse, PostResponse } from "@/constant/types";
+import { Post, PostListResponse, PostResponse, GlobalConfigurationDto} from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_COMMON_PATH = "/common";

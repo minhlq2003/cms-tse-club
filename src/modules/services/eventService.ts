@@ -1,4 +1,4 @@
-import { Event } from "@/constant/types";
+import { Event, EventSearchRequestDto, FunctionStatus, SearchDto } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_EVENT_PATH = "/events";
@@ -12,31 +12,6 @@ const http = new HttpClient(BASE_URL);
 export const createEvent = (data: Event) =>
   http.post<Event>(`${API_PREFIX_EVENT_PATH}`, data);
 
-interface SearchDto{
-  page?: number;
-  size?: number;
-  sort?: string;
-  searchs?: string[];
-  searchValues?: string[];
-}
-
-
-interface EventSearchRequestDto extends SearchDto{
-  isDone?: boolean;
-  eventType?: "SEMINAR" | "CONTEST" | "TRAINING_EVENT" | "SIMPLE" | "ALL";
-  keyword?: string;
-  startTime?: string;
-  endTime?: string;
-  rangeTimeType?: "UPCOMING" | "ONGOING" | "PAST";
-}
-
-enum FunctionStatus{
-  PENDING = "PENDING",
-  ARCHIVED = "ARCHIVED",
-  ACCEPTED = "ACCEPTED",
-  REJECTED = "REJECTED",
-  DISABLED = "DISABLED",
-}
 
 export const getEvents = (params?: EventSearchRequestDto & {
   status?: FunctionStatus;
@@ -48,17 +23,8 @@ export const getEvents = (params?: EventSearchRequestDto & {
   return response.then((res) => res);
 };
 
-export const getEventByLeader = (params?: {
-  page?: number;
-  size?: number;
-  eventType?: string;
-  isDone?: boolean;
-  keyword?: string;
-  category?: string;
-  status?: string;
-  searchs?: string;
-  searchValues?: string;
-  deleted?: boolean;
+export const getEventByLeader = (params?: EventSearchRequestDto & {
+  status?: FunctionStatus;
 }) => {
   const response = http.get(`${API_PREFIX_LEADER_EVENT_PATH}/search`, {
     params,
