@@ -17,6 +17,8 @@ import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CopyIcon } from "lucide-react";
+import { Images } from "@/constant/image";
+import Image from "next/image";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
@@ -110,10 +112,11 @@ export default function ProfilePage() {
     <div className="p-6 space-y-6">
       <Card className="shadow rounded-2xl">
         <div className="flex flex-col md:flex-row items-start w-full md:items-center space-y-3 md:space-y-0 md:space-x-4">
-          <Avatar
-            size={128}
-            icon={<i className="fas fa-user"></i>}
-            src="/images/usrLogo.png"
+          <Image 
+            src={Images.avtDefault.src} 
+            alt="anh ca nhan"
+            width={128}
+            height={128}
           />
           <div className="pl-0 md:pl-10 w-full">
             <h2 className="font-bold text-blue-900 mb-2 text-xl">

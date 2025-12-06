@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Avatar, Button, Select, Image } from "antd";
+import { Card, Avatar, Button, Select } from "antd";
 import {
   DoubleLeftOutlined,
   DoubleRightOutlined,
@@ -9,17 +9,27 @@ import {
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { getMyInfoUser } from "@/modules/services/userService";
-import { getEvents, getRegisteredEvents } from "@/modules/services/eventService";
+import {
+  getEvents,
+  getRegisteredEvents,
+} from "@/modules/services/eventService";
 import { set } from "lodash";
 import { Event } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@/lib/utils";
 import { Images } from "@/constant/image";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { getGlobalConfigByKey } from "@/modules/services/commonService";
+import { LAST_RESET_POINT_TIME } from "@/common/varConstants";
+import { GlobalConfigurationDto } from "@/lib/interfaces/commons";
 
 export default function Dashboard() {
   const { t } = useTranslation("common");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [myEvents, setMyEvents] = useState<Event[]>([]);
+  const [lastResetPointConfig, setLastResetPointConfig] = useState<GlobalConfigurationDto | null>(null);
+  
   interface UserInfo {
     username: string;
     email: string;
@@ -28,8 +38,11 @@ export default function Dashboard() {
     role: string;
     attendancePoint: number;
     contributionPoint: number;
+    fullName?: string;
+    studentId?: string;
   }
 
+  const navigation = useRouter();
   const [info, setInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
@@ -41,16 +54,35 @@ export default function Dashboard() {
         console.error("Failed to fetch user info:", error);
       });
 
-    getEvents({size: 50,
+    getEvents({
+      size: 50,
       sort: "location.startTime,asc",
       startTime: currentDate.toISOString(),
-      endTime: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString(),
+      endTime: new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        0
+      ).toISOString(),
     })
       .then((res) => {
         setMyEvents(res._embedded?.eventWrapperDtoList || []);
       })
       .catch((error) => {
         console.error("Failed to fetch registered events:", error);
+      });
+
+    getGlobalConfigByKey(LAST_RESET_POINT_TIME)
+      .then((res) => {
+        const {formattedDate, formattedTime} = formatDate(res?.configValue || "");
+        const formattedRes = {
+          ...res,
+          configKey: res?.configKey || "",
+          configValue: formattedDate + " " + formattedTime || "",
+        }
+        setLastResetPointConfig(formattedRes);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch last reset point config:", error);
       });
   }, []);
 
@@ -155,7 +187,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow md:col-span-2 rounded-2xl">
           <div className="flex flex-col md:flex-row items-start md:items-center space-y-3 md:space-y-0 md:space-x-4">
-            <Image src={Images.avtDefault.src} />
+            <Image
+              src={Images.avtDefault.src}
+              alt="anh ca nhan"
+              width={128}
+              height={128}
+            />
             <div className="pl-0 md:pl-3 w-full">
               <h3 className="font-bold text-blue-900 mb-2">
                 {t("THÔNG TIN CÁ NHÂN")}
@@ -175,13 +212,13 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p>
-                    {t("Attendance Point")}: <b>{info?.attendancePoint}</b>
+                    {t("Fullname")}: <span>{info?.fullName || "-"}</span>
                   </p>
                   <p>
-                    {t("Contribution Point")}: <b>{info?.contributionPoint}</b>
+                    {t("Student Id")}: <b>{info?.studentId || "-"}</b>
                   </p>
                   <p>
-                    {t("Role")}: {info?.role}
+                    {t("Role")}: {t(info?.role || "")}
                   </p>
                 </div>
               </div>
@@ -190,11 +227,16 @@ export default function Dashboard() {
         </Card>
 
         <Card className="shadow rounded-2xl">
-          <h3 className="font-bold text-blue-900">{t("EVENT THIS WEEK")}</h3>
-          <p className="text-gray-500">{t("Updating...")}</p>
-          <a href="#" className="text-blue-600 text-sm">
-            {t("View all events")}
-          </a>
+          <h3 className="font-bold text-blue-900">{t("Thống kê")}</h3>
+          <p>
+            {t("Attendance Point")}: <b>{info?.attendancePoint}</b>
+          </p>
+          <p>
+            {t("Contribution Point")}: <b>{info?.contributionPoint}</b>
+          </p>
+          <p>
+            {t("Last reset point date")}: <span>{lastResetPointConfig?.configValue || ""}</span>
+          </p>
         </Card>
       </div>
 

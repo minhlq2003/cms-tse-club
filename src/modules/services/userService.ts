@@ -1,5 +1,5 @@
 import { Event, MediaData, MediaResponse } from "@/constant/types";
-import { UserUpdateDto } from "@/global/interfaces/userInterface";
+import { UserUpdateDto } from "@/lib/interfaces/userInterface";
 import { HttpClient } from "@/lib/HttpClient";
 import { AxiosRequestHeaders } from "axios";
 

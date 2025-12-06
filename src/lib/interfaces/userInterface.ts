@@ -1,4 +1,4 @@
-import { UserRole } from "@/enums/enums";
+import { UserRole } from "@/common/enums/enums";
 
 export interface UserShortInfoResponseDto{
     id: string;
