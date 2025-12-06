@@ -13,7 +13,7 @@ import {
   triggerEventDone,
 } from "@/modules/services/eventService";
 import { useTranslation } from "react-i18next";
-import { formatDate, getUser, isLeader } from "@/lib/utils";
+import { formatDate, getUser, isLeader, isLeaderOrHigher } from "@/lib/utils";
 import { Check, Edit, Eye, Trash2, View, X, CheckCircle, Redo } from "lucide-react";
 import dayjs from "dayjs";
 import { toast } from "sonner";
@@ -231,7 +231,11 @@ export default function ListEvent({ filters }: ListEventProps) {
       title: t("Action"),
       key: "action",
       render: (_: any, record: Event) => (
+        
         <div className="flex flex-wrap gap-2">
+        {
+          (isLeaderOrHigher() || record.host?.id === getUser()?.id) &&
+          
           <Tooltip title={t("Move to Trash")}>
             <Button
               danger
@@ -242,7 +246,7 @@ export default function ListEvent({ filters }: ListEventProps) {
               }}
             ></Button>
           </Tooltip>
-
+        }
           {/* Hide Edit button if event is done */}
           {!record.done && (
             <Tooltip title={t("Edit")}>
