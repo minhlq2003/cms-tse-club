@@ -287,54 +287,7 @@ export default function Dashboard() {
           </table>
         </div>
       </Card>
-      {/* Quản lý sự kiện */}
-      <Card className="shadow rounded-2xl">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 gap-3">
-          <h3 className="font-bold text-blue-900">{t("My events")}</h3>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={currentDate.getMonth()}
-              onChange={(val) =>
-                setCurrentDate(new Date(currentDate.getFullYear(), val, 1))
-              }
-              options={months}
-              style={{ width: 100 }}
-            />
-            <Select
-              value={currentDate.getFullYear()}
-              onChange={(val) =>
-                setCurrentDate(new Date(val, currentDate.getMonth(), 1))
-              }
-              options={years}
-              style={{ width: 100 }}
-            />
-            <Button onClick={prevYear} icon={<DoubleLeftOutlined />}></Button>
-            <Button onClick={prevMonth} icon={<LeftOutlined />} />
-            <Button onClick={nextMonth} icon={<RightOutlined />} />
-            <Button onClick={nextYear} icon={<DoubleRightOutlined />}></Button>
-            <Button type="default" onClick={goToday}>
-              Hôm nay
-            </Button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[600px]">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">Th 2</th>
-                <th className="border p-2">Th 3</th>
-                <th className="border p-2">Th 4</th>
-                <th className="border p-2">Th 5</th>
-                <th className="border p-2">Th 6</th>
-                <th className="border p-2">Th 7</th>
-                <th className="border p-2">CN</th>
-              </tr>
-            </thead>
-            <tbody>{renderCalendar()}</tbody>
-          </table>
-        </div>
-      </Card> 
+       
     </div>
   );
 }
