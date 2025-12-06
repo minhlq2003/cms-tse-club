@@ -1,8 +1,10 @@
-import { UserRole } from "@/enums/enums";
+import { UserRole } from "@/lib/enums/enums";
 
 export interface UserShortInfoResponseDto{
     id: string;
     username: string;
+    fullName?: string;
+    studentId?: string;
     email: string;
     dateOfBirth?: string;
     nickname?: string;

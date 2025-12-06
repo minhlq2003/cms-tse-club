@@ -129,12 +129,12 @@ export const menuItems: Array<CustomMenuItem> = [
     key: "profile",
     icon: <UserDeleteOutlined />,
   },
-  {
-    label: "Settings",
-    key: "settings",
-    icon: <SettingOutlined />,
-    children: settingItems,
-  },
+  // {
+  //   label: "Settings",
+  //   key: "settings",
+  //   icon: <SettingOutlined />,
+  //   children: settingItems,
+  // },
   // {
   //   label: "Contact Form",
   //   key: "contactform",

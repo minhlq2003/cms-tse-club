@@ -1,13 +1,7 @@
 // UpdateUserInfoModal.tsx
 
 import React from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  DatePicker,
-  Checkbox,
-} from "antd";
+import { Modal, Form, Input, DatePicker, Checkbox } from "antd";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { USER_TYPE_OPTIONS, USER_TYPES } from "../services/userService";
@@ -28,8 +22,8 @@ interface Member {
 }
 
 interface UserTypeOption {
-    label: string;
-    value: number;
+  label: string;
+  value: number;
 }
 
 interface UpdateUserInfoModalProps {
@@ -48,21 +42,22 @@ const UpdateUserInfoModal: React.FC<UpdateUserInfoModalProps> = ({
 }) => {
   const { t } = useTranslation("common");
   const [form] = Form.useForm();
-  
+
   // Sử dụng useEffect để cập nhật form khi member thay đổi (mở modal)
   React.useEffect(() => {
     if (member) {
       // Chuyển đổi chuỗi ngày tháng sang đối tượng dayjs, kiểm tra tính hợp lệ
-      const dob = (member.dateOfBirth && dayjs(member.dateOfBirth).isValid())
-        ? dayjs(member.dateOfBirth)
-        : null;
-        
+      const dob =
+        member.dateOfBirth && dayjs(member.dateOfBirth).isValid()
+          ? dayjs(member.dateOfBirth)
+          : null;
+
       const decodedTypes = decodeBitwiseType(member.type);
 
       form.setFieldsValue({
         fullName: member.fullName,
         email: member.email,
-        dateOfBirth: dob, 
+        dateOfBirth: dob,
         nickname: member.nickname,
         studentId: member.studentId,
         type: decodedTypes, // Gán mảng các giá trị bit đã chọn
@@ -82,20 +77,19 @@ const UpdateUserInfoModal: React.FC<UpdateUserInfoModalProps> = ({
   };
 
   const decodeBitwiseType = (bitwiseValue?: number): number[] => {
-      if (!bitwiseValue || bitwiseValue === 0) return [];
-      
-      const selectedValues: number[] = [];
-      
-      for (const [_, value] of Object.entries(USER_TYPES)) {
-        if ((bitwiseValue & value) === value) {
-          selectedValues.push(value);
-        }
-      }
-      
-      return selectedValues;
-    };
+    if (!bitwiseValue || bitwiseValue === 0) return [];
 
-  
+    const selectedValues: number[] = [];
+
+    for (const [_, value] of Object.entries(USER_TYPES)) {
+      if ((bitwiseValue & value) === value) {
+        selectedValues.push(value);
+      }
+    }
+
+    return selectedValues;
+  };
+
   if (!member) return null;
 
   return (
@@ -122,7 +116,9 @@ const UpdateUserInfoModal: React.FC<UpdateUserInfoModalProps> = ({
         <Form.Item
           name="fullName"
           label={t("Full Name")}
-          rules={[{ required: true, message: t("Please input the full name!") }]}
+          rules={[
+            { required: true, message: t("Please input the full name!") },
+          ]}
         >
           <Input />
         </Form.Item>
@@ -154,12 +150,12 @@ const UpdateUserInfoModal: React.FC<UpdateUserInfoModalProps> = ({
         <Form.Item name="nickname" label={t("Nickname")}>
           <Input className="w-full" />
         </Form.Item>
-        
+
         {/* Student ID */}
         <Form.Item name="studentId" label={t("Student ID")}>
           <Input className="w-full" />
         </Form.Item>
-        
+
         {/* Bitwise Type */}
         <Form.Item
           name="type"

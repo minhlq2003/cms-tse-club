@@ -29,6 +29,7 @@ import { getRoleUser, isLeader } from "@/lib/utils";
 import { toast } from "sonner";
 import dayjs from "dayjs"; // Sử dụng dayjs
 import UpdateUserInfoModal from "./UpdateUserInfoModal";
+import { AxiosError, AxiosResponse } from "axios";
 
 interface Member {
   id: string;
@@ -68,23 +69,30 @@ export default function ListMember({
   const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false); // Modal cập nhật thông tin
   const [userInfoForm] = Form.useForm(); // Hook form của Ant Design
 
-  const fetchMembers = async () => {
-    try {
-      setLoading(true);
-      const res = await getUser({
-        keyword: searchTerm,
-        page: currentPage - 1,
-      });
-      if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
-        setMembers(res._embedded.userShortInfoResponseDtoList);
-        setCurrentPage(res.page.number + 1);
-        setTotal(res.page.totalElements);
-      }
-    } catch {
-      toast.error(t("Failed to fetch members"));
-    } finally {
-      setLoading(false);
-    }
+const fetchMembers = async () => { 
+    const fetchMembersAsync = async () => {
+        try {
+            setLoading(true);
+            const res = await getUser({
+                keyword: searchTerm,
+                page: currentPage - 1,
+            });
+            if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
+                setMembers(res._embedded.userShortInfoResponseDtoList);
+                setCurrentPage(res.page.number + 1);
+                setTotal(res.page.totalElements);
+            }
+        } catch {
+            toast.error(t("Failed to fetch members"));
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // *** Thêm setTimeout ở đây ***
+    setTimeout(() => {
+        fetchMembersAsync();
+    }, 500); // 500 milliseconds = 0.5 giây  
   };
 
   useEffect(() => {
@@ -95,7 +103,12 @@ export default function ListMember({
     try {
       const newPassword = prompt(t("Enter new password:"));
       if (!newPassword) return;
-      await resetPassword(userId, newPassword);
+      const res = await resetPassword(userId, newPassword);
+      console.log("Reset password response:", res);
+      if (res.status / 100 !== 2) {
+        toast.error(res.response?.data?.errors?.newPassword || res.response?.data?.detail || t("Failed to reset password"));
+        return;
+      }
       toast.success(t("Password reset successfully"));
     } catch {
       toast.error(t("Failed to reset password"));
@@ -117,12 +130,6 @@ export default function ListMember({
     const currentRole = selectedMember.role;
     const newRole = selectedRole;
 
-    // Không cho đổi trực tiếp NONE → LEADER
-    if (currentRole === "NONE" && newRole === "LEADER") {
-      toast.warning(t("Cannot change role from NONE to LEADER directly"));
-      return;
-    }
-
     // Nếu LEADER chuyển quyền cho MEMBER
     if (
       currentUserRole === "LEADER" &&
@@ -136,12 +143,25 @@ export default function ListMember({
     }
 
     try {
-      await changeRole(selectedMember.id, newRole);
-      toast.success(`${t("Changed role to")} ${newRole}`);
-      fetchMembers();
-    } catch {
-      toast.error(t("Failed to change role"));
-    } finally {
+    // 1. Thực hiện gọi API.
+    // Nếu thành công (status 2xx), kết quả được gán vào `response`.
+    const response = await changeRole(selectedMember.id, newRole);
+
+    if (response.status !=null && response.status / 100 !== 2) {
+      throw new Error(response.response?.data?.detail || "Failed to change role");
+    }
+    // 2. Xử lý THÀNH CÔNG:
+    toast.success(`${t("Changed role to")} ${newRole}`);
+    
+    // Gọi hàm fetchMembers để cập nhật danh sách sau khi thay đổi thành công
+    fetchMembers(); 
+
+  } catch (error) {
+    
+    // console.log("Error changing role:", error);
+    toast.error(error instanceof Error ? error.message : t("Failed to change role"));
+  }
+ finally {
       setIsModalOpen(false);
     }
   };
@@ -163,11 +183,7 @@ export default function ListMember({
   };
 
   const encodeBitwiseType = (selectedValues: number[]): number => {
-      // Sử dụng Array.prototype.reduce() và toán tử Bitwise OR (|)
-      // Ví dụ: [1, 4] -> 1 | 4 = 5
       return selectedValues.reduce((acc, current) => acc | current, 0);
-      // Hoặc nếu không cần tính bitwise, có thể dùng phép cộng đơn giản:
-      // return selectedValues.reduce((acc, current) => acc + current, 0);
   };
 
   // --- Bổ sung: Hàm xử lý cập nhật thông tin người dùng ---
