@@ -46,7 +46,7 @@ export const getUser = (params?: SearchDto & {
 };
 
 export const getMyInfoUser = () => {
-  const response = http.get(`${API_PREFIX_PATH}/me`);
+  const response = http.get<UserShortInfoResponseDto>(`${API_PREFIX_PATH}/me`);
   return response.then((res) => res);
 };
 

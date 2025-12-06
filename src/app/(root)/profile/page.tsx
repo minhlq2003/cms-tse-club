@@ -6,6 +6,8 @@ import {
   getMyInfoUser,
   updateUserInfo,
   changePassword,
+  USER_TYPES,
+  USER_TYPE_OPTIONS,
 } from "@/modules/services/userService";
 import {
   getEvents,
@@ -19,10 +21,11 @@ import { useRouter } from "next/navigation";
 import { CopyIcon } from "lucide-react";
 import { Images } from "@/constant/image";
 import Image from "next/image";
+import { UserShortInfoResponseDto } from "@/lib/interfaces/userInterface";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<UserShortInfoResponseDto | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -108,6 +111,29 @@ export default function ProfilePage() {
     },
   ];
 
+  const decodeBitwiseType = (value?: number): number[] => {
+    if (!value || value === 0) return [];
+
+    const selectedValues: number[] = [];
+
+    for (const [_, val] of Object.entries(USER_TYPES)) {
+      if ((value & val) === val) {
+        selectedValues.push(val);
+      }
+    }
+
+    return selectedValues;
+  };
+
+  const generateUserTypes = (values? :number) =>{
+    const selectedTypes = decodeBitwiseType(values);
+    console.log("Selected types: ", selectedTypes);
+    return selectedTypes.map((type) => {
+      const option = USER_TYPE_OPTIONS.find((opt) => opt.value === type);
+      return option ? option.label : "";
+    }).filter((type) => type !== "").join(", ");
+  }
+
   return (
     <div className="p-6 space-y-6">
       <Card className="shadow rounded-2xl">
@@ -152,7 +178,7 @@ export default function ProfilePage() {
               </div>
               <div className="w-full md:w-1/2 flex flex-col justify-end mt-4 md:mt-0">
                 <p>
-                  <b>{t("Full Name")}:</b> {userInfo?.fullName}
+                  <b>{t("Full Name")}:</b> {userInfo?.fullName || "-"}
                 </p>
                 <p>
                   <b>{t("Role")}:</b> {userInfo?.role}
@@ -166,7 +192,7 @@ export default function ProfilePage() {
                 </p>
                 <p>
                   <b>{t("Nhóm người dùng")}:</b>{" "}
-                  {userInfo?.type == 2 ? "Giảng viên" : "Sinh viên"}
+                  {generateUserTypes(userInfo?.type)}
                 </p>
               </div>
             </div>
@@ -182,6 +208,17 @@ export default function ProfilePage() {
         </div>
       </Card>
 
+      <Card className="shadow rounded-2xl">
+        <h3 className="font-bold text-blue-900 mb-4 text-xl">
+          {t("Events You Are Hosting")}
+        </h3>
+        <Table
+          columns={columns}
+          dataSource={events}
+          rowKey="id"
+          pagination={{ pageSize: 5 }}
+        />
+      </Card>
       <Card className="shadow rounded-2xl">
         <h3 className="font-bold text-blue-900 mb-4 text-xl">
           {t("Events You Are Hosting")}
