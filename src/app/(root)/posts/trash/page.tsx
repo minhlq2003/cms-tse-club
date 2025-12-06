@@ -303,8 +303,8 @@ export default function TrashPostPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              { label: t("Deleted Date (Oldest)"), value: "updatedAt,asc" },
-              { label: t("Deleted Date (Newest)"), value: "updatedAt,desc" },
+              { label: t("Deleted Date (Oldest)"), value: "lastModifiedTime,asc" },
+              { label: t("Deleted Date (Newest)"), value: "lastModifiedTime,desc" },
               { label: t("Post Time (Oldest)"), value: "postTime,asc" },
               { label: t("Post Time (Newest)"), value: "postTime,desc" },
             ]}

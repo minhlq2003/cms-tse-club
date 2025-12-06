@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
+import { LoginResponseDto } from "@/constant/types";
+import { isMemberOrHigher } from "@/lib/utils";
 
 const { RangePicker } = DatePicker;
 
@@ -99,16 +101,17 @@ export default function TrainingPage() {
           >
             {t("Trash")}
           </Button>
-
-          <Link href="/training/create">
-            <Button
-              icon={<PlusIcon size={16} />}
-              className="h-[36px]"
-              type="primary"
-            >
-              {t("Create Training")}
-            </Button>
-          </Link>
+          {isMemberOrHigher() && (
+            <Link href="/training/create">
+              <Button
+                icon={<PlusIcon size={16} />}
+                className="h-[36px]"
+                type="primary"
+              >
+                {t("Create Training")}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -168,8 +171,14 @@ export default function TrainingPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              { label: t("Start Time (Oldest)"), value: "location.startTime,asc" },
-              { label: t("Start Time (Newest)"), value: "location.startTime,desc" },
+              {
+                label: t("Start Time (Oldest)"),
+                value: "location.startTime,asc",
+              },
+              {
+                label: t("Start Time (Newest)"),
+                value: "location.startTime,desc",
+              },
               { label: t("Created Date (Oldest)"), value: "createdAt,asc" },
               { label: t("Created Date (Newest)"), value: "createdAt,desc" },
             ]}

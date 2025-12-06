@@ -8,12 +8,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
+import { LoginResponseDto } from "@/constant/types";
+import { isLeaderOrHigher, isMemberOrHigher } from "@/lib/utils";
 
 const { RangePicker } = DatePicker;
 
 export default function PostPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
+  const user = (typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : null as LoginResponseDto | null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     status: undefined as string | undefined,
@@ -54,6 +57,7 @@ export default function PostPage() {
           {t("List Posts")}
         </h1>
 
+        {isMemberOrHigher() && (
         <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
           <Link href="/posts/create">
             <Button
@@ -65,6 +69,7 @@ export default function PostPage() {
             </Button>
           </Link>
         </div>
+        )}
       </div>
 
       <div className="flex w-full justify-between align-middle ml-4 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg px-4">

@@ -20,7 +20,7 @@ import EventForm from "@/modules/event/EventForm";
 import EventOrganizers from "@/modules/event/EventOrganizers";
 import Publish from "@/components/Publish";
 import EventAttendees from "@/modules/event/Attendee";
-import { getRoleUser, getUser, isLeader } from "@/lib/utils";
+import { getRoleUser, getUser, isLeader, isLeaderOrHigher } from "@/lib/utils";
 import { exportPlanWithTemplate } from "@/lib/exportPlanWithTemplate";
 
 import PlanFormDynamic from "@/components/PlanFormDynamic";
@@ -260,8 +260,7 @@ const EditEvent = () => {
 
     const dataPayload: Event = {
       ...values,
-      limitRegister: values.multiple,
-      description: values.description,
+      limitRegister: values.limitRegister || 0,
       status,
       allowedType,
       category: values.category,
@@ -405,7 +404,7 @@ const EditEvent = () => {
                 organizers={organizers}
                 onChangeOrganizers={setOrganizers}
                 eventId={id || ""}
-                isView={!isHost}
+                isView={!isHost && !isLeaderOrHigher()}
               />
 
               <EventAttendees

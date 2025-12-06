@@ -1,3 +1,4 @@
+import { extend } from "lodash";
 import { ChangeEvent } from "react";
 
 // enums
@@ -147,7 +148,6 @@ export interface Event {
   organizers?: Organizer[];
   trainingId?: string;
   category?: string;
-  description?: string;
   host?: Member;
   limitRegister?: number;
   plans?: string;
@@ -258,6 +258,8 @@ export interface ListEventProps {
   };
 }
 
+// user props
+
 export interface ExamResult {
   student?: Member;
   rank?: number;
@@ -296,6 +298,12 @@ export interface PointHistoryResponseDto{
     pointType: "CONTRIBUTION" | "ATTENDANCE";
     resetTime: string;
 }
+
+export interface LoginResponseDto extends UserShortInfoResponseDto{
+    accessToken: string;
+}
+
+// global
 
 export interface GlobalConfigurationDto{
     configKey: string;

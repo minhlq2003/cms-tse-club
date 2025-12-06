@@ -55,6 +55,8 @@ export default function TrashEventPage() {
         res = await getEvents({
           page: page - 1,
           size: 10,
+          searchs: ["deleted"],
+          searchValues: ["true"],
           ...filters,
         });
       } else {
@@ -62,10 +64,16 @@ export default function TrashEventPage() {
           page: page - 1,
           size: 10,
           ...filters,
+          searchs: ["deleted"],
+          searchValues: ["true"],
         });
       }
-
-      if (Array.isArray(res._embedded?.eventWrapperDtoList)) {
+      if (res._embedded === undefined) {
+        setEvents([]);
+        setTotal(0);
+        return;
+      }
+      else if (Array.isArray(res._embedded?.eventWrapperDtoList)) {
         setEvents(res._embedded.eventWrapperDtoList);
         setTotal(res.page.totalElements);
       } else {
@@ -307,10 +315,10 @@ export default function TrashEventPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              { label: t("Deleted Date (Oldest)"), value: "updatedAt,asc" },
-              { label: t("Deleted Date (Newest)"), value: "updatedAt,desc" },
-              { label: t("Start Time (Oldest)"), value: "startTime,asc" },
-              { label: t("Start Time (Newest)"), value: "startTime,desc" },
+              { label: t("Deleted Date (Oldest)"), value: "lastModifiedTime,asc" },
+              { label: t("Deleted Date (Newest)"), value: "lastModifiedTime,desc" },
+              { label: t("Start Time (Oldest)"), value: "location.startTime,asc" },
+              { label: t("Start Time (Newest)"), value: "location.startTime,desc" },
             ]}
           />
         </div>
