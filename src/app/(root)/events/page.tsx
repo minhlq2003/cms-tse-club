@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
+import { EventSearchRequestDto, FunctionStatus } from "@/constant/types";
 
 const { RangePicker } = DatePicker;
 
@@ -15,15 +16,18 @@ export default function EventPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState({
-    eventType: undefined as string | undefined,
+  const [filters, setFilters] = useState<EventSearchRequestDto & {
+      status?: FunctionStatus;
+    } & {
+    
+  }>({
+    eventType: undefined as  | undefined,
     startTime: undefined as string | undefined,
     endTime: undefined as string | undefined,
     isDone: undefined as boolean | undefined,
-    status: undefined as string | undefined,
+    status: undefined as FunctionStatus | undefined,
     keyword: undefined as string | undefined,
     sort: undefined as string | undefined,
-    deleted: false,
   });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,12 +68,8 @@ export default function EventPage() {
     setFilters({ ...filters, sort: value });
   };
 
-  const handleStatusChange = (value: string) => {
-    if (value === "DONE") {
-      setFilters({ ...filters, status: undefined, isDone: true });
-    } else {
-      setFilters({ ...filters, status: value, isDone: undefined });
-    }
+  const handleStatusChange = (value: FunctionStatus | undefined) => {
+    setFilters({ ...filters, status: value, isDone: undefined });
   };
 
   return (
@@ -139,19 +139,17 @@ export default function EventPage() {
             allowClear
             onChange={handleStatusChange}
             value={
-              filters.isDone
-                ? "DONE"
-                : filters.status
+              filters.status
                 ? filters.status
                 : undefined
             }
             options={[
-              { label: t("Pending"), value: "PENDING" },
-              { label: t("Archived"), value: "ARCHIVED" },
-              { label: t("Accepted"), value: "ACCEPTED" },
-              { label: t("Rejected"), value: "REJECTED" },
-              { label: t("Disabled"), value: "DISABLED" },
-              { label: t("Done"), value: "DONE" },
+              { label: t("Pending"), value: FunctionStatus.PENDING },
+              { label: t("Archived"), value: FunctionStatus.ARCHIVED },
+              { label: t("Accepted"), value: FunctionStatus.ACCEPTED },
+              { label: t("Rejected"), value: FunctionStatus.REJECTED },
+              { label: t("Disabled"), value: FunctionStatus.DISABLED },
+              
             ]}
           />
 

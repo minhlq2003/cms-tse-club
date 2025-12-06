@@ -8,6 +8,7 @@ import { getRoleUser, isLeader, getUser } from "@/lib/utils";
 import Link from "next/link";
 import { getEvents } from "@/modules/services/eventService";
 import { searchMyTrainings } from "@/modules/services/trainingService";
+import { FunctionStatus } from "@/constant/types";
 
 const { Title } = Typography;
 
@@ -69,8 +70,8 @@ export default function Publish({
 
         try {
           const [eventRes, trainingRes] = await Promise.all([
-            getEvents({ status: "ACCEPTED", isDone: false }),
-            searchMyTrainings({ status: "ACCEPTED", isDone: false }),
+            getEvents({ status: FunctionStatus.ACCEPTED, isDone: false }),
+            searchMyTrainings({ status: FunctionStatus.ACCEPTED, isDone: false }),
           ]);
 
           let newEvents: any[] = [];

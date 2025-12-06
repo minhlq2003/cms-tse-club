@@ -6,8 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Button, Checkbox, Input, List, message, Typography } from "antd";
 import React, { useEffect, useState } from "react";
-import { createCategory, getCategories } from "../services/categoryService";
-import { Category, CategoryOption } from "@/constant/types";
+import { CategoryOption } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 
 const { Title, Link } = Typography;
@@ -35,23 +34,6 @@ const Categories: React.FC<CategoriesProps> = ({
       setPermissions(storedPermissions);
     }
   }, []);
-  const handleFetchCategories = async () => {
-    try {
-      const response = await getCategories();
-      const categoriesData = response?.data;
-      if (Array.isArray(categoriesData)) {
-        const categoryOptions = categoriesData.map((category) => ({
-          id: category.id,
-          label: category.name,
-          value: category.name,
-          disabled: false,
-        }));
-        setCategories(categoryOptions);
-      }
-    } catch {
-      message.error(t("Error fetching categories"));
-    }
-  };
 
   const handleAddCategory = async () => {
     if (newCategoryName) {
@@ -65,15 +47,6 @@ const Categories: React.FC<CategoriesProps> = ({
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "");
-        const data = {
-          name: newCategoryName,
-          slug: slug,
-          description: "",
-        };
-
-        const response = await createCategory(data);
-
-        await handleFetchCategories();
 
         setNewCategoryName("");
         setIsAddingCategory(false);
@@ -86,9 +59,6 @@ const Categories: React.FC<CategoriesProps> = ({
     }
   };
 
-  useEffect(() => {
-    handleFetchCategories();
-  }, []);
 
   return (
     <div className="categories border border-gray-300 rounded-[10px] mb-5">

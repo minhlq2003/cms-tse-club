@@ -100,9 +100,9 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     }
   };
 
-  const handleEdit = (file: MediaData) => {
-    router.push(`/media/edit?id=${file.id}`);
-  };
+  // const handleEdit = (file: MediaData) => {
+  //   router.push(`/media/edit?id=${file.id}`);
+  // };
 
   return (
     <div

@@ -43,16 +43,16 @@ export default function ListEvent({ filters }: ListEventProps) {
           page: page - 1,
           size: 10,
           ...filters,
-          searchs: "deleted",
-          searchValues: "false",
+          searchs: ["deleted"],
+          searchValues: ["false"],
         });
       } else {
         res = await getEventByLeader({
           page: page - 1,
           size: 10,
           ...filters,
-          searchs: "deleted",
-          searchValues: "false",
+          searchs: ["deleted"],
+          searchValues: ["false"],
         });
       }
 

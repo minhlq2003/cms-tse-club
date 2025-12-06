@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
-import { Event } from "@/constant/types";
+import { Event, EventSearchRequestDto, FunctionStatus } from "@/constant/types";
 import {
   getEvents,
   deleteEvent,
@@ -41,15 +41,11 @@ export default function TrashEventPage() {
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
 
-  const [filters, setFilters] = useState({
-    eventType: undefined as string | undefined,
-    startTime: undefined as string | undefined,
-    endTime: undefined as string | undefined,
-    keyword: undefined as string | undefined,
-    sort: undefined as string | undefined,
-    searchs: "deleted",
-    searchValues: "true",
-  });
+
+  const [filters, setFilters] = useState<EventSearchRequestDto & {
+    status?: FunctionStatus;
+    isHost?: boolean;
+  }>();
 
   const fetchDeletedEvents = async () => {
     try {
