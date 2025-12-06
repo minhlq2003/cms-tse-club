@@ -178,5 +178,9 @@
   "OK": "Đồng ý",
   "Revert done attempt": "Hoàn tác đánh dấu hoàn thành",
   "Events You Are Hosting": "Sự kiện bạn đang tổ chức",
-  "My events": "Những sự kiện của tôi"
+  "My events": "Những sự kiện của tôi",
+  "LEADER": "quản lý clb",
+  "MEMBER": "thành viên clb",
+  "NONE": "thành viên thường",
+  "ADMIN": "quản trị viên"
 }
