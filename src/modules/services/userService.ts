@@ -1,5 +1,5 @@
 import { Event, MediaData, MediaResponse } from "@/constant/types";
-import { UserUpdateDto } from "@/interfaces/userInterface";
+import { UserUpdateDto } from "@/global/interfaces/userInterface";
 import { HttpClient } from "@/lib/HttpClient";
 import { AxiosRequestHeaders } from "axios";
 
@@ -71,7 +71,7 @@ export const resetAttendancePoint = () => {
 
 export const resetPassword = (userId: string, newPassword: string) => {
   const response = http.put(
-    `${API_PREFIX_LEADER_PATH}/reset-password/${userId}`,
+    `${API_PREFIX_LEADER_PATH}/${userId}/reset-password`,
     { newPassword: newPassword }
   );
   return response.then((res) => res);
@@ -82,7 +82,7 @@ export const changeRole = (userId: string, role: string) => {
     newRole: role,
     accepted: true,
   });
-  return response.then((res) => res);
+  return response;
 };
 
 export const updateUserInfoByLeader = (userId: string, data: UserUpdateDto) => {

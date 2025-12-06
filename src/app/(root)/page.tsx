@@ -201,7 +201,7 @@ export default function Dashboard() {
       {/* Quản lý sự kiện */}
       <Card className="shadow rounded-2xl">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 gap-3">
-          <h3 className="font-bold text-blue-900">QUẢN LÝ SỰ KIỆN</h3>
+          <h3 className="font-bold text-blue-900">{t("My events")}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={currentDate.getMonth()}
