@@ -36,7 +36,7 @@ import {
   getAvailableUsersToBecomeAttendee,
 } from "../services/eventService";
 import { getUser } from "../services/userService";
-import { Member, ExamResult } from "@/constant/types";
+import { Member, ExamResult, AttendeeDto, UserShortInfoResponseDto, AttendeeStatus } from "@/constant/types";
 import dayjs from "dayjs";
 import ContestResultsModal from "./ContestResultModal";
 import SeminarReviewsModal from "./SeminarReviewModal";
@@ -46,16 +46,7 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-export interface Attendee {
-  id: string;
-  user: Member;
-  status: string;
-  checkIn?: boolean;
-  fullName?: string;
-  nickname?: string;
-  email?: string;
-  dateOfBirth?: string;
-}
+
 
 enum OrganizerRole {
   MODIFY = "MODIFY",
@@ -94,7 +85,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [attendees, setAttendees] = useState<AttendeeDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -305,7 +296,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const initialResults: ExamResult[] = attendees
         .filter((a) => a.status === "CHECKED")
         .map((a) => ({
-          userId: a.user.id,
+          userId: a.user?.id || "",
           student: a.user,
           rank: 0,
           point: 0,
@@ -337,6 +328,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
+  const toggleCheckIn = (status: AttendeeStatus) => {
+    if (status === AttendeeStatus.CHECKED) return AttendeeStatus.REGISTERED;
+    return AttendeeStatus.CHECKED;
+  }
+
   const openContestModal = () => {
     setIsContestModalOpen(true);
     fetchContestResults();
@@ -354,12 +350,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
-      prev.map((a) => (a.id === userId ? { ...a, checkIn: !a.checkIn } : a))
+      prev.map((a) => (a.id === userId ? { ...a, status: toggleCheckIn(a.status) } : a))
     );
   };
 
   const handleCheckInAllLocal = () => {
-    setAttendees((prev) => prev.map((a) => ({ ...a, checkIn: true })));
+    setAttendees((prev) => prev.map((a) => ({ ...a, status: AttendeeStatus.CHECKED })));
   };
 
   const handleCancelAllLocal = () => {
@@ -392,7 +388,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!eventId) return;
     try {
       setLoading(true);
-      const checkedIds = attendees.filter((a) => a.checkIn).map((a) => a.id);
+      const checkedIds = attendees.filter((a) => a.status === AttendeeStatus.CHECKED).map((a) => a.id);
       const res = await manualCheckIn(eventId, checkedIds);
       if (res?.ok || res?.status === 200 || res === true) {
         message.success(t("Check-in data saved successfully!"));
@@ -429,12 +425,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("ID"),
       key: "id",
-      render: (_: any, record: Attendee) => record.id || record.user?.id || "-",
+      render: (_: any, record: AttendeeDto) => record.id || record.user?.id || "-",
     },
     {
       title: t("Full Name"),
       key: "fullName",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <span className="font-semibold">
           {record.fullName || record.user?.fullName}
         </span>
@@ -443,19 +439,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("Username / Nickname"),
       key: "username",
-      render: (_: any, record: Attendee) =>
+      render: (_: any, record: AttendeeDto) =>
         record.nickname || record.user?.username || "-",
     },
     {
       title: t("Email"),
       key: "email",
-      render: (_: any, record: Attendee) =>
+      render: (_: any, record: AttendeeDto) =>
         record.email || record.user?.email || "-",
     },
     {
       title: t("Status"),
       key: "status",
-      render: (_: any, record: Attendee) => {
+      render: (_: any, record: AttendeeDto) => {
         const status = (record.status || "UNKNOWN").toUpperCase();
         let color = "default";
         if (status === "CHECKED") color = "green";
@@ -467,9 +463,9 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("Check in"),
       key: "checkin",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <Checkbox
-          checked={Boolean(record.checkIn)}
+          checked={Boolean(record.status === AttendeeStatus.CHECKED)}
           onChange={() => toggleCheckInLocal(record.id)}
           disabled={!canCheckIn || eventDone}
         />
@@ -498,7 +494,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const shortColumns = [
     {
       key: "fullName",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <span className="font-semibold">
           {record.fullName ||
             record.nickname ||
@@ -509,7 +505,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     },
     {
       key: "status",
-      render: (_: any, record: Attendee) => {
+      render: (_: any, record: AttendeeDto) => {
         const s = (record.status || "UNKNOWN").toUpperCase();
         const cls =
           s === "CHECKED"
@@ -542,7 +538,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <div>
           <div className="block md:hidden">
             <Table
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: AttendeeDto) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -555,7 +551,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           <div className="hidden md:block">
             <Table
               className="p-2"
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: AttendeeDto) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -701,7 +697,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
 
         <Table
-          rowKey={(record: Attendee) => record.id}
+          rowKey={(record: AttendeeDto) => record.id}
           columns={attendeeColumns}
           dataSource={attendees}
           loading={loading}
