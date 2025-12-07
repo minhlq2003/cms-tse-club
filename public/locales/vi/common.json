@@ -183,5 +183,8 @@
   "MEMBER": "thành viên clb",
   "NONE": "thành viên thường",
   "ADMIN": "quản trị viên",
-  "Point History": "Lịch sử điểm"
+  "Point History": "Lịch sử điểm",
+  "Remove": "Xóa",
+  "Remove attendee": "Xóa người tham gia",
+  "Are you sure you want to remove {{name}} from the list?": "Bạn có chắc chắn muốn xóa {{name}} khỏi danh sách?"
 }
