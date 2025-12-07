@@ -1,4 +1,5 @@
 import { extend } from "lodash";
+import { User } from "next-auth";
 import { ChangeEvent } from "react";
 
 // enums
@@ -23,6 +24,12 @@ export enum EventType{
   TRAINING_EVENT = "TRAINING_EVENT",
   SIMPLE = "SIMPLE",
   ALL = "ALL",
+}
+
+export enum AttendeeStatus{
+  REGISTERED = "REGISTERED",
+  CHECKED = "CHECKED",
+  BANNED = "BANNED",
 }
 
 // interfaces
@@ -137,6 +144,16 @@ export interface ModalCheckoutSuccessProps {
   address: string;
   name: string;
   total: number;
+}
+
+export interface AttendeeDto{
+  id: string;
+  fullName?: string;
+  nickname?: string;
+  email?: string;
+  dateOfBirth?: string;
+  status: AttendeeStatus;
+  user?: UserShortInfoResponseDto;
 }
 
 export interface Event {
@@ -261,7 +278,7 @@ export interface ListEventProps {
 // user props
 
 export interface ExamResult {
-  student?: Member;
+  student?: UserShortInfoResponseDto;
   rank?: number;
   point?: number;
   userId?: string;

@@ -8,16 +8,13 @@ import {
   getContestExamResults,
   updateContestResults,
 } from "../services/eventService";
-import { Member, ExamResult } from "@/constant/types";
+import { Member, ExamResult, AttendeeDto } from "@/constant/types";
 
 interface ContestResultsModalProps {
   open: boolean;
   onClose: () => void;
   eventId: string;
-  attendees: Array<{
-    user: Member;
-    status: string;
-  }>;
+  attendees: AttendeeDto[];
 }
 
 const ContestResultsModal: React.FC<ContestResultsModalProps> = ({

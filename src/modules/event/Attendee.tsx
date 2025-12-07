@@ -13,6 +13,7 @@ import {
   Input,
   Select,
   Spin,
+  Popconfirm,
 } from "antd";
 import {
   CaretDownOutlined,
@@ -36,26 +37,21 @@ import {
   getAvailableUsersToBecomeAttendee,
 } from "../services/eventService";
 import { getUser } from "../services/userService";
-import { Member, ExamResult } from "@/constant/types";
+import {
+  Member,
+  ExamResult,
+  AttendeeDto,
+  UserShortInfoResponseDto,
+  AttendeeStatus,
+} from "@/constant/types";
 import dayjs from "dayjs";
 import ContestResultsModal from "./ContestResultModal";
 import SeminarReviewsModal from "./SeminarReviewModal";
-import { get } from "lodash";
+import { toast } from "sonner";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-
-export interface Attendee {
-  id: string;
-  user: Member;
-  status: string;
-  checkIn?: boolean;
-  fullName?: string;
-  nickname?: string;
-  email?: string;
-  dateOfBirth?: string;
-}
 
 enum OrganizerRole {
   MODIFY = "MODIFY",
@@ -63,7 +59,7 @@ enum OrganizerRole {
   CHECK_IN = "CHECK_IN",
   REMOVE = "REMOVE",
   POST = "POST",
-  BAN = "BAN"
+  BAN = "BAN",
 }
 
 interface EventAttendeesProps {
@@ -90,11 +86,10 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   isHost = false,
   userAsOrganizer,
 }) => {
-  
   const { t } = useTranslation("common");
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [attendees, setAttendees] = useState<AttendeeDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -130,12 +125,11 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
-  
+
   const end = endTime ? new Date(endTime) : null;
   const isEventStarted = Boolean(start && now >= start);
   const isDuringEvent = Boolean(start && now >= start && end && now <= end);
   const isEventEnded = Boolean(end && now > end);
-
 
   // 🆕 Kiểm tra quyền REGISTER
   const canRegister = () => {
@@ -144,11 +138,16 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     return roles.includes(OrganizerRole.REGISTER);
   };
 
+  const canRemove = () => {
+    if (isHost || userRole === "LEADER" || userRole === "ADMIN") return true;
+    const roles = userAsOrganizer?.roles || [];
+    return roles.includes(OrganizerRole.REMOVE);
+  };
+
   const canUpdateContest =
     isEventEnded &&
     eventCategory === "CONTEST" &&
-  ( isHost || userAsOrganizer?.roles.includes(OrganizerRole.MODIFY))
-    ;
+    (isHost || userAsOrganizer?.roles.includes(OrganizerRole.MODIFY));
   const canViewReviews =
     isEventEnded &&
     eventCategory === "SEMINAR" &&
@@ -156,7 +155,14 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   useEffect(() => {
     fetchAttendees(pagination.current, pagination.pageSize);
-  }, [eventId, keyword, statusFilter, isModalOpen, pagination.current, pagination.pageSize]);
+  }, [
+    eventId,
+    keyword,
+    statusFilter,
+    isModalOpen,
+    pagination.current,
+    pagination.pageSize,
+  ]);
 
   const fetchAttendees = async (page: number, size: number) => {
     if (!eventId) return;
@@ -187,19 +193,23 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           checkIn: a.checkIn || false,
         }))
       );
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
         total: res.page?.totalElements || 0,
       }));
     } catch (err) {
-      message.error(t("Failed to fetch attendees"));
+      toast.error(t("Failed to fetch attendees"));
     } finally {
       setLoading(false);
     }
   };
 
   // 🆕 Fetch available users for adding
-  const fetchAvailableUsers = async (keyword: string = "", page: number = 1, size: number = 5) => {
+  const fetchAvailableUsers = async (
+    keyword: string = "",
+    page: number = 1,
+    size: number = 5
+  ) => {
     if (!eventId) return;
     try {
       setLoadingUsers(true);
@@ -212,20 +222,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
         const allUsers = res._embedded.userShortInfoResponseDtoList;
         setAvailableUsers(allUsers);
-        setUserPagination(prev => ({
+        setUserPagination((prev) => ({
           ...prev,
           total: res.page?.totalElements || 0,
         }));
-      }
-      else{
+      } else {
         setAvailableUsers([]);
-        setUserPagination(prev => ({
+        setUserPagination((prev) => ({
           ...prev,
           total: 0,
         }));
       }
     } catch (err) {
-      message.error(t("Failed to fetch users"));
+      toast.error(t("Failed to fetch users"));
     } finally {
       setLoadingUsers(false);
     }
@@ -242,18 +251,35 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   // 🆕 Handle add participants
   const handleAddParticipants = async () => {
     if (!eventId || selectedUserIds.length === 0) {
-      message.warning(t("Vui lòng chọn ít nhất một người"));
+      toast.warning(t("Vui lòng chọn ít nhất một người"));
       return;
     }
 
     try {
       setLoading(true);
       await addAttendees(eventId, selectedUserIds);
-      message.success(t("Đã thêm người tham gia thành công"));
+      toast.success(t("Đã thêm người tham gia thành công"));
       setAddParticipantModalVisible(false);
       fetchAttendees(pagination.current, pagination.pageSize);
     } catch (err) {
-      message.error(t("Không thể thêm người tham gia"));
+      toast.error(t("Không thể thêm người tham gia"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveAttendees = async (attendeeIds: string[]) => {
+    if (!eventId || attendeeIds.length === 0) return;
+
+    try {
+      setLoading(true);
+      // Gọi hàm service để xóa
+      await removeAttendees(eventId, attendeeIds);
+      toast.success(t("Đã xóa người tham gia thành công"));
+      // Làm mới danh sách sau khi xóa
+      fetchAttendees(pagination.current, pagination.pageSize);
+    } catch (err) {
+      toast.error(t("Không thể xóa người tham gia"));
     } finally {
       setLoading(false);
     }
@@ -264,11 +290,20 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     if (!addParticipantModalVisible) return;
 
     const timeoutId = setTimeout(() => {
-      fetchAvailableUsers(searchUserKeyword, userPagination.current, userPagination.pageSize);
+      fetchAvailableUsers(
+        searchUserKeyword,
+        userPagination.current,
+        userPagination.pageSize
+      );
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchUserKeyword, addParticipantModalVisible, userPagination.current, userPagination.pageSize]);
+  }, [
+    searchUserKeyword,
+    addParticipantModalVisible,
+    userPagination.current,
+    userPagination.pageSize,
+  ]);
 
   const handleUserTableChange = (pagination: any) => {
     setUserPagination({
@@ -287,12 +322,12 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const res = await getCodeCheckIn(eventId, formattedEndTime, forceNew);
       if (res?.code) {
         setCheckInCode(res.code);
-        message.success(
+        toast.success(
           forceNew ? t("Đã tạo mã mới thành công") : t("Lấy mã thành công")
         );
       }
     } catch (error: any) {
-      message.error(error?.message || t("Không thể tạo mã điểm danh"));
+      toast.error(error?.message || t("Không thể tạo mã điểm danh"));
     } finally {
       setLoadingCode(false);
     }
@@ -305,7 +340,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       const initialResults: ExamResult[] = attendees
         .filter((a) => a.status === "CHECKED")
         .map((a) => ({
-          userId: a.user.id,
+          userId: a.user?.id || "",
           student: a.user,
           rank: 0,
           point: 0,
@@ -313,7 +348,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       // const initialResults =
       setContestResults(initialResults);
     } catch (err) {
-      message.error(t("Failed to load contest results"));
+      toast.error(t("Failed to load contest results"));
     } finally {
       setLoading(false);
     }
@@ -331,10 +366,15 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         : [];
       setSeminarReviews(reviews);
     } catch (err) {
-      message.error(t("Không thể tải đánh giá"));
+      toast.error(t("Không thể tải đánh giá"));
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleCheckIn = (status: AttendeeStatus) => {
+    if (status === AttendeeStatus.CHECKED) return AttendeeStatus.REGISTERED;
+    return AttendeeStatus.CHECKED;
   };
 
   const openContestModal = () => {
@@ -354,12 +394,16 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const toggleCheckInLocal = (userId: string) => {
     setAttendees((prev) =>
-      prev.map((a) => (a.id === userId ? { ...a, checkIn: !a.checkIn } : a))
+      prev.map((a) =>
+        a.id === userId ? { ...a, status: toggleCheckIn(a.status) } : a
+      )
     );
   };
 
   const handleCheckInAllLocal = () => {
-    setAttendees((prev) => prev.map((a) => ({ ...a, checkIn: true })));
+    setAttendees((prev) =>
+      prev.map((a) => ({ ...a, status: AttendeeStatus.CHECKED }))
+    );
   };
 
   const handleCancelAllLocal = () => {
@@ -390,26 +434,31 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const handleSave = async () => {
     if (!eventId) return;
-    try {
-      setLoading(true);
-      const checkedIds = attendees.filter((a) => a.checkIn).map((a) => a.id);
-      const res = await manualCheckIn(eventId, checkedIds);
-      if (res?.ok || res?.status === 200 || res === true) {
-        message.success(t("Check-in data saved successfully!"));
-        setIsModalOpen(false);
-        fetchAttendees(pagination.current, pagination.pageSize);
-      } else {
-        message.error(
-          `${t("Failed to save check-in")} ${
-            res?.status ? `(status ${res.status})` : ""
-          }`
-        );
-      }
-    } catch (err) {
-      message.error(t("Error occurred while saving check-in data"));
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    const checkedIds = attendees
+      .filter((a) => a.status === AttendeeStatus.CHECKED)
+      .map((a) => a.id);
+    const res = manualCheckIn(eventId, checkedIds);
+    res
+      .then((res) => {
+        console.log("Save check-in response:", res);
+
+        if (res.status && res.status / 100 >= 4) {
+          toast.error(
+            res.detail
+          );
+        } else {
+          toast.success(t("Check-in data saved successfully!"));
+          setIsModalOpen(false);
+          fetchAttendees(pagination.current, pagination.pageSize);
+        }
+      })
+      .catch((err) => {
+        toast.error(t("Error occurred while saving check-in data"));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   const handleTableChange = (pagination: any) => {
@@ -429,12 +478,13 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("ID"),
       key: "id",
-      render: (_: any, record: Attendee) => record.id || record.user?.id || "-",
+      render: (_: any, record: AttendeeDto) =>
+        record.id || record.user?.id || "-",
     },
     {
       title: t("Full Name"),
       key: "fullName",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <span className="font-semibold">
           {record.fullName || record.user?.fullName}
         </span>
@@ -443,19 +493,19 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("Username / Nickname"),
       key: "username",
-      render: (_: any, record: Attendee) =>
+      render: (_: any, record: AttendeeDto) =>
         record.nickname || record.user?.username || "-",
     },
     {
       title: t("Email"),
       key: "email",
-      render: (_: any, record: Attendee) =>
+      render: (_: any, record: AttendeeDto) =>
         record.email || record.user?.email || "-",
     },
     {
       title: t("Status"),
       key: "status",
-      render: (_: any, record: Attendee) => {
+      render: (_: any, record: AttendeeDto) => {
         const status = (record.status || "UNKNOWN").toUpperCase();
         let color = "default";
         if (status === "CHECKED") color = "green";
@@ -467,12 +517,34 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     {
       title: t("Check in"),
       key: "checkin",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <Checkbox
-          checked={Boolean(record.checkIn)}
+          checked={Boolean(record.status === AttendeeStatus.CHECKED)}
           onChange={() => toggleCheckInLocal(record.id)}
-          disabled={!canCheckIn || eventDone}
+          disabled={!canCheckIn || eventDone || !(record.status === AttendeeStatus.REGISTERED)}
         />
+      ),
+    },
+    {
+      title: t("Remove"), // Cột Xóa mới
+      key: "remove_action",
+      render: (_: any, record: AttendeeDto) => (
+        <Popconfirm
+          title={t("Remove attendee")}
+          description={t(
+            `Are you sure you want to remove ${
+              record.fullName || record.nickname
+            } from the list?`
+          )}
+          onConfirm={() => handleRemoveAttendees([record.id])} // Gọi hàm xóa
+          okText={t("Remove")}
+          cancelText={t("Cancel")}
+          disabled={!canRemove()}
+        >
+          <Button type="link" danger disabled={!canRemove()}>
+            {t("Remove")}
+          </Button>
+        </Popconfirm>
       ),
     },
   ];
@@ -498,7 +570,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const shortColumns = [
     {
       key: "fullName",
-      render: (_: any, record: Attendee) => (
+      render: (_: any, record: AttendeeDto) => (
         <span className="font-semibold">
           {record.fullName ||
             record.nickname ||
@@ -509,7 +581,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     },
     {
       key: "status",
-      render: (_: any, record: Attendee) => {
+      render: (_: any, record: AttendeeDto) => {
         const s = (record.status || "UNKNOWN").toUpperCase();
         const cls =
           s === "CHECKED"
@@ -542,7 +614,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         <div>
           <div className="block md:hidden">
             <Table
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: AttendeeDto) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -555,7 +627,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
           <div className="hidden md:block">
             <Table
               className="p-2"
-              rowKey={(record: Attendee) => record.id}
+              rowKey={(record: AttendeeDto) => record.id}
               columns={shortColumns}
               dataSource={attendees}
               loading={loading}
@@ -701,7 +773,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
         </div>
 
         <Table
-          rowKey={(record: Attendee) => record.id}
+          rowKey={(record: AttendeeDto) => record.id}
           columns={attendeeColumns}
           dataSource={attendees}
           loading={loading}

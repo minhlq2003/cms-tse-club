@@ -93,10 +93,11 @@ export const getEventAttendees = (
   return response.then((res) => res);
 };
 
-export const manualCheckIn = (eventId: string, data: string[]) =>
-  http.post<any>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-check-in`, {
+export const manualCheckIn = (eventId: string, data: string[]) =>{
+   return http.post<any>(`${API_PREFIX_EVENT_PATH}/${eventId}/manual-check-in`, {
     attendeeIds: data,
   });
+}
 
 export const exportEventAttendees = (eventId: string) =>
   http.get(`${API_PREFIX_EVENT_PATH}/${eventId}/attendees/export`, {
@@ -146,7 +147,7 @@ export const removeAttendees = (eventId: string, attendeeIds: string[]) =>
   http.post<Event>(
     `${API_PREFIX_EVENT_PATH}/${eventId}/manual-remove-attendees`,
     {
-      attendeeIds: { attendeeIds },
+      attendeeIds: [...attendeeIds],
     }
   );
 
