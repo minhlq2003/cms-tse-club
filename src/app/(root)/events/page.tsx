@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { EventSearchRequestDto, FunctionStatus } from "@/constant/types";
+import { isMemberOrHigher } from "@/lib/utils";
 
 const { RangePicker } = DatePicker;
 
@@ -16,6 +17,7 @@ export default function EventPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+
   const [filters, setFilters] = useState<EventSearchRequestDto & {
       status?: FunctionStatus;
     } & {
@@ -103,6 +105,7 @@ export default function EventPage() {
           >
             {t("Trash")}
           </Button>
+          { isMemberOrHigher() &&
 
           <Link href="/events/create">
             <Button
@@ -113,6 +116,7 @@ export default function EventPage() {
               {t("Create Event")}
             </Button>
           </Link>
+          }
         </div>
       </div>
 
@@ -173,6 +177,7 @@ export default function EventPage() {
             placeholder={t("Select sort")}
             style={{ width: 200 }}
             allowClear
+            defaultValue={"lastModifiedTime,asc"}
             onChange={handleSortChange}
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
@@ -181,6 +186,8 @@ export default function EventPage() {
               { label: t("Start Time (Newest)"), value: "location.startTime,desc" },
               { label: t("Created Date (Oldest)"), value: "createdAt,asc" },
               { label: t("Created Date (Newest)"), value: "createdAt,desc" },
+              { label: t("Last Modified Time (Oldest)"), value: "lastModifiedTime,asc" },
+              { label: t("Last Modified Time  (Newest)"), value: "lastModifiedTime,desc" },
               {
                 label: t("Registration (Low to High)"),
                 value: "currentRegistered,asc",
@@ -194,7 +201,7 @@ export default function EventPage() {
         </div>
       </div>
 
-      <ListEvent filters={{ ...filters, keyword: searchTerm }} />
+      <ListEvent filters={{ ...filters, keyword: searchTerm, sort: "lastModifiedTime,desc" }} />
     </div>
   );
 }

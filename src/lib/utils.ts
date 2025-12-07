@@ -40,6 +40,23 @@ export const isLeader = () => {
   const role = getRoleUser();
   return role === "LEADER" || role === "ADMIN";
 };
+
+export const isAdmin = () => {
+  const role = getRoleUser();
+  return role === "ADMIN";
+};
+export const isMemberOrHigher = () => {
+  const role = getRoleUser();
+  return role === "MEMBER" || isLeader();
+}
+
+export const isLeaderOrHigher = () => {
+  
+  const role = getRoleUser();
+  console.log("role", role);
+  return role === "LEADER" || isAdmin();
+}
+
 export const getUser = () => {
   const user = localStorage.getItem("user");
   if (user) {

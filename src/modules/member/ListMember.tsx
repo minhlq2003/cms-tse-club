@@ -77,7 +77,12 @@ const fetchMembers = async () => {
                 keyword: searchTerm,
                 page: currentPage - 1,
             });
-            if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
+            if (res._embedded == undefined){
+                setMembers([]);
+                setCurrentPage(1);
+                setTotal(0);
+            }
+            else if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
                 setMembers(res._embedded.userShortInfoResponseDtoList);
                 setCurrentPage(res.page.number + 1);
                 setTotal(res.page.totalElements);

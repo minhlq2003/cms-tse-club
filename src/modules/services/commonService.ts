@@ -18,3 +18,7 @@ export const getGlobalConfigByKey = (key: string) => {
   );
   return response;
 }
+
+export const getLastResetPointTime = () => {
+  return getGlobalConfigByKey("LAST_RESET_POINT_TIME");
+}

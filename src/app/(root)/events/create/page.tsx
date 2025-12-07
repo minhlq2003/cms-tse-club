@@ -127,11 +127,10 @@ export default function AddEvent() {
     const dataPayload: Event = {
       ...values,
       title: values.title,
-      description: values.description || "none",
       status,
       limitRegister: values.limitRegister || 0,
       category: values.category,
-      isPublic: true,
+      isPublic: values.isPublic !== undefined ? values.isPublic : false,
       allowedType: allowedType,
       plans: JSON.stringify({
         selected: selectedCategories,
