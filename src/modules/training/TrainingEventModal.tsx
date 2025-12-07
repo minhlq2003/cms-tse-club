@@ -79,7 +79,6 @@ export default function TrainingEventModal({
       const newLesson: Event = {
         id: crypto.randomUUID(),
         title: values.title,
-        description: values.description || "",
         location: {
           destination: values.destination,
           startTime: values.time[0].toISOString(),
@@ -121,7 +120,6 @@ export default function TrainingEventModal({
               title: `${values.title} - ${current.format(
                 "DD/MM/YYYY"
               )} ${slot.time[0].format("HH:mm")}`,
-              description: values.description || "",
               location: {
                 destination: values.destination,
                 startTime: startTime.toISOString(),
@@ -180,13 +178,6 @@ export default function TrainingEventModal({
                   rules={[{ required: true, message: t("Please enter title") }]}
                 >
                   <Input placeholder={t("Lesson title")} />
-                </Form.Item>
-
-                <Form.Item name="description" label={t("Description")}>
-                  <Input.TextArea
-                    rows={3}
-                    placeholder={t("Optional description")}
-                  />
                 </Form.Item>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -298,13 +289,6 @@ export default function TrainingEventModal({
                   rules={[{ required: true, message: t("Please enter title") }]}
                 >
                   <Input placeholder={t("Title")} />
-                </Form.Item>
-
-                <Form.Item name="description" label={t("Description")}>
-                  <Input.TextArea
-                    rows={3}
-                    placeholder={t("Optional description")}
-                  />
                 </Form.Item>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
