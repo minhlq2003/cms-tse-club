@@ -18,12 +18,12 @@ export default function EventPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [filters, setFilters] = useState<EventSearchRequestDto & {
+  const [filters, setFilters] = useState<
+    EventSearchRequestDto & {
       status?: FunctionStatus;
-    } & {
-    
-  }>({
-    eventType: undefined as  | undefined,
+    } & {}
+  >({
+    eventType: undefined as undefined,
     startTime: undefined as string | undefined,
     endTime: undefined as string | undefined,
     isDone: undefined as boolean | undefined,
@@ -49,7 +49,6 @@ export default function EventPage() {
   };
 
   const handleExport = () => {
-    // TODO: Implement export logic
     message.success(t("Exporting events..."));
   };
 
@@ -105,18 +104,17 @@ export default function EventPage() {
           >
             {t("Trash")}
           </Button>
-          { isMemberOrHigher() &&
-
-          <Link href="/events/create">
-            <Button
-              icon={<PlusIcon size={16} />}
-              className="h-[36px]"
-              type="primary"
-            >
-              {t("Create Event")}
-            </Button>
-          </Link>
-          }
+          {isMemberOrHigher() && (
+            <Link href="/events/create">
+              <Button
+                icon={<PlusIcon size={16} />}
+                className="h-[36px]"
+                type="primary"
+              >
+                {t("Create Event")}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -142,18 +140,13 @@ export default function EventPage() {
             style={{ width: 150 }}
             allowClear
             onChange={handleStatusChange}
-            value={
-              filters.status
-                ? filters.status
-                : undefined
-            }
+            value={filters.status ? filters.status : undefined}
             options={[
               { label: t("Pending"), value: FunctionStatus.PENDING },
               { label: t("Archived"), value: FunctionStatus.ARCHIVED },
               { label: t("Accepted"), value: FunctionStatus.ACCEPTED },
               { label: t("Rejected"), value: FunctionStatus.REJECTED },
               { label: t("Disabled"), value: FunctionStatus.DISABLED },
-              
             ]}
           />
 
@@ -182,12 +175,24 @@ export default function EventPage() {
             options={[
               { label: t("Title (A-Z)"), value: "title,asc" },
               { label: t("Title (Z-A)"), value: "title,desc" },
-              { label: t("Start Time (Oldest)"), value: "location.startTime,asc" },
-              { label: t("Start Time (Newest)"), value: "location.startTime,desc" },
+              {
+                label: t("Start Time (Oldest)"),
+                value: "location.startTime,asc",
+              },
+              {
+                label: t("Start Time (Newest)"),
+                value: "location.startTime,desc",
+              },
               { label: t("Created Date (Oldest)"), value: "createdAt,asc" },
               { label: t("Created Date (Newest)"), value: "createdAt,desc" },
-              { label: t("Last Modified Time (Oldest)"), value: "lastModifiedTime,asc" },
-              { label: t("Last Modified Time  (Newest)"), value: "lastModifiedTime,desc" },
+              {
+                label: t("Last Modified Time (Oldest)"),
+                value: "lastModifiedTime,asc",
+              },
+              {
+                label: t("Last Modified Time  (Newest)"),
+                value: "lastModifiedTime,desc",
+              },
               {
                 label: t("Registration (Low to High)"),
                 value: "currentRegistered,asc",
@@ -201,7 +206,13 @@ export default function EventPage() {
         </div>
       </div>
 
-      <ListEvent filters={{ ...filters, keyword: searchTerm, sort: "lastModifiedTime,desc" }} />
+      <ListEvent
+        filters={{
+          ...filters,
+          keyword: searchTerm,
+          sort: "lastModifiedTime,desc",
+        }}
+      />
     </div>
   );
 }

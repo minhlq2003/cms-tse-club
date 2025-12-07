@@ -125,11 +125,12 @@ const EditEvent = () => {
             ...data,
             location: {
               ...data.location,
+              // ✅ Parse với timezone GMT+7
               startTime: data.location?.startTime
-                ? dayjs(data.location.startTime)
+                ? dayjs.tz(data.location.startTime, "Asia/Ho_Chi_Minh")
                 : null,
               endTime: data.location?.endTime
-                ? dayjs(data.location.endTime)
+                ? dayjs.tz(data.location.endTime, "Asia/Ho_Chi_Minh")
                 : null,
             },
           };

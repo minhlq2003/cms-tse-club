@@ -3,6 +3,8 @@
 import React, { useEffect } from "react";
 import { Input, DatePicker, Button, Table, Select } from "antd";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import DynamicTable from "./DynamicTable";
 import {
@@ -16,8 +18,15 @@ import Title from "antd/es/typography/Title";
 import { BasicBlocks } from "@/constant/data";
 import { toast } from "sonner";
 
+// Configure dayjs with timezone
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
+
+// Timezone constant
+const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 interface PlanFormDynamicProps {
   selectedCategories: string[];
@@ -195,9 +204,11 @@ export default function PlanFormDynamic({
       case "DateTime":
         return (
           <DatePicker
-            value={value ? dayjs(value) : undefined}
+            value={value ? dayjs.tz(value, TIMEZONE) : undefined}
             showTime={field.type === "DateTime"}
-            onChange={(d) => setValue(blockId, key, d ? d.toISOString() : "")}
+            onChange={(d) =>
+              setValue(blockId, key, d ? d.tz(TIMEZONE).format() : "")
+            }
             disabled={readonly}
           />
         );
@@ -209,14 +220,14 @@ export default function PlanFormDynamic({
             showTime
             value={
               Array.isArray(value) && value[0]
-                ? [dayjs(value[0]), dayjs(value[1])]
+                ? [dayjs.tz(value[0], TIMEZONE), dayjs.tz(value[1], TIMEZONE)]
                 : undefined
             }
             onChange={(vals) => {
               if (!vals) return setValue(blockId, key, []);
               setValue(blockId, key, [
-                vals[0]?.toISOString(),
-                vals[1]?.toISOString(),
+                vals[0]?.tz(TIMEZONE).format(),
+                vals[1]?.tz(TIMEZONE).format(),
               ]);
             }}
             disabled={readonly}
@@ -257,17 +268,22 @@ export default function PlanFormDynamic({
         }
 
         const now = dayjs();
-        const start = dayjs(val[0]);
+        const start = val[0];
 
         if (start.isBefore(now, "minute")) {
           toast.error("Thời gian bắt đầu phải sau thời điểm hiện tại!");
           return;
         }
 
-        setValue(blockId, "Thời gian", [
-          val[0].toISOString(),
-          val[1].toISOString(),
-        ]);
+        // ✅ Lưu format không có timezone offset (LocalDateTime format)
+        // Backend Java dùng LocalDateTime nên chỉ cần YYYY-MM-DDTHH:mm:ss
+        const startStr = val[0].format("YYYY-MM-DDTHH:mm:ss");
+        const endStr = val[1].format("YYYY-MM-DDTHH:mm:ss");
+
+        console.log("🕐 User chọn:", val[0].format("DD/MM/YYYY HH:mm"));
+        console.log("📤 Lưu vào state:", startStr);
+
+        setValue(blockId, "Thời gian", [startStr, endStr]);
       };
 
       const handleLocationChange = (e: any) => {
@@ -278,6 +294,13 @@ export default function PlanFormDynamic({
         setValue(blockId, "Địa điểm", val);
       };
 
+      // Parse stored time back to dayjs for display
+      const parseStoredTime = (timeStr: string) => {
+        if (!timeStr) return undefined;
+        // Parse LocalDateTime format (YYYY-MM-DDTHH:mm:ss)
+        return dayjs(timeStr);
+      };
+
       return (
         <div className="space-y-2">
           <RangePicker
@@ -286,7 +309,10 @@ export default function PlanFormDynamic({
             className="w-full !mb-2"
             value={
               data?.["Thời gian"]
-                ? [dayjs(data["Thời gian"][0]), dayjs(data["Thời gian"][1])]
+                ? [
+                    parseStoredTime(data["Thời gian"][0]),
+                    parseStoredTime(data["Thời gian"][1]),
+                  ]
                 : undefined
             }
             onChange={handleTimeChange}
@@ -412,7 +438,7 @@ export default function PlanFormDynamic({
       );
     }
 
-    // 🆕 Block mentors (for training)
+    // Block mentors (for training)
     if (blockId === "basic_mentor") {
       const rows = data?.["Mentors"] || [];
       const columns = [
