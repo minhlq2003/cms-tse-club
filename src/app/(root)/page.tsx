@@ -13,16 +13,13 @@ import {
   getEvents,
   getRegisteredEvents,
 } from "@/modules/services/eventService";
-import { set } from "lodash";
 import { Event, GlobalConfigurationDto } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@/lib/utils";
 import { Images } from "@/constant/image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { getGlobalConfigByKey } from "@/modules/services/commonService";
-import { LAST_RESET_POINT_TIME } from "@/lib/varConstants";
-
+import { getLastResetPointTime } from "@/modules/services/commonService";
 export default function Dashboard() {
   const { t } = useTranslation("common");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -70,7 +67,7 @@ export default function Dashboard() {
         console.error("Failed to fetch registered events:", error);
       });
 
-    getGlobalConfigByKey(LAST_RESET_POINT_TIME)
+    getLastResetPointTime()
       .then((res) => {
         const {formattedDate, formattedTime} = formatDate(res?.configValue || "");
         const formattedRes = {

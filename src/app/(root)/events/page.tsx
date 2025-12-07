@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
-import { EventSearchRequestDto, FunctionStatus, LoginResponseDto } from "@/constant/types";
+import { EventSearchRequestDto, FunctionStatus } from "@/constant/types";
 import { isMemberOrHigher } from "@/lib/utils";
 
 const { RangePicker } = DatePicker;
@@ -17,6 +17,7 @@ export default function EventPage() {
   const { t } = useTranslation("common");
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+
   const [filters, setFilters] = useState<EventSearchRequestDto & {
       status?: FunctionStatus;
     } & {

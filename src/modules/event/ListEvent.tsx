@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Button, Modal, Table, Tag, Tooltip, message } from "antd";
 import { useRouter } from "next/navigation";
-import { Event, ListEventProps } from "@/constant/types";
+import { Event, GlobalConfigurationDto, ListEventProps } from "@/constant/types";
 import {
   getEvents,
   deleteEvent,
@@ -17,6 +17,7 @@ import { formatDate, getUser, isLeader, isLeaderOrHigher } from "@/lib/utils";
 import { Check, Edit, Eye, Trash2, View, X, CheckCircle, Redo } from "lucide-react";
 import dayjs from "dayjs";
 import { toast } from "sonner";
+import { getLastResetPointTime } from "../services/commonService";
 
 export default function ListEvent({ filters }: ListEventProps) {
   const { t } = useTranslation("common");
@@ -25,6 +26,8 @@ export default function ListEvent({ filters }: ListEventProps) {
   const [loading, setLoading] = useState<boolean>(false);
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [lastResetPointTime, setLastResetPointTime] = useState<GlobalConfigurationDto | null>(null);
+
   const [openMoveToTrashModal, setOpenMoveToTrashModal] = useState(false);
   const [openApproveModal, setOpenApproveModal] = useState(false);
   const [openRejectModal, setOpenRejectModal] = useState(false);
@@ -34,6 +37,7 @@ export default function ListEvent({ filters }: ListEventProps) {
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
 
+  
   const fetchEvents = async () => {
     let res;
     try {
@@ -73,6 +77,21 @@ export default function ListEvent({ filters }: ListEventProps) {
   useEffect(() => {
     fetchEvents();
   }, [JSON.stringify(filters), page]);
+
+  useLayoutEffect(() => {
+    // Fetch last reset point time
+    const fetchLastResetPointTime = async () => {
+      try {
+        const res = await getLastResetPointTime();
+        setLastResetPointTime(res);
+      }
+      catch {
+        console.error("Failed to fetch last reset point time");
+      }
+    };
+
+    fetchLastResetPointTime();
+  }, []);
 
   const handleMoveToTrash = async (id: string) => {
     try {
@@ -144,6 +163,16 @@ export default function ListEvent({ filters }: ListEventProps) {
       setOpenRevertDoneModal(false);
     }
   };
+
+  const ableToRevertDone = (event: Event) => {
+    if (!lastResetPointTime) return false;
+    
+    const resetTime = dayjs(lastResetPointTime.configValue);
+    const eventDoneTime = dayjs(event.lastModifiedTime || "");
+    return eventDoneTime.isAfter(resetTime) && isLeader() &&
+            event.status === "ACCEPTED" &&
+            event.done;
+  }
 
   const columns = [
     {
@@ -282,9 +311,9 @@ export default function ListEvent({ filters }: ListEventProps) {
               </Tooltip>
             )}
 
-            {isLeader() &&
-            record.status === "ACCEPTED" &&
-            record.done &&
+            {
+              ableToRevertDone(record) &&
+            
             dayjs(record.location.startTime).isBefore(Date.now()) && (
               <Tooltip title={t("Revert done attempt")}>
                 <Button
@@ -326,6 +355,8 @@ export default function ListEvent({ filters }: ListEventProps) {
       ),
     },
   ];
+
+
 
   return (
     <div className="w-full mt-5">
