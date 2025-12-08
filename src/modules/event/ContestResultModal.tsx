@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Modal, Table, Button, InputNumber, Alert, message } from "antd";
+import { toast } from "sonner";
 import { TrophyOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import {
@@ -55,7 +56,7 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
           total: res.page?.totalElements || 0,
         }));
       } catch (error) {
-        message.error(t("Failed to fetch contest results"));
+        toast.error(t("Failed to fetch contest results"));
       } finally {
         setLoading(false);
       }
@@ -92,7 +93,7 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
     );
 
     if (invalid) {
-      message.warning(t("Vui lòng nhập đầy đủ thứ hạng và điểm số"));
+      toast.warning(t("Vui lòng nhập đầy đủ thứ hạng và điểm số"));
       return;
     }
 
@@ -107,15 +108,17 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
       };
 
       const res = await updateContestResults(eventId, payload);
-      if (res) {
-        message.success(t("Đã cập nhật kết quả thi thành công"));
+      console.log("Update response:", res);
+      if (res?.status && res.status >= 400){
+        toast.error(t("Không thể cập nhật kết quả"));
+      }
+      else{
+        toast.success(t("Đã cập nhật kết quả thi thành công"));
         onClose();
-      } else {
-        message.error(t("Không thể cập nhật kết quả"));
       }
     } catch (err) {
       console.error("Error updating contest results:", err);
-      message.error(t("Có lỗi xảy ra khi cập nhật kết quả"));
+      toast.error(t("Có lỗi xảy ra khi cập nhật kết quả"));
     } finally {
       setLoading(false);
     }
@@ -153,7 +156,6 @@ const ContestResultsModal: React.FC<ContestResultsModalProps> = ({
       render: (_: any, record: ExamResult) => (
         <InputNumber
           min={0}
-          max={100}
           value={record.point}
           onChange={(val) => handleResultChange(record.student?.id!, "point", val)}
           style={{ width: "100%" }}

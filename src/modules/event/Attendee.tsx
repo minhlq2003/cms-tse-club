@@ -90,6 +90,8 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
   const [isListVisible, setListVisible] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attendees, setAttendees] = useState<AttendeeDto[]>([]);
+  const [fetchedAttendeeSuccessfully, setFetchedAttendeeSuccessfully] = useState(false);
+  const [fetchedAttendeesMap, setFetchedAttendeesMap] = useState<Map<string, AttendeeDto>>(new Map());
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -122,7 +124,6 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
-
   const now = new Date();
   const start = startTime ? new Date(startTime) : null;
 
@@ -164,6 +165,17 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     pagination.pageSize,
   ]);
 
+
+  useEffect(() => {
+    if(fetchedAttendeeSuccessfully){
+      const attendeeMap = new Map<string, AttendeeDto>();
+      attendees.forEach((attendee) => {
+        attendeeMap.set(attendee.id, attendee);
+      });
+      setFetchedAttendeesMap(attendeeMap);
+    }
+  }, [fetchedAttendeeSuccessfully, loading]);
+
   const fetchAttendees = async (page: number, size: number) => {
     if (!eventId) return;
     try {
@@ -178,27 +190,18 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       });
       const list = Array.isArray(res._embedded?.attendeeDtoList)
         ? res._embedded.attendeeDtoList
-        : Array.isArray(res)
-        ? res
         : [];
       setAttendees(
-        list.map((a: any) => ({
-          id: a.id,
-          fullName: a.fullName,
-          nickname: a.nickname,
-          email: a.email,
-          dateOfBirth: a.dateOfBirth,
-          user: a.user || a.attendee || a.userDto || {},
-          status: a.status || a.attendeeStatus || "UNKNOWN",
-          checkIn: a.checkIn || false,
-        }))
+        list
       );
       setPagination((prev) => ({
         ...prev,
         total: res.page?.totalElements || 0,
       }));
+      setFetchedAttendeeSuccessfully(true);
     } catch (err) {
       toast.error(t("Failed to fetch attendees"));
+      setFetchedAttendeeSuccessfully(false);
     } finally {
       setLoading(false);
     }
@@ -508,22 +511,24 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
       render: (_: any, record: AttendeeDto) => {
         const status = (record.status || "UNKNOWN").toUpperCase();
         let color = "default";
-        if (status === "CHECKED") color = "green";
-        else if (status === "REGISTERED") color = "blue";
-        else if (status === "MISSED") color = "red";
+        if (status === AttendeeStatus.CHECKED) color = "green";
+        else if (status === AttendeeStatus.REGISTERED) color = "blue";
+        else if (status === AttendeeStatus.BANNED) color = "red";
         return <Tag color={color}>{t(status)}</Tag>;
       },
     },
     {
       title: t("Check in"),
       key: "checkin",
-      render: (_: any, record: AttendeeDto) => (
+      render: (_: any, record: AttendeeDto) => {
+        const oldStatus = fetchedAttendeesMap.get(record.id)?.status || AttendeeStatus.REGISTERED;
+        return (
         <Checkbox
           checked={Boolean(record.status === AttendeeStatus.CHECKED)}
           onChange={() => toggleCheckInLocal(record.id)}
-          disabled={!canCheckIn || eventDone || !(record.status === AttendeeStatus.REGISTERED)}
+          disabled={!canCheckIn || eventDone || !(oldStatus === AttendeeStatus.REGISTERED)}
         />
-      ),
+      )},
     },
     {
       title: t("Remove"), // Cột Xóa mới
