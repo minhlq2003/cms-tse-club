@@ -59,7 +59,33 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
   const fetchMembers = async (keyword: string = "", page: number = 1, size: number = 5) => {
     try {
       setLoadingMembers(true);
-
+      if(eventId === undefined) {
+        
+        let searchs : string[] = [];
+        let searchValues : string[] = [];
+        for (let organizer of organizers) {
+          searchs.push("id");
+          searchValues.push("!" + organizer.organizerId);
+        }
+        const res = await getUser({
+          keyword,
+          page: page - 1,
+          size,
+          sort: "fullName,asc",
+          searchs,
+          searchValues
+        });
+        if (Array.isArray(res._embedded?.userShortInfoResponseDtoList)) {
+          setMembers(res._embedded.userShortInfoResponseDtoList);
+          setMemberPagination(prev => ({
+            ...prev,
+            total: res.page.totalElements,
+          }));
+        }
+        
+        setLoadingMembers(false);
+        return;
+      }
       const res = await searchAvailableUsersToBecomeOrganizer(eventId!, { keyword, page: page - 1, size, sort: "fullName,asc" });
       if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
         setMembers(res._embedded.userShortInfoResponseDtoList);
