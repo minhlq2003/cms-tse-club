@@ -1,4 +1,4 @@
-import { Post, PostListResponse, PostResponse } from "@/constant/types";
+import { Post, PostListResponse, PostResponse, SearchDto, SearchPostRequestDto } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_POST_PATH = "/posts";
@@ -13,26 +13,14 @@ const user = JSON.parse(
   (typeof window !== "undefined" && localStorage.getItem("user")) || "{}"
 );
 
-export const getPosts = async (params?: {
-  page?: number;
-  size?: number;
-  sort?: string;
-  title?: string;
-  status?: string;
-}) => {
+export const getPosts = async (params?: SearchPostRequestDto) => {
   const response = await http.get(`${API_PREFIX_POST_PATH}/me/search`, {
     params,
   });
   return response;
 };
 
-export const getPostsByLeader = async (params?: {
-  page?: number;
-  size?: number;
-  sort?: string;
-  title?: string;
-  status?: string;
-}) => {
+export const getPostsByLeader = async (params?: SearchPostRequestDto) => {
   const response = await http.get(`${API_PREFIX_LEADER_POST_PATH}/search`, {
     params,
   });
@@ -63,7 +51,7 @@ export const updatePost = (id: string, data: Partial<Post>) =>
   http.put<PostResponse>(`${API_PREFIX_POST_PATH}/${id}`, data);
 
 export const deletePost = (id: string) =>
-  http.delete<PostResponse>(`${API_PREFIX_POST_PATH}/${id}`);
+  http.delete<PostResponse>(`${API_PREFIX_LEADER_POST_PATH}/${id}`);
 
 export const approvePostByLeader = (id: string) =>
   http.patch<PostResponse>(`${API_PREFIX_LEADER_POST_PATH}/${id}/approve`, {});

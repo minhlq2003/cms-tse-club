@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Modal, Table, Tag, Tooltip } from "antd";
 import { useRouter } from "next/navigation";
-import { Post } from "@/constant/types";
+import { FunctionStatus, Post } from "@/constant/types";
 import { formatDate, getRoleUser, getUser, isLeader } from "@/lib/utils";
 import {
   getPosts,
@@ -11,6 +11,7 @@ import {
   approvePostByLeader,
   rejectPostByLeader,
   getPostsByLeader,
+  movePostToTrash,
 } from "@/modules/services/postService";
 import { useTranslation } from "react-i18next";
 import { Check, Edit, Eye, Trash2, X } from "lucide-react";
@@ -49,8 +50,9 @@ export default function ListPost({ filters }: ListPostProps) {
           page: page - 1,
           size: 10,
           sort: filters.sort,
-          title: filters.keyword,
-          status: filters.status
+          status: filters.status as FunctionStatus,
+          searchs: ["title", "deleted"],
+          searchValues: ["*" + (filters.keyword || "") + "*", "false"],
         });
       } else {
         response = await getPostsByLeader({
@@ -58,8 +60,9 @@ export default function ListPost({ filters }: ListPostProps) {
           page: page - 1,
           size: 10,
           sort: filters.sort,
-          title: filters.keyword,
-          status: filters.status
+          status: filters.status as FunctionStatus,
+          searchs: ["title", "deleted"],
+          searchValues: ["*" + (filters.keyword || "") + "*", "false"],
         });
       }
       if (Array.isArray(response._embedded?.postWrapperDtoList)) {
@@ -82,7 +85,7 @@ export default function ListPost({ filters }: ListPostProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      await deletePost(id);
+      await movePostToTrash(id);
       toast.success(t("Post deleted successfully"));
       fetchPosts();
     } catch {
