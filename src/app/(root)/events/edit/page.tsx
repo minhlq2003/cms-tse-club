@@ -40,6 +40,7 @@ const EditEvent = () => {
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
+  const [currentStatus, setCurrentStatus] = useState<FunctionStatus>(FunctionStatus.PENDING); 
   const [post, setPost] = useState<Post | undefined>(undefined);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -120,6 +121,8 @@ const EditEvent = () => {
         if (data) {
           setEventData(data);
           checkPermissions(data);
+
+          setCurrentStatus(data.status || FunctionStatus.PENDING);
 
           const formattedData = {
             ...data,
@@ -339,6 +342,7 @@ const EditEvent = () => {
                 setUploadedImages={setUploadedImage}
                 disabled={!canModify}
                 event={eventData}
+                
               />
 
               <PlanFormDynamic
@@ -367,6 +371,7 @@ const EditEvent = () => {
                 // 🆕 Truyền thêm permission props
                 isHost={isHost}
                 userAsOrganizer={eventData?.userAsOrganizer}
+                currentStatus={currentStatus}
               />
               {getRoleUser() === "LEADER" && !eventDone && (
                 <Button
