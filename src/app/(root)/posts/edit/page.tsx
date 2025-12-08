@@ -3,7 +3,7 @@
 import { Form, Spin } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { Post } from "@/constant/types";
+import { FunctionStatus, Post } from "@/constant/types";
 import {
   approvePostByLeader,
   getPostById,
@@ -27,7 +27,7 @@ const EditPost = () => {
   const [post, setPost] = useState<Post | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
   const [eventId, setEventId] = useState<string>("");
   const fetchPost = useCallback(
     async (id: string) => {

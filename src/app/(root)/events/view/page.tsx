@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Event, Organizer, Post } from "@/constant/types";
+import { Event, Organizer, OrganizerRole, Post } from "@/constant/types";
 import dayjs from "dayjs";
 import {
   CheckCircleOutlined,
@@ -399,11 +399,8 @@ const ViewEvent = () => {
                   )}
                 </div>
                 <Space wrap>
-                  {org.roles?.includes("MODIFY") && (
+                  {org.roles?.includes(OrganizerRole.MODIFY) && (
                     <Tag color="blue">{t("Quản lý")}</Tag>
-                  )}
-                  {org.roles?.includes("VIEW") && (
-                    <Tag color="green">{t("Xem")}</Tag>
                   )}
                 </Space>
               </div>
