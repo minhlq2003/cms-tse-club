@@ -116,6 +116,18 @@ export default function ListPost({ filters }: ListPostProps) {
     }
   };
 
+  const ableToEditPost = (post: Post) => {
+    const userRole = getRoleUser();
+    
+    // Admin, Leader luôn có quyền
+    if (userRole === "ADMIN" || userRole === "LEADER") {
+      return true;
+    }
+    
+    // Chỉ cho phép chỉnh sửa bài viết của chính mình
+    return getUser().id === post.writer?.id;
+  }
+
   const columns = [
     {
       title: t("Post"),
@@ -194,7 +206,7 @@ export default function ListPost({ filters }: ListPostProps) {
             ></Button>
           </Tooltip>
 
-          {getUser().id === record.writer?.id && (
+          {ableToEditPost(record) && (
             <Tooltip title={t("Edit")}>
               <Button
                 type="primary"
