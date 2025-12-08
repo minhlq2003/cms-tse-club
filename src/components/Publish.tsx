@@ -15,7 +15,7 @@ const { Title } = Typography;
 interface PublishProps {
   onSubmit: () => void;
   setStatus: (val: FunctionStatus) => void;
-  status: string;
+  status: FunctionStatus;
   type?: string;
   eventId?: string;
   postId?: string;
@@ -194,8 +194,8 @@ export default function Publish({
           <Space direction="horizontal" className="px-4 py-2 md:py-4">
             <p>{t("Status: ")}</p>
             <Select
-              onChange={(value) => {
-                setStatus(FunctionStatus[value as keyof typeof FunctionStatus])
+              onChange={(value ) => {
+                setStatus(value as FunctionStatus);
               }}
               defaultValue={status}
               className="w-[120px] !h-[28px]"

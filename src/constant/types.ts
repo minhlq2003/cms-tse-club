@@ -191,6 +191,8 @@ export interface Event {
   createdAt?: string;
   lastModifiedTime?: string;
   done?: boolean;
+  single?: boolean;
+  deleted?: boolean;
 }
 
 

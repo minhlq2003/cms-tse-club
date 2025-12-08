@@ -212,6 +212,7 @@ export default function AddTraining() {
               trainingEvent={trainingEvents}
               setTrainingEvent={setTrainingEvents}
               mentors={mentors}
+              fetchTraining={() => {}}
             />
           </div>
 

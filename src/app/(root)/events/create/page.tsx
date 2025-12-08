@@ -2,7 +2,7 @@
 
 import { Button, Form } from "antd";
 import { useCallback, useEffect, useState } from "react";
-import { BlockTemplate, Event, Organizer } from "@/constant/types";
+import { BlockTemplate, Event, FunctionStatus, Organizer } from "@/constant/types";
 import {
   createEvent,
   updateStatusEventByLeader,
@@ -35,7 +35,7 @@ export default function AddEvent() {
       roleContent: "Trưởng ban",
     },
   ]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     "basic_muc_dich",
