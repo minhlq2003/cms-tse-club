@@ -1,4 +1,4 @@
-import { BlockTemplate } from "./types";
+import { BlockTemplate, FunctionStatus } from "./types";
 
 export const eventUpcomming = [
   {
@@ -88,3 +88,11 @@ export const BasicBlocks: BlockTemplate[] = [
     ]),
   },
 ];
+
+export const functionStatusColorMap: Record<FunctionStatus, string> = {
+  ACCEPTED: "green",
+  PENDING: "orange",
+  REJECTED: "red",
+  DISABLED: "gray",
+  ARCHIVED: "blue",
+};

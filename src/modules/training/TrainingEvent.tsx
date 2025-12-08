@@ -2,33 +2,63 @@
 
 import { useState } from "react";
 import { Table, Button, Popconfirm, Tag, Card } from "antd";
-import { Event, Member } from "@/constant/types";
+import { Event, FunctionStatus, Member } from "@/constant/types";
 import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import TrainingEventModal from "./TrainingEventModal";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { addTrainingEvents } from "../services/trainingService";
+import { toast } from "sonner";
+import { functionStatusColorMap } from "@/constant/data";
+import { deleteEvent, moveEventToTrash } from "../services/eventService";
 
 interface Props {
+  trainingId?: string;
   trainingEvent: Event[];
   setTrainingEvent: React.Dispatch<React.SetStateAction<Event[]>>;
   mentors?: Member[];
+  fetchTraining: () => void;
 }
 
 export default function TrainingEventTable({
+  trainingId,
   trainingEvent,
   setTrainingEvent,
+  fetchTraining,
   mentors = [],
 }: Props) {
   const [openModal, setOpenModal] = useState(false);
   const { t } = useTranslation("common");
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const res = await moveEventToTrash(id);
+    console.log("Delete event response:", res);
+    if (res?.status && res.status >= 400) {
+      toast.error(t("Failed to delete lesson"));
+      return;
+    }
+    toast.success(t("Lesson deleted successfully"));
     setTrainingEvent((prev) => prev.filter((item) => item.id !== id));
+    
   };
 
   const handleAddLesson = (lesson: Event) => {
-    setTrainingEvent((prev) => [...prev, lesson]);
+    if (!trainingId) {
+      setTrainingEvent((prev) => [...prev, lesson]);
+      return;
+    }
+    addTrainingEvents(trainingId || "", { events: [lesson] }).then((res) => {
+      if (res.status && res.status >= 400){
+        throw new Error("Failed to add training event");
+      }
+      console.log("Added training event response:", res); 
+      fetchTraining();
+    })
+    .catch((e) => {
+      // Handle error
+      toast.error("Failed to add training event", e);
+    });
   };
 
   // Desktop columns
@@ -62,21 +92,13 @@ export default function TrainingEventTable({
       width: "15%",
     },
     {
-      title: t("Organizers"),
-      key: "organizers",
+      title: t("Status"),
+      key: "Status",
       width: "14%",
       render: (_: any, record: Event) => (
-        <div className="flex flex-wrap gap-1">
-          {record.organizers && record.organizers.length > 0 ? (
-            record.organizers.map((org) => (
-              <Tag key={org.organizerId} color="blue" className="text-xs">
-                {org.fullName || org.username}
-              </Tag>
-            ))
-          ) : (
-            <span className="text-gray-400 text-xs">{t("No organizers")}</span>
-          )}
-        </div>
+        <Tag color={functionStatusColorMap[record.status as FunctionStatus]}>
+          {record.status}
+        </Tag>
       ),
     },
     {
@@ -85,7 +107,7 @@ export default function TrainingEventTable({
       width: "10%",
       render: (_: any, record: Event) => (
         <div className="flex gap-2">
-          <Popconfirm
+          {/* <Popconfirm
             title={t("Are you sure to delete this lesson?")}
             onConfirm={() => handleDelete(record.id || "")}
             okText={t("Yes")}
@@ -94,7 +116,7 @@ export default function TrainingEventTable({
             <Button danger size="small" icon={<DeleteOutlined />}>
               {t("Delete")}
             </Button>
-          </Popconfirm>
+          </Popconfirm> */}
           {record.id && (
             <Link href={`/events/edit?id=${record.id}`}>
               <Button size="small" type="primary" icon={<EditOutlined />}>

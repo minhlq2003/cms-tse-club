@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { BlockTemplate, Event, Member, Post, Training } from "@/constant/types";
+import { BlockTemplate, Event, FunctionStatus, Member, Post, Training } from "@/constant/types";
 import {
   getTrainingById,
+  modifyTrainingMentors,
   updateStatusTrainingByLeader,
   updateTraining,
 } from "@/modules/services/trainingService";
@@ -33,7 +34,7 @@ const EditTraining = () => {
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [mentors, setMentors] = useState<Member[]>([]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
   const [trainingEvents, setTrainingEvents] = useState<Event[]>([]);
   const [post, setPost] = useState<Post>();
 
@@ -112,9 +113,7 @@ const EditTraining = () => {
 
           setUploadedImage(data.featuredImageUrl || "");
           setStatus(
-            data.status === "PENDING" || data.status === "ACCEPTED"
-              ? "PENDING"
-              : "ARCHIVED"
+            data.status as FunctionStatus
           );
           setPost(data.post);
 
@@ -334,9 +333,11 @@ const EditTraining = () => {
               />
 
               <TrainingEventTable
+                trainingId={id || ""}
                 trainingEvent={trainingEvents}
                 setTrainingEvent={setTrainingEvents}
                 mentors={mentors} // 🆕 Truyền mentors từ state
+                fetchTraining={() => fetchTraining(id || "")}
               />
             </div>
 
@@ -357,7 +358,11 @@ const EditTraining = () => {
                 onTemplateSelect={handleTemplateSelect}
               />
 
-              <TrainingMentors mentors={mentors} onChangeMentors={setMentors} />
+              <TrainingMentors 
+                trainingId= {id || ""}
+                mentors={mentors} 
+                onChangeMentors={setMentors}
+                />
               <FeaturedImage
                 selectedMedia={uploadedImage}
                 setSelectedMedia={setUploadedImage}

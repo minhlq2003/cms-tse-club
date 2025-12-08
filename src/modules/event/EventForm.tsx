@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 export interface EventFormProps {
   form: FormInstance;
   onFinish: (values: Event) => void;
+  event?: Event;
   uploadedImages: string;
   setUploadedImages: React.Dispatch<React.SetStateAction<string>>;
   disabled?: boolean;
@@ -19,7 +20,11 @@ const EventForm: React.FC<EventFormProps> = ({
   uploadedImages,
   setUploadedImages,
   disabled = false,
+  event,
 }) => {
+
+  console.log("Event in EventForm:", event);
+
   const { t } = useTranslation("common");
 
   const allowedOptions = [
@@ -94,7 +99,9 @@ const EventForm: React.FC<EventFormProps> = ({
             label={t("Limit Attendees")}
             rules={[{ required: true, message: t("Please enter number!") }]}
           >
-            <Input type="number" min={1} />
+            <Input 
+            disabled = {event && !event.single}
+            type="number" min={1} />
           </Form.Item>
 
           <Form.Item
@@ -112,7 +119,10 @@ const EventForm: React.FC<EventFormProps> = ({
             valuePropName="checked"
             className="flex items-center md:mt-8"
           >
-            <Switch checkedChildren={t("Yes")} unCheckedChildren={t("No")} />
+            <Switch 
+              disabled = {event && !event.single}
+              checkedChildren={t("Yes")} 
+              unCheckedChildren={t("No")} />
           </Form.Item>
         </div>
 
@@ -134,7 +144,7 @@ const EventForm: React.FC<EventFormProps> = ({
           ]}
         >
           <Checkbox.Group
-            disabled={isPublic || disabled}
+            disabled={isPublic || disabled || (event && !event.single)}
             onChange={(checkedValues: number[]) => {
               const total = checkedValues.reduce((acc, val) => acc + val, 0);
               form.setFieldsValue({ allowedType: total });

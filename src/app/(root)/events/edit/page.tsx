@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { BlockTemplate, Event, Organizer, Post } from "@/constant/types";
+import { BlockTemplate, Event, FunctionStatus, Organizer, Post } from "@/constant/types";
 import dayjs from "dayjs";
 import { QrcodeOutlined, CheckCircleOutlined } from "@ant-design/icons";
 
@@ -39,7 +39,7 @@ const EditEvent = () => {
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
   const [post, setPost] = useState<Post | undefined>(undefined);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -262,7 +262,7 @@ const EditEvent = () => {
     const dataPayload: Event = {
       ...values,
       limitRegister: values.limitRegister || 0,
-      status,
+      status: status,
       allowedType,
       category: values.category,
       organizers: organizers.map((org) => ({
@@ -281,9 +281,11 @@ const EditEvent = () => {
     try {
       if (!id) return toast.error(t("Invalid event ID."));
       const res = await updateEvent(id, dataPayload);
-
+      
       if (res?.id) {
-        if (isLeader() && dataPayload.status === "PENDING") {
+        console.log("Test post saving");
+        console.log("dataPayload", dataPayload)
+        if (isLeader() && dataPayload.status === FunctionStatus.PENDING) {
           await updateStatusEventByLeader(String(res.id), "ACCEPTED");
         }
         toast.success(t("Cập nhật sự kiện thành công."));
@@ -336,6 +338,7 @@ const EditEvent = () => {
                 uploadedImages={uploadedImage}
                 setUploadedImages={setUploadedImage}
                 disabled={!canModify}
+                event={eventData}
               />
 
               <PlanFormDynamic

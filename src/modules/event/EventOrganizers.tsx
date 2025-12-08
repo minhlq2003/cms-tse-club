@@ -25,7 +25,7 @@ import React, { useEffect, useState } from "react";
 import { Member, Organizer } from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { getUser } from "../services/userService";
-import { modifyOrganizers } from "../services/eventService";
+import { modifyOrganizers, searchAvailableUsersToBecomeOrganizer } from "../services/eventService";
 
 const { Title } = Typography;
 
@@ -60,15 +60,7 @@ const EventOrganizers: React.FC<EventOrganizersProps> = ({
     try {
       setLoadingMembers(true);
 
-      let searchs = [];
-      let searchValues = [];
-
-      for (const org of organizers) {
-        searchs.push( "id");
-        searchValues.push("!" + org.organizerId);
-      }
-
-      const res = await getUser({ keyword, page: page - 1, size, searchs, searchValues });
+      const res = await searchAvailableUsersToBecomeOrganizer(eventId!, { keyword, page: page - 1, size, sort: "fullName,asc" });
       if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
         setMembers(res._embedded.userShortInfoResponseDtoList);
         setMemberPagination(prev => ({

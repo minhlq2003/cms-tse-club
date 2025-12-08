@@ -32,6 +32,15 @@ export enum AttendeeStatus{
   BANNED = "BANNED",
 }
 
+export enum OrganizerRole{
+  MODIFY = "MODIFY",
+  CHECK_IN = "CHECK_IN",
+  REGISTER = "REGISTER",
+  BAN = "BAN",
+  REMOVE = "REMOVE",
+  POST = "POST",
+}
+
 // interfaces
 
 export interface MediaData {
@@ -156,12 +165,19 @@ export interface AttendeeDto{
   user?: UserShortInfoResponseDto;
 }
 
+export interface BaseEventCreateRequestDto{
+  title: string;
+  location: Location;
+  multiple?: number;
+  organizers?: Organizer[];
+}
+
 export interface Event {
   id?: string;
   title: string;
   location: Location;
   multiple?: number;
-  status?: string;
+  status?: FunctionStatus;
   organizers?: Organizer[];
   trainingId?: string;
   category?: string;
@@ -175,7 +191,11 @@ export interface Event {
   createdAt?: string;
   lastModifiedTime?: string;
   done?: boolean;
+  single?: boolean;
+  deleted?: boolean;
 }
+
+
 export interface Location {
   destination: string;
   startTime: string;
@@ -187,7 +207,7 @@ export interface Organizer {
   roleContent: string;
   username?: string;
   email?: string;
-  roles: string[];
+  roles: OrganizerRole[];
   fullName?: string;
 }
 
@@ -206,6 +226,27 @@ export interface Training {
   allowedType?: number;
   allowedArray?: number[];
   isPublic?: boolean;
+}
+
+export interface TrainingCreateRequestDto {
+  title: string;
+  trainingEvents: Event[];
+  location: Location;
+  status: FunctionStatus;
+  mentorIds?: string[];
+  limitRegister?: number;
+  featuredImageUrl?: string;
+  plans?: string;
+  allowedType?: number;
+  isPublic?: boolean;
+}
+
+export interface TrainingMentorsRequestDto{
+  mentorIds: string[];
+}
+
+export interface TrainingEventListCreateRequestDto{
+  events: BaseEventCreateRequestDto[];
 }
 
 export interface Member {
@@ -372,5 +413,10 @@ export interface EventSearchRequestDto extends SearchDto {
   startTime?: string;
   endTime?: string;
   rangeTimeType?: "UPCOMING" | "ONGOING" | "PAST";
+}
+
+export interface UserSearchRequestDto extends SearchDto {
+  keyword?: string;
+  role?: UserRole;
 }
 

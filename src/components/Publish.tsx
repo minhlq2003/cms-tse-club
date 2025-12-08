@@ -14,8 +14,8 @@ const { Title } = Typography;
 
 interface PublishProps {
   onSubmit: () => void;
-  setStatus: (val: string) => void;
-  status: string;
+  setStatus: (val: FunctionStatus) => void;
+  status: FunctionStatus;
   type?: string;
   eventId?: string;
   postId?: string;
@@ -194,17 +194,19 @@ export default function Publish({
           <Space direction="horizontal" className="px-4 py-2 md:py-4">
             <p>{t("Status: ")}</p>
             <Select
-              onChange={(value) => setStatus(value)}
+              onChange={(value ) => {
+                setStatus(value as FunctionStatus);
+              }}
               defaultValue={status}
               className="w-[120px] !h-[28px]"
               disabled={disabled}
             >
               {getRoleUser() === "ADMIN" || getRoleUser() === "LEADER" ? (
-                <Select.Option value="PENDING">{t("Publish")}</Select.Option>
+                <Select.Option value={FunctionStatus.PENDING}>{t("Publish")}</Select.Option>
               ) : (
-                <Select.Option value="PENDING">{t("Submit")}</Select.Option>
+                <Select.Option value={FunctionStatus.PENDING}>{t("Submit")}</Select.Option>
               )}
-              <Select.Option value="ARCHIVED">{t("Draft")}</Select.Option>
+              <Select.Option value={FunctionStatus.ARCHIVED}>{t("Draft")}</Select.Option>
             </Select>
           </Space>
           {renderLinkButton()}

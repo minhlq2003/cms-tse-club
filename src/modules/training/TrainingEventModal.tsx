@@ -17,10 +17,15 @@ import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { Event, Member, Organizer } from "@/constant/types";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { TIMEZONE } from "@/constant/varConstants";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { NoUndefinedRangeValueType } from "rc-picker/lib/PickerInput/RangePicker";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const { RangePicker } = DatePicker;
-
-
 
 interface Props {
   open: boolean;
@@ -38,6 +43,8 @@ export default function TrainingEventModal({
   const { t } = useTranslation("common");
   const [formLesson] = Form.useForm();
   const [formSchedule] = Form.useForm();
+
+  const [rangeValue, setRangeValue] = useState<any>(null);
 
   const [selectedOrganizersLesson, setSelectedOrganizersLesson] = useState<
     string[]
@@ -73,16 +80,41 @@ export default function TrainingEventModal({
       .filter(Boolean) as Organizer[];
   };
 
+  const displayValue = rangeValue && [
+    rangeValue[0] ? dayjs.tz(rangeValue[0], TIMEZONE) : undefined,
+    rangeValue[1] ? dayjs.tz(rangeValue[1], TIMEZONE) : undefined,
+  ];
+
+// Hàm xử lý khi giá trị thay đổi
+  const handleRangeChange = (dates: NoUndefinedRangeValueType<any> | null, dateStrings: [string, string]) => {
+    if (dates && dates.length === 2 && dates[0] && dates[1]) {
+
+      const [start, end] = dates;
+
+      const formattedStart = start.tz(TIMEZONE).format();
+      const formattedEnd = end.tz(TIMEZONE).format();   // hoặc .toISOString() nếu bạn thích ISO
+
+      // 3. Cập nhật state với chuỗi đã được chuẩn hóa
+      setRangeValue([formattedStart, formattedEnd]); 
+      
+      // Ở đây bạn sẽ gọi hàm setValue() của mình:
+      // setValue(blockId, key, [formattedStart, formattedEnd]);
+
+    } else {
+      setRangeValue(null);
+      // setValue(blockId, key, null);
+    }
+  };
+
   const handleAddLesson = async () => {
     try {
       const values = await formLesson.validateFields();
       const newLesson: Event = {
-        id: crypto.randomUUID(),
         title: values.title,
         location: {
           destination: values.destination,
-          startTime: values.time[0].toISOString(),
-          endTime: values.time[1].toISOString(),
+          startTime: values.time[0]?.format().slice(0, -6),
+          endTime: values.time[1]?.format().slice(0, -6),
         },
         multiple: values.multiple || 1,
         organizers: createOrganizers(selectedOrganizersLesson),
@@ -155,7 +187,6 @@ export default function TrainingEventModal({
       footer={null}
       width="95%"
       style={{ maxWidth: 900, top: 20 }}
-      destroyOnClose
       className="training-event-modal"
     >
       <Tabs
@@ -205,16 +236,18 @@ export default function TrainingEventModal({
                       showTime
                       format="DD/MM/YYYY HH:mm"
                       className="w-full"
+                      value={displayValue}
                       placeholder={[t("Start time"), t("End time")]}
+                      onChange={handleRangeChange}
                     />
                   </Form.Item>
                   <Form.Item
-                  name="multiple"
-                  label={t("Multiple")}
-                  rules={[{ required: false }]}
-                >
-                  <Input placeholder={t("Multiple")} type="number"/>
-                </Form.Item>
+                    name="multiple"
+                    label={t("Multiple")}
+                    rules={[{ required: false }]}
+                  >
+                    <Input placeholder={t("Multiple")} type="number" />
+                  </Form.Item>
                 </div>
 
                 {mentors.length > 0 && (
@@ -273,188 +306,196 @@ export default function TrainingEventModal({
               </Form>
             ),
           },
-          {
-            key: "schedule",
-            label: t("Add Schedule"),
-            children: (
-              <Form
-                form={formSchedule}
-                layout="vertical"
-                onFinish={handleAddSchedule}
-                className="space-y-4"
-              >
-                <Form.Item
-                  name="title"
-                  label={t("Title")}
-                  rules={[{ required: true, message: t("Please enter title") }]}
-                >
-                  <Input placeholder={t("Title")} />
-                </Form.Item>
+          // {
+          //   key: "schedule",
+          //   label: t("Add Schedule"),
+          //   children: (
+          //     <Form
+          //       form={formSchedule}
+          //       layout="vertical"
+          //       onFinish={handleAddSchedule}
+          //       className="space-y-4"
+          //     >
+          //       <Form.Item
+          //         name="title"
+          //         label={t("Title")}
+          //         rules={[{ required: true, message: t("Please enter title") }]}
+          //       >
+          //         <Input placeholder={t("Title")} />
+          //       </Form.Item>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Form.Item
-                    name="destination"
-                    label={t("Destination")}
-                    rules={[
-                      {
-                        required: true,
-                        message: t("Please enter destination"),
-                      },
-                    ]}
-                  >
-                    <Input placeholder={t("Location / Room")} />
-                  </Form.Item>
+          //       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          //         <Form.Item
+          //           name="destination"
+          //           label={t("Destination")}
+          //           rules={[
+          //             {
+          //               required: true,
+          //               message: t("Please enter destination"),
+          //             },
+          //           ]}
+          //         >
+          //           <Input placeholder={t("Location / Room")} />
+          //         </Form.Item>
 
-                  <Form.Item
-                    name="dateRange"
-                    label={t("Date Range")}
-                    rules={[
-                      {
-                        required: true,
-                        message: t("Please select date range"),
-                      },
-                    ]}
-                  >
-                    <RangePicker
-                      className="w-full"
-                      format="DD/MM/YYYY"
-                      placeholder={[t("Start date"), t("End date")]}
-                    />
-                  </Form.Item>
-                </div>
+          //         <Form.Item
+          //           name="dateRange"
+          //           label={t("Date Range")}
+          //           rules={[
+          //             {
+          //               required: true,
+          //               message: t("Please select date range"),
+          //             },
+          //           ]}
+          //         >
+          //           <RangePicker
+          //             className="w-full"
+          //             format="DD/MM/YYYY"
+          //             placeholder={[t("Start date"), t("End date")]}
+          //           />
+          //         </Form.Item>
+          //       </div>
 
-                <Form.List
-                  name="timeSlots"
-                  rules={[
-                    {
-                      validator: async (_, value) => {
-                        if (!value || value.length === 0) {
-                          return Promise.reject(
-                            new Error(t("At least one time slot is required"))
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  {(fields, { add, remove }) => (
-                    <>
-                      {fields.map(({ key, name, ...restField }) => (
-                        <Space
-                          key={key}
-                          align="baseline"
-                          className="flex w-full flex-col sm:flex-row sm:justify-between mb-2 gap-2"
-                        >
-                          <Form.Item
-                            {...restField}
-                            name={[name, "day"]}
-                            rules={[
-                              { required: true, message: t("Select day") },
-                            ]}
-                            className="mb-0 w-full sm:w-auto flex-1"
-                          >
-                            <Select
-                              placeholder={t("Day of week")}
-                              className="w-full sm:w-32"
-                              options={daysOfWeek}
-                            />
-                          </Form.Item>
+          //       <Form.Item
+          //         name="multiple"
+          //         label={t("Multiple")}
+          //         rules={[{ required: false }]}
+          //       >
+          //         <Input placeholder={t("Multiple")} type="number" />
+          //       </Form.Item>
 
-                          <Form.Item
-                            {...restField}
-                            name={[name, "time"]}
-                            rules={[
-                              { required: true, message: t("Select time") },
-                            ]}
-                            className="mb-0 w-full sm:w-auto flex-1"
-                          >
-                            <TimePicker.RangePicker
-                              format="HH:mm"
-                              className="w-full"
-                              placeholder={[t("Start"), t("End")]}
-                            />
-                          </Form.Item>
+          //       <Form.List
+          //         name="timeSlots"
+          //         rules={[
+          //           {
+          //             validator: async (_, value) => {
+          //               if (!value || value.length === 0) {
+          //                 return Promise.reject(
+          //                   new Error(t("At least one time slot is required"))
+          //                 );
+          //               }
+          //             },
+          //           },
+          //         ]}
+          //       >
+          //         {(fields, { add, remove }) => (
+          //           <>
+          //             {fields.map(({ key, name, ...restField }) => (
+          //               <Space
+          //                 key={key}
+          //                 align="baseline"
+          //                 className="flex w-full flex-col sm:flex-row sm:justify-between mb-2 gap-2"
+          //               >
+          //                 <Form.Item
+          //                   {...restField}
+          //                   name={[name, "day"]}
+          //                   rules={[
+          //                     { required: true, message: t("Select day") },
+          //                   ]}
+          //                   className="mb-0 w-full sm:w-auto flex-1"
+          //                 >
+          //                   <Select
+          //                     placeholder={t("Day of week")}
+          //                     className="w-full sm:w-32"
+          //                     options={daysOfWeek}
+          //                   />
+          //                 </Form.Item>
 
-                          <MinusCircleOutlined
-                            onClick={() => remove(name)}
-                            className="cursor-pointer text-red-500 text-lg"
-                          />
-                        </Space>
-                      ))}
-                      <Button
-                        type="dashed"
-                        onClick={() => add()}
-                        block
-                        icon={<PlusOutlined />}
-                      >
-                        {t("Add Time Slot")}
-                      </Button>
-                    </>
-                  )}
-                </Form.List>
+          //                 <Form.Item
+          //                   {...restField}
+          //                   name={[name, "time"]}
+          //                   rules={[
+          //                     { required: true, message: t("Select time") },
+          //                   ]}
+          //                   className="mb-0 w-full sm:w-auto flex-1"
+          //                 >
+          //                   <TimePicker.RangePicker
+          //                     format="HH:mm"
+          //                     className="w-full"
+          //                     placeholder={[t("Start"), t("End")]}
+          //                   />
+          //                 </Form.Item>
 
-                {mentors.length > 0 && (
-                  <Form.Item label={t("Organizers (Mentors)")}>
-                    <div className="hidden md:block">
-                      <Transfer
-                        dataSource={mentorDataSource}
-                        targetKeys={selectedOrganizersSchedule}
-                        onChange={(targetKeys) =>
-                          setSelectedOrganizersSchedule(targetKeys as string[])
-                        }
-                        render={(item) => item.title}
-                        listStyle={{ width: "45%", height: 300 }}
-                        titles={[
-                          t("Available Mentors"),
-                          t("Selected Organizers"),
-                        ]}
-                        locale={{
-                          itemUnit: t("item"),
-                          itemsUnit: t("items"),
-                          searchPlaceholder: t("Search"),
-                          notFoundContent: t("No data"),
-                        }}
-                        showSearch
-                      />
-                    </div>
+          //                 <MinusCircleOutlined
+          //                   onClick={() => remove(name)}
+          //                   className="cursor-pointer text-red-500 text-lg"
+          //                 />
+          //               </Space>
+          //             ))}
+          //             <Button
+          //               type="dashed"
+          //               onClick={() => add()}
+          //               block
+          //               icon={<PlusOutlined />}
+          //             >
+          //               {t("Add Time Slot")}
+          //             </Button>
+          //           </>
+          //         )}
+          //       </Form.List>
 
-                    {/* Mobile: Use Select instead of Transfer */}
-                    <div className="block md:hidden">
-                      <Select
-                        mode="multiple"
-                        style={{ width: "100%" }}
-                        placeholder={t("Select organizers")}
-                        value={selectedOrganizersSchedule}
-                        onChange={(values) =>
-                          setSelectedOrganizersSchedule(values)
-                        }
-                        options={mentorDataSource.map((m) => ({
-                          label: m.title,
-                          value: m.key,
-                        }))}
-                        showSearch
-                        filterOption={(input, option) =>
-                          (option?.label ?? "")
-                            .toLowerCase()
-                            .includes(input.toLowerCase())
-                        }
-                      />
-                    </div>
+          //       {mentors.length > 0 && (
+          //         <Form.Item label={t("Organizers (Mentors)")}>
+          //           <div className="hidden md:block">
+          //             <Transfer
+          //               dataSource={mentorDataSource}
+          //               targetKeys={selectedOrganizersSchedule}
+          //               onChange={(targetKeys) =>
+          //                 setSelectedOrganizersSchedule(targetKeys as string[])
+          //               }
+          //               render={(item) => item.title}
+          //               listStyle={{ width: "45%", height: 300 }}
+          //               titles={[
+          //                 t("Available Mentors"),
+          //                 t("Selected Organizers"),
+          //               ]}
+          //               locale={{
+          //                 itemUnit: t("item"),
+          //                 itemsUnit: t("items"),
+          //                 searchPlaceholder: t("Search"),
+          //                 notFoundContent: t("No data"),
+          //               }}
+          //               showSearch
+          //             />
+          //           </div>
 
-                    <div className="text-sm text-gray-500 mt-2">
-                      {t(
-                        "These organizers will be added to all generated lessons"
-                      )}
-                    </div>
-                  </Form.Item>
-                )}
+          //           {/* Mobile: Use Select instead of Transfer */}
+          //           <div className="block md:hidden">
+          //             <Select
+          //               mode="multiple"
+          //               style={{ width: "100%" }}
+          //               placeholder={t("Select organizers")}
+          //               value={selectedOrganizersSchedule}
+          //               onChange={(values) =>
+          //                 setSelectedOrganizersSchedule(values)
+          //               }
+          //               options={mentorDataSource.map((m) => ({
+          //                 label: m.title,
+          //                 value: m.key,
+          //               }))}
+          //               showSearch
+          //               filterOption={(input, option) =>
+          //                 (option?.label ?? "")
+          //                   .toLowerCase()
+          //                   .includes(input.toLowerCase())
+          //               }
+          //             />
+          //           </div>
 
-                <Button type="primary" htmlType="submit" block>
-                  {t("Generate Lessons")}
-                </Button>
-              </Form>
-            ),
-          },
+          //           <div className="text-sm text-gray-500 mt-2">
+          //             {t(
+          //               "These organizers will be added to all generated lessons"
+          //             )}
+          //           </div>
+          //         </Form.Item>
+          //       )}
+
+          //       <Button type="primary" htmlType="submit" block>
+          //         {t("Generate Lessons")}
+          //       </Button>
+          //     </Form>
+          //   ),
+          // },
         ]}
       />
     </Modal>

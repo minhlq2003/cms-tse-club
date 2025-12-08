@@ -2,7 +2,7 @@
 
 import { Button, Form } from "antd";
 import { useCallback, useEffect, useState } from "react";
-import { BlockTemplate, Member, Training } from "@/constant/types";
+import { BlockTemplate, FunctionStatus, Member, Training, TrainingCreateRequestDto } from "@/constant/types";
 import {
   createTraining,
   updateStatusTrainingByLeader,
@@ -26,7 +26,7 @@ export default function AddTraining() {
   const [form] = Form.useForm();
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [mentors, setMentors] = useState<Member[]>([]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
   const [trainingEvents, setTrainingEvents] = useState<any[]>([]);
 
   // Dynamic plan states
@@ -141,11 +141,9 @@ export default function AddTraining() {
       ? values.allowedArray.reduce((acc, val) => acc + val, 0)
       : 0;
 
-    const dataPayload: Training = {
+    const dataPayload: TrainingCreateRequestDto = {
       ...values,
       title: values.title,
-      description:
-        "nonemmmmmmmmmmmmmmmmmmmdfdfdfdfdfdffdfdf mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
       status,
       location: values.location,
       limitRegister: Number(values.limitRegister),
@@ -214,13 +212,14 @@ export default function AddTraining() {
               trainingEvent={trainingEvents}
               setTrainingEvent={setTrainingEvents}
               mentors={mentors}
+              fetchTraining={() => {}}
             />
           </div>
 
           <div className="w-full lg:w-[22%] space-y-4">
             <Publish
               onSubmit={() => onFinish(form.getFieldsValue())}
-              setStatus={setStatus}
+              setStatus={setStatus.toString}
               status={status}
             />
 

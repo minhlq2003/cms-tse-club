@@ -2,7 +2,7 @@
 
 import { Button, Form, message } from "antd";
 import { useState } from "react";
-import { Post } from "@/constant/types";
+import { FunctionStatus, Post } from "@/constant/types";
 import {
   approvePostByLeader,
   createPost,
@@ -24,7 +24,7 @@ export default function AddPost() {
   const eventId = searchParams.get("eventId");
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<string>("PENDING");
+  const [status, setStatus] = useState<FunctionStatus>(FunctionStatus.PENDING);
 
   const onFinish = async (values: Post) => {
     const slug = values.title?.trim().replace(/\s+/g, "-").toLowerCase() || "";
