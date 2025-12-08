@@ -150,7 +150,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     eventCategory === "CONTEST" &&
     (isHost || userAsOrganizer?.roles.includes(OrganizerRole.MODIFY));
   const canViewReviews =
-    isEventEnded &&
+    isEventStarted &&
     eventCategory === "SEMINAR" &&
     ["LEADER"].includes(userRole || "");
 
@@ -357,23 +357,23 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
     }
   };
 
-  const fetchSeminarReviews = async () => {
-    if (!eventId) return;
-    try {
-      setLoading(true);
-      const res = await getSeminarReview(eventId);
-      const reviews = Array.isArray(res.reviews)
-        ? res.reviews
-        : Array.isArray(res)
-        ? res
-        : [];
-      setSeminarReviews(reviews);
-    } catch (err) {
-      toast.error(t("Không thể tải đánh giá"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchSeminarReviews = async () => {
+  //   if (!eventId) return;
+  //   try {
+  //     setLoading(true);
+  //     const res = await getSeminarReview(eventId);
+  //     const reviews = Array.isArray(res.reviews)
+  //       ? res.reviews
+  //       : Array.isArray(res)
+  //       ? res
+  //       : [];
+  //     setSeminarReviews(reviews);
+  //   } catch (err) {
+  //     toast.error(t("Không thể tải đánh giá"));
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const toggleCheckIn = (status: AttendeeStatus) => {
     if (status === AttendeeStatus.CHECKED) return AttendeeStatus.REGISTERED;
@@ -387,7 +387,7 @@ const EventAttendees: React.FC<EventAttendeesProps> = ({
 
   const openReviewModal = () => {
     setIsReviewModalOpen(true);
-    fetchSeminarReviews();
+    // fetchSeminarReviews();
   };
 
   const openCheckInCodeModal = () => {
