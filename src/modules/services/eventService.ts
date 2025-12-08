@@ -1,4 +1,4 @@
-import { Event, EventSearchRequestDto, FunctionStatus, SearchDto } from "@/constant/types";
+import { Event, EventSearchRequestDto, FunctionStatus, SearchDto, UserSearchRequestDto } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_EVENT_PATH = "/events";
@@ -164,4 +164,11 @@ export const getContestExamResults = (eventId: string, params?: SearchDto) => {
     params,
   });
   return response.then((res) => res);
+}
+
+export const searchAvailableUsersToBecomeOrganizer = (eventId: string, params?: UserSearchRequestDto) => {
+  const response = http.get(`${API_PREFIX_EVENT_PATH}/${eventId}/search/available-organizers`, {
+    params,
+  });
+  return response;
 }

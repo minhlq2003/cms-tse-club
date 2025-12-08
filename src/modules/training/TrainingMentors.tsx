@@ -21,7 +21,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getUser } from "../services/userService";
-import { modifyTrainingMembers } from "../services/trainingService";
+import { modifyTrainingMembers, modifyTrainingMentors } from "../services/trainingService";
 import { Member } from "@/constant/types";
 
 const { Title } = Typography;
@@ -113,8 +113,11 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
   };
 
   const updateMentors = () => {
-    const payload = mentors.map((m) => ({ id: m.id }));
-    modifyTrainingMembers(trainingId!, { mentors: payload })
+    const payload : string[]= mentors.map((m) => m.id);
+    
+    console.log("Updating mentors with payload:", payload);
+
+    modifyTrainingMentors(trainingId!, { mentorIds: payload })
       .then(() => {
         message.success(t("Mentors updated successfully"));
         handleCloseModal();
@@ -123,6 +126,8 @@ const TrainingMentors: React.FC<TrainingMentorsProps> = ({
         message.error(t("Failed to update mentors"));
       });
   };
+
+  
 
   const memberColumns = [
     {

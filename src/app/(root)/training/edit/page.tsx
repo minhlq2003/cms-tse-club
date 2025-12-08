@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { BlockTemplate, Event, Member, Post, Training } from "@/constant/types";
 import {
   getTrainingById,
+  modifyTrainingMentors,
   updateStatusTrainingByLeader,
   updateTraining,
 } from "@/modules/services/trainingService";
@@ -357,7 +358,11 @@ const EditTraining = () => {
                 onTemplateSelect={handleTemplateSelect}
               />
 
-              <TrainingMentors mentors={mentors} onChangeMentors={setMentors} />
+              <TrainingMentors 
+                trainingId= {id || ""}
+                mentors={mentors} 
+                onChangeMentors={setMentors}
+                />
               <FeaturedImage
                 selectedMedia={uploadedImage}
                 setSelectedMedia={setUploadedImage}
