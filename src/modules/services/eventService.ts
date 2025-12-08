@@ -115,7 +115,7 @@ export const moveEventToTrash = (id: string) =>
   );
 
 export const updateContestResults = (eventId: string, data: any) =>
-  http.put<Event>(
+  http.put<any>(
     `${API_PREFIX_EVENT_PATH}/contest/${eventId}/update-standing`,
     data
   );

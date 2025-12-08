@@ -12,14 +12,14 @@ interface SeminarReviewsModalProps {
   eventId: string;
 }
 
-interface Review {
-  id: string;
-  user: {
-    fullName: string;
-    email: string;
-  };
+interface ReviewModel {
   content: string;
-  rating: number;
+  id: string;
+  // user: {
+  //   fullName: string;
+  //   email: string;
+  // };
+  // rating: number;
 }
 
 const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
@@ -28,7 +28,7 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
   eventId,
 }) => {
   const { t } = useTranslation("common");
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<ReviewModel[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,7 +46,15 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
         : Array.isArray(res)
         ? res
         : [];
-      setReviews(reviewList);
+      let reviews: ReviewModel[] = [];
+      for (let review of reviewList) {
+        reviews.push({
+          content: review,
+          id: Math.random().toString(36).substring(2, 15),
+        });
+      }
+
+      setReviews(reviews);
     } catch (err) {
       message.error(t("Không thể tải đánh giá"));
     } finally {
@@ -55,17 +63,17 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
   };
 
   const columns = [
-    {
-      title: t("Người đánh giá"),
-      dataIndex: ["user", "fullName"],
-      key: "reviewer",
-      render: (text: string, record: Review) => (
-        <div>
-          <div className="font-semibold">{text}</div>
-          <div className="text-sm text-gray-500">{record.user.email}</div>
-        </div>
-      ),
-    },
+    // {
+    //   title: t("Người đánh giá"),
+    //   dataIndex: ["user", "fullName"],
+    //   key: "reviewer",
+    //   render: (text: string, record: Review) => (
+    //     <div>
+    //       <div className="font-semibold">{text}</div>
+    //       <div className="text-sm text-gray-500">{record.user.email}</div>
+    //     </div>
+    //   ),
+    // },
     {
       title: t("Nội dung"),
       dataIndex: "content",
@@ -74,27 +82,19 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
         <div className="max-w-md">{text || t("Không có nội dung")}</div>
       ),
     },
-    {
-      title: t("Đánh giá"),
-      dataIndex: "rating",
-      key: "rating",
-      width: 120,
-      align: "center" as const,
-      render: (rating: number) => (
-        <span className="text-yellow-500 font-semibold">
-          {rating} <StarOutlined />
-        </span>
-      ),
-    },
+    // {
+    //   title: t("Đánh giá"),
+    //   dataIndex: "rating",
+    //   key: "rating",
+    //   width: 120,
+    //   align: "center" as const,
+    //   render: (rating: number) => (
+    //     <span className="text-yellow-500 font-semibold">
+    //       {rating} <StarOutlined />
+    //     </span>
+    //   ),
+    // },
   ];
-
-  // Calculate average rating
-  const averageRating =
-    reviews.length > 0
-      ? (
-          reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-        ).toFixed(1)
-      : "0";
 
   return (
     <Modal
@@ -116,7 +116,7 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
       width="90%"
       className="!max-w-[900px]"
     >
-      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+      {/* <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
         <div className="flex items-center justify-between">
           <span className="text-gray-700">
             {t("Tổng số đánh giá")}: <strong>{reviews.length}</strong>
@@ -128,10 +128,10 @@ const SeminarReviewsModal: React.FC<SeminarReviewsModalProps> = ({
             </strong>
           </span>
         </div>
-      </div>
+      </div> */}
 
       <Table
-        rowKey={(record: Review) => record.id}
+        rowKey={(record: ReviewModel) => record.id}
         columns={columns}
         dataSource={reviews}
         loading={loading}
