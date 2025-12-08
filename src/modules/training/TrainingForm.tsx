@@ -122,8 +122,7 @@ const TrainingForm: React.FC<TrainingFormProps> = ({
           <div className="flex w-1/2">
             <Form.Item
               name="isPublic"
-              label={t("Public Event")}
-              valuePropName="checked"
+              label={t("Public Training")}
               className="flex items-center md:mt-8 w-1/3"
             >
               <Switch checkedChildren={t("Yes")} unCheckedChildren={t("No")} />

@@ -109,6 +109,7 @@ const EditTraining = () => {
             title: data.title,
             limitRegister: data.limitRegister,
             description: data.description,
+            ...data,
           });
 
           setUploadedImage(data.featuredImageUrl || "");
