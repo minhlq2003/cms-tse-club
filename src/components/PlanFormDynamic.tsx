@@ -17,6 +17,7 @@ import {
 import Title from "antd/es/typography/Title";
 import { BasicBlocks } from "@/constant/data";
 import { toast } from "sonner";
+import { TIMEZONE } from "@/constant/varConstants";
 
 // Configure dayjs with timezone
 dayjs.extend(utc);
@@ -25,8 +26,6 @@ dayjs.extend(timezone);
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-// Timezone constant
-const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 interface PlanFormDynamicProps {
   selectedCategories: string[];

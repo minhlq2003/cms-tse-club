@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { BlockTemplate, Event, Organizer, Post } from "@/constant/types";
+import { BlockTemplate, Event, FunctionStatus, Organizer, Post } from "@/constant/types";
 import dayjs from "dayjs";
 import { QrcodeOutlined, CheckCircleOutlined } from "@ant-design/icons";
 
@@ -262,7 +262,7 @@ const EditEvent = () => {
     const dataPayload: Event = {
       ...values,
       limitRegister: values.limitRegister || 0,
-      status,
+      status: values.status as FunctionStatus,
       allowedType,
       category: values.category,
       organizers: organizers.map((org) => ({

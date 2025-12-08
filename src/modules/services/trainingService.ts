@@ -1,4 +1,4 @@
-import { TrainingCreateRequestDto, TrainingMentorsRequestDto } from "@/constant/types";
+import { TrainingCreateRequestDto, TrainingEventListCreateRequestDto, TrainingMentorsRequestDto } from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 
 const API_PREFIX_TRAINING_PATH = "/trainings";
@@ -24,7 +24,7 @@ export const manualTriggerRegister = (trainingId: string, data: any) =>
     data
   );
 
-export const addTrainingEvents = (trainingId: string, data: any) =>
+export const addTrainingEvents = (trainingId: string, data: TrainingEventListCreateRequestDto) =>
   http.post<any>(`${API_PREFIX_TRAINING_PATH}/${trainingId}/events`, data);
 
 export const modifyTrainingMembers = (trainingId: string, data: any) =>

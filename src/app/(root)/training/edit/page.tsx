@@ -335,6 +335,7 @@ const EditTraining = () => {
               />
 
               <TrainingEventTable
+                trainingId={id || ""}
                 trainingEvent={trainingEvents}
                 setTrainingEvent={setTrainingEvents}
                 mentors={mentors} // 🆕 Truyền mentors từ state

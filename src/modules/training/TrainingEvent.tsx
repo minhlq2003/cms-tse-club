@@ -8,14 +8,18 @@ import TrainingEventModal from "./TrainingEventModal";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { addTrainingEvents } from "../services/trainingService";
+import { toast } from "sonner";
 
 interface Props {
+  trainingId?: string;
   trainingEvent: Event[];
   setTrainingEvent: React.Dispatch<React.SetStateAction<Event[]>>;
   mentors?: Member[];
 }
 
 export default function TrainingEventTable({
+  trainingId,
   trainingEvent,
   setTrainingEvent,
   mentors = [],
@@ -28,7 +32,20 @@ export default function TrainingEventTable({
   };
 
   const handleAddLesson = (lesson: Event) => {
-    setTrainingEvent((prev) => [...prev, lesson]);
+    if (!trainingId) {
+      setTrainingEvent((prev) => [...prev, lesson]);
+      return;
+    }
+    addTrainingEvents(trainingId || "", { events: [lesson] }).then((res) => {
+      if (res.status && res.status >= 400){
+        throw new Error("Failed to add training event");
+      }
+      setTrainingEvent((prev) => [...prev, res]);
+    })
+    .catch((e) => {
+      // Handle error
+      toast.error("Failed to add training event", e);
+    });
   };
 
   // Desktop columns

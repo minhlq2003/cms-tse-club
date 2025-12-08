@@ -243,6 +243,10 @@ export interface TrainingMentorsRequestDto{
   mentorIds: string[];
 }
 
+export interface TrainingEventListCreateRequestDto{
+  events: BaseEventCreateRequestDto[];
+}
+
 export interface Member {
   id: string;
   username: string;
