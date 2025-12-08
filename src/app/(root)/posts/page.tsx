@@ -57,9 +57,9 @@ export default function PostPage() {
           {t("List Posts")}
         </h1>
 
-        {isMemberOrHigher() && (
+        
         <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
-          <Link href="/posts/create">
+          {isMemberOrHigher() && (<Link href="/posts/create">
             <Button
               icon={<PlusIcon size={16} />}
               className="h-[36px]"
@@ -68,8 +68,18 @@ export default function PostPage() {
               {t("Create Post")}
             </Button>
           </Link>
+          )}
+          <Link href="/posts/trash">
+            <Button
+              icon={<Trash2 size={16} />}
+              className="h-[36px]"
+              type="default"
+            >
+              {t("Trash")}
+            </Button>
+          </Link>
         </div>
-        )}
+        
       </div>
 
       <div className="flex w-full justify-between align-middle ml-4 py-3 border-[0.5px] border-[#a5a1a18e] rounded-lg px-4">

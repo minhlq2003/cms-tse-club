@@ -169,36 +169,6 @@ const PostForm: React.FC<PostFormProps> = ({
         </Form.Item>
       </div>
 
-      <p className="my-2 font-semibold text-lg">{t("SEO")}</p>
-
-      <div className="flex flex-col p-4 border rounded-[10px] mb-4">
-        <div className="flex flex-row w-full justify-between gap-10">
-          <Form.Item
-            name="meta_title"
-            label={<p className="">{t("Meta Title")}</p>}
-            className="w-1/2"
-          >
-            <Input className="custom-input" />
-          </Form.Item>
-
-          <Form.Item
-            className="w-1/2"
-            name="keywords"
-            label={<p className="">{t("Meta Keywords")}</p>}
-          >
-            <Input className="custom-input" />
-          </Form.Item>
-        </div>
-
-        <Form.Item
-          name="meta_desc"
-          className=""
-          label={<p className="">{t("Meta Description")}</p>}
-        >
-          <Input.TextArea className="custom-input" rows={5} />
-        </Form.Item>
-      </div>
-
       <ModalSelectMedia
         isOpen={isModalOpen}
         onClose={handleCloseModal}

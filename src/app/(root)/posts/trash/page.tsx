@@ -20,8 +20,9 @@ import {
   getPosts,
   deletePost,
   recoverPostFromTrash,
+  getPostsByLeader,
 } from "@/modules/services/postService";
-import { formatDate, getRoleUser } from "@/lib/utils";
+import { formatDate, getRoleUser, isLeaderOrHigher } from "@/lib/utils";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -50,14 +51,30 @@ export default function TrashPostPage() {
   const fetchDeletedPosts = async () => {
     try {
       setLoading(true);
-      const response = await getPosts({
-        page: page - 1,
-        size: 10,
-        sort: filters.sort,
-        title: filters.keyword,
-        // Assuming the API supports deleted filter
-        // You may need to adjust this based on your actual API
-      });
+
+      let response 
+      
+      if (isLeaderOrHigher()){
+        response = await getPostsByLeader({
+          page: page - 1,
+          size: 10,
+          sort: filters.sort,
+          searchs: ["title","deleted"],
+          searchValues: ["*" + (filters.keyword || "") + "*", "true"],
+        });
+      }
+      else{
+        response = await getPosts({
+          page: page - 1,
+          size: 10,
+          sort: filters.sort,
+          searchs: ["title","deleted"],
+          searchValues: ["*" + (filters.keyword || "") + "*", "true"],
+          // Assuming the API supports deleted filter
+          // You may need to adjust this based on your actual API
+        });
+      }
+      
 
       if (Array.isArray(response._embedded?.postWrapperDtoList)) {
         // Filter deleted posts on client side if API doesn't support it
@@ -65,7 +82,7 @@ export default function TrashPostPage() {
           (post: Post) => post.deleted === true
         );
         setPosts(deletedPosts);
-        setTotal(deletedPosts.length);
+        setTotal(deletedPosts. length);
       } else {
         setPosts([]);
         setTotal(0);

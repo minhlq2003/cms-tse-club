@@ -127,6 +127,7 @@ export default function AddEvent() {
     const dataPayload: Event = {
       ...values,
       title: values.title,
+      status: status,
       limitRegister: values.limitRegister || 0,
       category: values.category,
       isPublic: values.isPublic !== undefined ? values.isPublic : false,

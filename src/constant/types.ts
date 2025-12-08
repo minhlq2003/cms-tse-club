@@ -420,3 +420,9 @@ export interface UserSearchRequestDto extends SearchDto {
   role?: UserRole;
 }
 
+export interface SearchPostRequestDto extends SearchDto {
+  startTime?: string;
+  endTime?: string;
+  status?: FunctionStatus;
+}
+

@@ -24,6 +24,7 @@ interface PublishProps {
   // 🆕 Props cho event permission check
   isHost?: boolean;
   userAsOrganizer?: { roles: string[] };
+  currentStatus?: FunctionStatus;
 }
 
 export default function Publish({
@@ -37,6 +38,7 @@ export default function Publish({
   disabled = false,
   isHost = false,
   userAsOrganizer,
+  currentStatus,
 }: PublishProps) {
   const { t } = useTranslation("common");
   const [isPublishListVisible, setPublishListVisible] = useState(true);
@@ -131,7 +133,10 @@ export default function Publish({
             }`}
             target="_blank"
           >
-            <Button className="!h-[28px]" type="default">
+            <Button 
+              disabled={currentStatus && currentStatus !== FunctionStatus.ACCEPTED}
+              className="!h-[28px]" 
+              type="default">
               {postId ? t("Sửa bài") : t("Tạo bài")}
             </Button>
           </Link>
