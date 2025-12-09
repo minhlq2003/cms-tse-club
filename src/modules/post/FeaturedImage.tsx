@@ -8,9 +8,8 @@ import {
   CaretUpOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Button, Modal } from "antd";
+import { Button, Image, Modal } from "antd";
 import Title from "antd/es/typography/Title";
-import Image from "next/image";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -63,8 +62,7 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
                 alt="featured"
                 className="w-full cursor-pointer "
                 onClick={handleOpenModal}
-                width={1000}
-                height={1000}
+                preview={false}
               />
               <Button
                 variant="outlined"
@@ -82,8 +80,7 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
                 src={selectedMedia}
                 alt="featured"
                 className="w-full cursor-pointer"
-                width={1000}
-                height={1000}
+                preview={false}
               />
               <Button
                 color="danger"
