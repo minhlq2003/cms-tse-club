@@ -100,7 +100,7 @@ const EventForm: React.FC<EventFormProps> = ({
             rules={[{ required: true, message: t("Please enter number!") }]}
           >
             <Input 
-            disabled = {event && !event.single}
+            disabled = {(event && !event.single) || disabled}
             type="number" min={1} />
           </Form.Item>
 

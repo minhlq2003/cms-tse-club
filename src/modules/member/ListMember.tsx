@@ -47,8 +47,10 @@ interface Member {
 
 export default function ListMember({
   searchTerm,
+  reloadToggle,
 }: {
   searchTerm: string | undefined;
+  reloadToggle: boolean;
 }) {
   const { t } = useTranslation("common");
   const router = useRouter();
@@ -102,7 +104,8 @@ const fetchMembers = async () => {
 
   useEffect(() => {
     fetchMembers();
-  }, [searchTerm, currentPage]);
+    
+  }, [searchTerm, currentPage, reloadToggle]);
 
   const handleResetPassword = async (userId: string) => {
     try {
