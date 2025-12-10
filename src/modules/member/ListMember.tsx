@@ -113,7 +113,7 @@ const fetchMembers = async () => {
       if (!newPassword) return;
       const res = await resetPassword(userId, newPassword);
       console.log("Reset password response:", res);
-      if (res.status / 100 !== 2) {
+      if (res.status >= 400) {
         toast.error(res.response?.data?.errors?.newPassword || res.response?.data?.detail || t("Failed to reset password"));
         return;
       }

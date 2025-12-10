@@ -4,6 +4,7 @@ import { twMerge } from "tailwind-merge";
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import type { Event } from "@/constant/types";
+import { USER_TYPE_OPTIONS, USER_TYPES } from "@/modules/services/userService";
 
 interface ScheduleInput {
   dateRange: [dayjs.Dayjs, dayjs.Dayjs];
@@ -49,14 +50,13 @@ export const isAdmin = () => {
 export const isMemberOrHigher = () => {
   const role = getRoleUser();
   return role === "MEMBER" || isLeader();
-}
+};
 
 export const isLeaderOrHigher = () => {
-  
   const role = getRoleUser();
   console.log("role", role);
   return role === "LEADER" || isAdmin();
-}
+};
 
 export const getUser = () => {
   const user = localStorage.getItem("user");
@@ -133,4 +133,32 @@ export function isTokenExpired(token: string): boolean {
   } catch (error) {
     return true;
   }
+}
+
+export const decodeBitwiseUserType = (value?: number): number[] => {
+  if (!value || value === 0) return [];
+
+  const selectedValues: number[] = [];
+
+  for (const [_, val] of Object.entries(USER_TYPES)) {
+    if ((value & val) === val) {
+      selectedValues.push(val);
+    }
+  }
+
+  return selectedValues;
+};
+
+
+export const decodeBitwiseUserTypeToLabels = (bitwiseValue?: number): string[] => {
+  if (!bitwiseValue || bitwiseValue === 0) return [];
+  
+  const selectedLabels: string[] = [];
+  for (const option of USER_TYPE_OPTIONS) {
+    if ((bitwiseValue & option.value) === option.value) {
+      selectedLabels.push(option.label);
+    }
+  }
+  
+  return selectedLabels;
 }
