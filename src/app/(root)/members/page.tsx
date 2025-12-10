@@ -10,10 +10,12 @@ import { Button, Input, Popconfirm, message } from "antd";
 import { Search, RefreshCcw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 export default function MemberPage() {
   const { t } = useTranslation("common");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [reloadToggle, setReloadToggle] = useState<boolean>(false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -22,18 +24,20 @@ export default function MemberPage() {
   const handleResetAttendance = async () => {
     try {
       await resetAttendancePoint();
-      message.success(t("Reset attendance points successfully!"));
+      setReloadToggle((prev) => !prev);
+      toast.success(t("Reset attendance points successfully!"));
     } catch {
-      message.error(t("Failed to reset attendance points"));
+      toast.error(t("Failed to reset attendance points"));
     }
   };
 
   const handleResetContribution = async () => {
     try {
       await resetContributionPoint();
-      message.success(t("Reset contribution points successfully!"));
+      setReloadToggle((prev) => !prev);
+      toast.success(t("Reset contribution points successfully!"));
     } catch {
-      message.error(t("Failed to reset contribution points"));
+      toast.error(t("Failed to reset contribution points"));
     }
   };
 
@@ -101,7 +105,7 @@ export default function MemberPage() {
       </div>
 
       {/* Table */}
-      <ListMember searchTerm={searchTerm} />
+      <ListMember searchTerm={searchTerm} reloadToggle={reloadToggle} />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export default function MobileNav() {
   const [menuItems, setMenuItems] = useState(originalMenuItems);
 
   useEffect(() => {
-    const updatedMenuItems = originalMenuItems?.map((item) => ({
+    const updatedMenuItems = menuItems?.map((item) => ({
       ...item,
       label: t(item?.label ?? ""),
       children: item.children?.map((child) => ({
@@ -34,7 +34,7 @@ export default function MobileNav() {
     })) as MenuItem[];
 
     setMenuItems(updatedMenuItems);
-  }, [originalMenuItems, t]);
+  }, [t]);
 
   if (!menuItems) return <div> Đang load menu</div>;
 

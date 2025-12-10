@@ -89,6 +89,22 @@ export const updateUserInfoByLeader = (userId: string, data: UserUpdateDto) => {
   return response.then((res) => res);
 };
 
+export const leaderGetUserRequestUpdateInfo = (params?: SearchDto) => {
+  const response = http.get(`${API_PREFIX_LEADER_PATH}/search/update-requests`, {
+    params,
+  });
+  return response;
+};
+
+export const leaderApproveUserRequestUpdateInfo = (userUpdateRequestId: string, payload:{
+  isApproved: boolean;
+}) => {
+  const response = http.post(
+    `${API_PREFIX_LEADER_PATH}/update-requests/${userUpdateRequestId}/approve`, payload
+  );
+  return response;
+};
+
 export const updateUserInfo = (data: any) => {
   const response = http.put(`${API_PREFIX_PATH}/update-my-info`, data);
   return response.then((res) => res);

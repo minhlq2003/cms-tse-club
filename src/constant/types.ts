@@ -350,6 +350,15 @@ export interface UserUpdateDto{
     type?: number;
 }
 
+export interface UserUpdateFormDto{
+  id: string;
+  user: UserShortInfoResponseDto
+  email?: string;
+  type?: number;
+  createdAt?: string;
+  lastModifiedTime?: string;
+}
+
 export interface PointHistoryResponseDto{
     id: string;
     point: number;

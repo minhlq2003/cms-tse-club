@@ -1,3 +1,6 @@
+"use client";
+
+import { UserRole } from "@/constant/types";
 import {
   BookOutlined,
   CalendarOutlined,
@@ -30,6 +33,7 @@ interface CustomMenuItem extends MenuItemType {
   path?: string;
   permissionKey?: string;
   parent?: string;
+  requiredRole?: UserRole;
 }
 export const settingItems: CustomMenuItem[] = [
   {
@@ -71,25 +75,15 @@ export const eventItems: CustomMenuItem[] = [
   },
 ];
 
-export const orderItems: CustomMenuItem[] = [
+export const memberItems: CustomMenuItem[] = [
   {
-    key: "/orders",
-    label: "Orders",
+    key: "members",
+    label: "Members List",
   },
   {
-    key: "/orders/create",
-    label: "Create Order",
-  },
-];
-
-export const categoriesTagsItems: CustomMenuItem[] = [
-  {
-    key: "/categories",
-    label: "Categories",
-  },
-  {
-    key: "/tags",
-    label: "Tags",
+    key: "member-update-requests",
+    label: "Member Update Requests",
+    requiredRole: UserRole.LEADER,
   },
 ];
 
@@ -99,6 +93,7 @@ export const menuItems: Array<CustomMenuItem> = [
     label: "Members",
     key: "members",
     icon: <UsergroupAddOutlined />,
+    children: memberItems,
   },
   {
     label: "Events",
@@ -155,42 +150,35 @@ export const menuItems: Array<CustomMenuItem> = [
   // },
 ];
 
-const filterMenuItemsByPermission = (
-  menuItems: MenuItem[],
-  permissions: Record<
-    string,
-    { find?: { enabled: boolean }; create?: { enabled: boolean } }
-  >
-): MenuItem[] => {
-  return menuItems.reduce<MenuItem[]>((filteredMenuItems, item) => {
-    const permissionKey = item.permissionKey;
+const filterMenuItemsByRoleRecursive = (
+  menuItems: CustomMenuItem[],
+  userRole: UserRole
+): CustomMenuItem[] => {
+  return menuItems.reduce<CustomMenuItem[]>((filteredMenuItems, item) => {
+    // 1. Kiểm tra quyền truy cập cho mục hiện tại
+    const isAccessible = !item.requiredRole || item.requiredRole === userRole;
 
-    if (permissionKey) {
-      const hasPermission = permissions[permissionKey]?.find?.enabled === true;
+    if (isAccessible) {
+      // 2. Nếu mục có children, dùng đệ quy để lọc chúng
+      if (item.children) {
+        const filteredChildren = filterMenuItemsByRoleRecursive(
+          item.children,
+          userRole
+        );
 
-      if (hasPermission) {
-        if (item.children?.length) {
-          const filteredChildren = item.children?.filter((child) => {
-            const path = child.key?.toString() || "";
-
-            if (path.includes("/create")) {
-              return permissions[permissionKey]?.create?.enabled === true;
-            }
-            return true;
+        // 3. Chỉ thêm mục cha nếu nó có mục con hợp lệ (hoặc không có mục con)
+        if (filteredChildren.length > 0) {
+          filteredMenuItems.push({
+            ...item,
+            children: filteredChildren,
           });
-
-          if (filteredChildren?.length) {
-            filteredMenuItems.push({
-              ...item,
-              children: filteredChildren,
-            });
-          }
-        } else {
-          filteredMenuItems.push(item);
         }
+        // Trường hợp không có mục con: Nếu đây là menu cha nhưng không có requiredRole
+        // và tất cả các con bị lọc hết, ta sẽ bỏ qua mục cha này.
+      } else {
+        // 4. Mục đơn (không có children) và đã vượt qua kiểm tra quyền truy cập, thêm vào
+        filteredMenuItems.push(item);
       }
-    } else {
-      filteredMenuItems.push(item);
     }
 
     return filteredMenuItems;
@@ -198,10 +186,11 @@ const filterMenuItemsByPermission = (
 };
 
 export const getFilteredMenuItems = (): MenuItem[] => {
-  // const permissions = JSON.parse(localStorage.getItem("permissions") || "{}");
-  // const filteredMenuItems = filterMenuItemsByPermission(
-  //   menuItems,
-  //   permissions
-  // );
-  return menuItems;
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole: UserRole = user?.role || UserRole.NONE;
+  
+
+  // Lọc menu items dựa trên vai trò người dùng
+  const filteredMenuItems = filterMenuItemsByRoleRecursive(menuItems, userRole);
+  return filteredMenuItems;
 };

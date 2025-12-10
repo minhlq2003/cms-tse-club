@@ -47,8 +47,10 @@ interface Member {
 
 export default function ListMember({
   searchTerm,
+  reloadToggle,
 }: {
   searchTerm: string | undefined;
+  reloadToggle: boolean;
 }) {
   const { t } = useTranslation("common");
   const router = useRouter();
@@ -102,7 +104,8 @@ const fetchMembers = async () => {
 
   useEffect(() => {
     fetchMembers();
-  }, [searchTerm, currentPage]);
+    
+  }, [searchTerm, currentPage, reloadToggle]);
 
   const handleResetPassword = async (userId: string) => {
     try {
@@ -110,7 +113,7 @@ const fetchMembers = async () => {
       if (!newPassword) return;
       const res = await resetPassword(userId, newPassword);
       console.log("Reset password response:", res);
-      if (res.status / 100 !== 2) {
+      if (res.status >= 400) {
         toast.error(res.response?.data?.errors?.newPassword || res.response?.data?.detail || t("Failed to reset password"));
         return;
       }

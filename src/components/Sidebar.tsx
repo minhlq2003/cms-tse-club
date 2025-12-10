@@ -33,7 +33,7 @@ export const LayoutSider = ({
   const [menuItems, setMenuItems] = useState(originalMenuItems);
 
   useEffect(() => {
-    const updatedMenuItems = originalMenuItems?.map((item) => ({
+    const updatedMenuItems = menuItems?.map((item) => ({
       ...item,
       label: t(item?.label ?? ""),
       children: item.children?.map((child) => ({
@@ -44,7 +44,7 @@ export const LayoutSider = ({
     })) as MenuItem[];
 
     setMenuItems(updatedMenuItems);
-  }, [language, originalMenuItems, t]);
+  }, [language, t]);
 
   if (!menuItems) return <div> Đang load menu</div>;
 
