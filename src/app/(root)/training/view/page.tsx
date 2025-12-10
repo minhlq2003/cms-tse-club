@@ -449,22 +449,6 @@ const ViewTraining = () => {
               t("Tất cả")
             )}
           </Descriptions.Item>
-
-          <Descriptions.Item
-            label={
-              <span>
-                <FileTextOutlined className="mr-2" />
-                {t("Mô tả")}
-              </span>
-            }
-            span={2}
-          >
-            <div
-              dangerouslySetInnerHTML={{
-                __html: training.description || t("Không có mô tả"),
-              }}
-            />
-          </Descriptions.Item>
         </Descriptions>
       </Card>
 

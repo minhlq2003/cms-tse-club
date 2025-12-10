@@ -33,7 +33,7 @@ interface CustomMenuItem extends MenuItemType {
   path?: string;
   permissionKey?: string;
   parent?: string;
-  requiredRole?: UserRole;
+  requiredRole?: UserRole[];
 }
 export const settingItems: CustomMenuItem[] = [
   {
@@ -83,7 +83,7 @@ export const memberItems: CustomMenuItem[] = [
   {
     key: "member-update-requests",
     label: "Member Update Requests",
-    requiredRole: UserRole.LEADER,
+    requiredRole: [UserRole.LEADER, UserRole.ADMIN],
   },
 ];
 
@@ -156,7 +156,7 @@ const filterMenuItemsByRoleRecursive = (
 ): CustomMenuItem[] => {
   return menuItems.reduce<CustomMenuItem[]>((filteredMenuItems, item) => {
     // 1. Kiểm tra quyền truy cập cho mục hiện tại
-    const isAccessible = !item.requiredRole || item.requiredRole === userRole;
+    const isAccessible = !item.requiredRole || item.requiredRole.includes(userRole);
 
     if (isAccessible) {
       // 2. Nếu mục có children, dùng đệ quy để lọc chúng

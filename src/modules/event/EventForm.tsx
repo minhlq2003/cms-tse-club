@@ -82,8 +82,10 @@ const EventForm: React.FC<EventFormProps> = ({
             rules={[
               { required: true, message: t("Please select Event Type!") },
             ]}
+            
           >
             <Select
+              disabled = {(event && !event.single) || disabled}
               placeholder={t("Select event type")}
               options={[
                 { label: t("Seminar"), value: "SEMINAR" },
