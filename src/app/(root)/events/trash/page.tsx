@@ -203,12 +203,14 @@ export default function TrashEventPage() {
       render: (text: string) => <span>{text}</span>,
     },
     {
-      title: t("Deleted Date"),
+      title: t("Remaining Days"),
       dataIndex: "lastModifiedTime",
       key: "lastModifiedTime",
-      render: (date: string) => (
-        <span>{date ? new Date(date).toLocaleString() : ""}</span>
-      ),
+      render: (date: string) => {
+        const remainingDays = 30 - Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+        return (
+        <span>{remainingDays > 0 ? remainingDays : ""} {t("days")}</span>
+      )},
     },
     getRoleUser() === "LEADER" || getRoleUser() === "ADMIN"
       ? {

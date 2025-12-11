@@ -80,6 +80,8 @@ export default function ProfilePage() {
         page: page - 1,
         size: 5,
         isHost: true,
+        searchs: ["deleted"],
+        searchValues: ["false"],
       });
       console.log("Event: ", res._embedded?.eventWrapperDtoList);
       setEvents(res._embedded?.eventWrapperDtoList || []);
