@@ -1,9 +1,15 @@
-import { Event, UserShortInfoResponseDto as ShortUserInfoResponseDto, UserUpdateDto, PageWrapperDto   } from "@/constant/types";
+import {
+  Event,
+  UserShortInfoResponseDto as ShortUserInfoResponseDto,
+  UserUpdateDto,
+  PageWrapperDto,
+} from "@/constant/types";
 import { HttpClient } from "@/lib/HttpClient";
 import { AxiosRequestHeaders } from "axios";
 
 const API_PREFIX_PATH = "/users";
 const API_PREFIX_LEADER_PATH = "/leader/users";
+const API_PREFIX_AUTH_PATH = "/auth";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
@@ -25,8 +31,7 @@ export const USER_TYPE_OPTIONS = [
   { label: "Nghiên cứu sinh", value: USER_TYPES.POST_STUDENT },
 ];
 
-
-interface SearchDto{
+interface SearchDto {
   page?: number;
   size?: number;
   sort?: string;
@@ -34,10 +39,12 @@ interface SearchDto{
   searchValues?: string[];
 }
 
-export const getUser = (params?: SearchDto & {
-  keyword?: string;
-  role?: string;
-}) => {
+export const getUser = (
+  params?: SearchDto & {
+    keyword?: string;
+    role?: string;
+  }
+) => {
   const response = http.get(`${API_PREFIX_PATH}/search`, {
     params,
   });
@@ -90,17 +97,24 @@ export const updateUserInfoByLeader = (userId: string, data: UserUpdateDto) => {
 };
 
 export const leaderGetUserRequestUpdateInfo = (params?: SearchDto) => {
-  const response = http.get(`${API_PREFIX_LEADER_PATH}/search/update-requests`, {
-    params,
-  });
+  const response = http.get(
+    `${API_PREFIX_LEADER_PATH}/search/update-requests`,
+    {
+      params,
+    }
+  );
   return response;
 };
 
-export const leaderApproveUserRequestUpdateInfo = (userUpdateRequestId: string, payload:{
-  isApproved: boolean;
-}) => {
+export const leaderApproveUserRequestUpdateInfo = (
+  userUpdateRequestId: string,
+  payload: {
+    isApproved: boolean;
+  }
+) => {
   const response = http.post(
-    `${API_PREFIX_LEADER_PATH}/update-requests/${userUpdateRequestId}/approve`, payload
+    `${API_PREFIX_LEADER_PATH}/update-requests/${userUpdateRequestId}/approve`,
+    payload
   );
   return response;
 };
@@ -119,13 +133,30 @@ export const changePassword = (data: {
   return response.then((res) => res);
 };
 
-export const getMyPointHistory = (params?: SearchDto & {
-  startTime?: string;
-  endTime?: string;
-  pointHistoryType: "CONTRIBUTION" | "ATTENDANCE" | "ALL";
-}) : Promise<PageWrapperDto | null>  => {
-  const response = http.get<PageWrapperDto>(`${API_PREFIX_PATH}/me/point-history`, {
-    params,
-  });
+export const getMyPointHistory = (
+  params?: SearchDto & {
+    startTime?: string;
+    endTime?: string;
+    pointHistoryType: "CONTRIBUTION" | "ATTENDANCE" | "ALL";
+  }
+): Promise<PageWrapperDto | null> => {
+  const response = http.get<PageWrapperDto>(
+    `${API_PREFIX_PATH}/me/point-history`,
+    {
+      params,
+    }
+  );
   return response;
-}
+};
+
+export const getDetailUser = (userId: string) => {
+  const response = http.get(`${API_PREFIX_PATH}/${userId}`);
+  return response.then((res) => res);
+};
+
+export const forgotPassword = (email: string) => {
+  const response = http.post(`${API_PREFIX_AUTH_PATH}/forget-password`, {
+    email,
+  });
+  return response.then((res) => res);
+};

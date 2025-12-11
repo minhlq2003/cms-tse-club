@@ -99,10 +99,7 @@ export default function ProfilePage() {
         pointHistoryType: "ALL",
         sort: "resetTime,desc",
       });
-      console.log(
-        "My Point History: ",
-        res?._embedded?.pointHistoryResponseDtoList
-      );
+
       setPointHistorys(res?._embedded?.pointHistoryResponseDtoList || []);
       setTotalCountPointHistorys(res?.page?.totalElements || 0);
     } catch (err) {
@@ -152,12 +149,16 @@ export default function ProfilePage() {
       title: "Thời gian bắt đầu",
       dataIndex: "location.startTime",
       key: "startTime",
-      render: (_: any, record: Event) =>
-        formatDate(record.location.startTime)?.formattedDate,
+      render: (_: any, record: Event) => (
+        <p>
+          {formatDate(record.location.startTime)?.formattedTime} -
+          {formatDate(record.location.startTime)?.formattedDate}
+        </p>
+      ),
     },
     {
       title: "Địa điểm",
-      dataIndex: "location.destination",
+      dataIndex: ["location", "destination"],
       key: "destination",
     },
   ];

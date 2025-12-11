@@ -60,13 +60,9 @@ function SignIn() {
     const token = localStorage.getItem("accessToken");
 
     if (typeof window !== "undefined") {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");1
-      if (
-        user &&
-        user.id &&
-        token &&
-        !isTokenExpired(token)
-      ) {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      1;
+      if (user && user.id && token && !isTokenExpired(token)) {
         router.push("/");
       }
     }
@@ -153,7 +149,7 @@ function SignIn() {
               <p>
                 {t("Didn't remember your password ?")}{" "}
                 <Link
-                  href="/forgotpassword"
+                  href="/forgot-password"
                   className="text-blue-500 hover:underline"
                 >
                   {t("Click Here")}

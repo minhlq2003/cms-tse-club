@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import dayjs from "dayjs"; // Sử dụng dayjs
 import UpdateUserInfoModal from "./UpdateUserInfoModal";
 import { AxiosError, AxiosResponse } from "axios";
+import Link from "next/link";
 
 interface Member {
   id: string;
@@ -71,40 +72,38 @@ export default function ListMember({
   const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false); // Modal cập nhật thông tin
   const [userInfoForm] = Form.useForm(); // Hook form của Ant Design
 
-const fetchMembers = async () => { 
+  const fetchMembers = async () => {
     const fetchMembersAsync = async () => {
-        try {
-            setLoading(true);
-            const res = await getUser({
-                keyword: searchTerm,
-                page: currentPage - 1,
-            });
-            if (res._embedded == undefined){
-                setMembers([]);
-                setCurrentPage(1);
-                setTotal(0);
-            }
-            else if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
-                setMembers(res._embedded.userShortInfoResponseDtoList);
-                setCurrentPage(res.page.number + 1);
-                setTotal(res.page.totalElements);
-            }
-        } catch {
-            toast.error(t("Failed to fetch members"));
-        } finally {
-            setLoading(false);
+      try {
+        setLoading(true);
+        const res = await getUser({
+          keyword: searchTerm,
+          page: currentPage - 1,
+        });
+        if (res._embedded == undefined) {
+          setMembers([]);
+          setCurrentPage(1);
+          setTotal(0);
+        } else if (Array.isArray(res._embedded.userShortInfoResponseDtoList)) {
+          setMembers(res._embedded.userShortInfoResponseDtoList);
+          setCurrentPage(res.page.number + 1);
+          setTotal(res.page.totalElements);
         }
+      } catch {
+        toast.error(t("Failed to fetch members"));
+      } finally {
+        setLoading(false);
+      }
     };
-    
+
     // *** Thêm setTimeout ở đây ***
     setTimeout(() => {
-        fetchMembersAsync();
-    }, 500); // 500 milliseconds = 0.5 giây  
+      fetchMembersAsync();
+    }, 500); // 500 milliseconds = 0.5 giây
   };
 
   useEffect(() => {
     fetchMembers();
-    
   }, [searchTerm, currentPage, reloadToggle]);
 
   const handleResetPassword = async (userId: string) => {
@@ -114,7 +113,11 @@ const fetchMembers = async () => {
       const res = await resetPassword(userId, newPassword);
       console.log("Reset password response:", res);
       if (res.status >= 400) {
-        toast.error(res.response?.data?.errors?.newPassword || res.response?.data?.detail || t("Failed to reset password"));
+        toast.error(
+          res.response?.data?.errors?.newPassword ||
+            res.response?.data?.detail ||
+            t("Failed to reset password")
+        );
         return;
       }
       toast.success(t("Password reset successfully"));
@@ -151,30 +154,29 @@ const fetchMembers = async () => {
     }
 
     try {
-    // 1. Thực hiện gọi API.
-    // Nếu thành công (status 2xx), kết quả được gán vào `response`.
-    const response = await changeRole(selectedMember.id, newRole);
+      // 1. Thực hiện gọi API.
+      // Nếu thành công (status 2xx), kết quả được gán vào `response`.
+      const response = await changeRole(selectedMember.id, newRole);
 
-    if (response.status !=null && response.status / 100 !== 2) {
-      throw new Error(response.response?.data?.detail || "Failed to change role");
-    }
-    // 2. Xử lý THÀNH CÔNG:
-    toast.success(`${t("Changed role to")} ${newRole}`);
-    
-    // Gọi hàm fetchMembers để cập nhật danh sách sau khi thay đổi thành công
-    fetchMembers(); 
+      if (response.status != null && response.status / 100 !== 2) {
+        throw new Error(
+          response.response?.data?.detail || "Failed to change role"
+        );
+      }
+      // 2. Xử lý THÀNH CÔNG:
+      toast.success(`${t("Changed role to")} ${newRole}`);
 
-  } catch (error) {
-    
-    // console.log("Error changing role:", error);
-    toast.error(error instanceof Error ? error.message : t("Failed to change role"));
-  }
- finally {
+      // Gọi hàm fetchMembers để cập nhật danh sách sau khi thay đổi thành công
+      fetchMembers();
+    } catch (error) {
+      // console.log("Error changing role:", error);
+      toast.error(
+        error instanceof Error ? error.message : t("Failed to change role")
+      );
+    } finally {
       setIsModalOpen(false);
     }
   };
-
-
 
   const openChangeUserInfo = (member: Member) => {
     setSelectedMember(member);
@@ -191,7 +193,7 @@ const fetchMembers = async () => {
   };
 
   const encodeBitwiseType = (selectedValues: number[]): number => {
-      return selectedValues.reduce((acc, current) => acc | current, 0);
+    return selectedValues.reduce((acc, current) => acc | current, 0);
   };
 
   // --- Bổ sung: Hàm xử lý cập nhật thông tin người dùng ---
@@ -267,6 +269,9 @@ const fetchMembers = async () => {
             <Button type="link" onClick={() => openChangeUserInfo(record)}>
               {t("Change user info")}
             </Button>
+            <Link href={`/members/view?id=${record.id}`}>
+              <Button type="link">{t("View")}</Button>
+            </Link>
           </div>
         ),
     });

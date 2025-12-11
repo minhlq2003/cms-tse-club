@@ -8,24 +8,41 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import { getMyInfoUser } from "@/modules/services/userService";
+import {
+  getMyInfoUser,
+  getMyPointHistory,
+} from "@/modules/services/userService";
 import {
   getEvents,
   getRegisteredEvents,
 } from "@/modules/services/eventService";
-import { Event, GlobalConfigurationDto } from "@/constant/types";
+import {
+  Event,
+  GlobalConfigurationDto,
+  PointHistoryResponseDto,
+} from "@/constant/types";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@/lib/utils";
 import { Images } from "@/constant/image";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getLastResetPointTime } from "@/modules/services/commonService";
+import { PointHistoryCard } from "@/components/profile/PointHistoryCard";
+import { toast } from "sonner";
 export default function Dashboard() {
+  const pageSizePointHistorys = 5;
   const { t } = useTranslation("common");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [myEvents, setMyEvents] = useState<Event[]>([]);
-  const [lastResetPointConfig, setLastResetPointConfig] = useState<GlobalConfigurationDto | null>(null);
-  
+  const [lastResetPointConfig, setLastResetPointConfig] =
+    useState<GlobalConfigurationDto | null>(null);
+  const [currentPointHistoryPage, setCurrentPointHistoryPage] = useState(1);
+  const [totalCountPointHistorys, setTotalCountPointHistorys] = useState(0);
+  const [loadingPointHistorys, setLoadingPointHistorys] = useState(false);
+  const [pointHistorys, setPointHistorys] = useState<PointHistoryResponseDto[]>(
+    []
+  );
+
   interface UserInfo {
     username: string;
     email: string;
@@ -40,6 +57,25 @@ export default function Dashboard() {
 
   const navigation = useRouter();
   const [info, setInfo] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    const fetchPointHistory = async (page: number) => {
+      try {
+        const res = await getMyPointHistory({
+          page: page - 1,
+          size: pageSizePointHistorys,
+          pointHistoryType: "ALL",
+          sort: "resetTime,desc",
+        });
+
+        setPointHistorys(res?._embedded?.pointHistoryResponseDtoList || []);
+        setTotalCountPointHistorys(res?.page?.totalElements || 0);
+      } catch (err) {
+        toast.error(t("Failed to fetch events"));
+      }
+    };
+    fetchPointHistory(currentPointHistoryPage);
+  }, [currentPointHistoryPage]);
 
   useEffect(() => {
     getMyInfoUser()
@@ -69,12 +105,14 @@ export default function Dashboard() {
 
     getLastResetPointTime()
       .then((res) => {
-        const {formattedDate, formattedTime} = formatDate(res?.configValue || "");
+        const { formattedDate, formattedTime } = formatDate(
+          res?.configValue || ""
+        );
         const formattedRes = {
           ...res,
           configKey: res?.configKey || "",
           configValue: formattedDate + " " + formattedTime || "",
-        }
+        };
         setLastResetPointConfig(formattedRes);
       })
       .catch((error) => {
@@ -231,10 +269,20 @@ export default function Dashboard() {
             {t("Contribution Point")}: <b>{info?.contributionPoint}</b>
           </p>
           <p>
-            {t("Last reset point date")}: <span>{lastResetPointConfig?.configValue || ""}</span>
+            {t("Last reset point date")}:{" "}
+            <span>{lastResetPointConfig?.configValue || ""}</span>
           </p>
         </Card>
       </div>
+
+      <PointHistoryCard
+        pointHistorys={pointHistorys}
+        currentPointHistoryPage={currentPointHistoryPage}
+        totalCountPointHistorys={totalCountPointHistorys}
+        setCurrentPointHistoryPage={setCurrentPointHistoryPage}
+        loadingPointHistorys={loadingPointHistorys}
+        pageSizePointHistorys={pageSizePointHistorys}
+      />
 
       {/* Quản lý sự kiện */}
       <Card className="shadow rounded-2xl">
@@ -284,7 +332,6 @@ export default function Dashboard() {
           </table>
         </div>
       </Card>
-       
     </div>
   );
 }

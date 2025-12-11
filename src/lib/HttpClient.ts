@@ -1,4 +1,9 @@
-import axios, { AxiosHeaders, AxiosRequestHeaders, AxiosInstance, CustomParamsSerializer } from "axios";
+import axios, {
+  AxiosHeaders,
+  AxiosRequestHeaders,
+  AxiosInstance,
+  CustomParamsSerializer,
+} from "axios";
 
 export const getToken = (): string | null => {
   try {
@@ -44,8 +49,7 @@ export class HttpClient {
 
       return res?.data ?? res;
     } catch (err: any) {
-      console.log("HTTP Error:", err);
-      return err;
+      return err.response?.data ?? null;
     }
   }
 
@@ -64,7 +68,7 @@ export class HttpClient {
             }
           });
           return searchParams.toString();
-        }
+        },
       })
     );
 
