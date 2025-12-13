@@ -6,8 +6,8 @@ import {
   resetAttendancePoint,
   resetContributionPoint,
 } from "@/modules/services/userService";
-import { Button, Input, Popconfirm, message } from "antd";
-import { Search, RefreshCcw } from "lucide-react";
+import { Button, Input, Popconfirm, Select, message } from "antd";
+import { Search, RefreshCcw, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import { toast } from "sonner";
 export default function MemberPage() {
   const { t } = useTranslation("common");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  // State mới cho việc sắp xếp
+  const [sortBy, setSortBy] = useState<string>("attendancePoint,desc");
   const [reloadToggle, setReloadToggle] = useState<boolean>(false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +88,40 @@ export default function MemberPage() {
             </div>
           )}
 
+          {/* Nhóm Tìm kiếm và Sắp xếp */}
+          <div className="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto">
+            {/* Component Sort */}
+            <Select
+              className="w-full md:w-[180px] h-[38px]"
+              placeholder={t("Sort by")}
+              value={sortBy}
+              onChange={(value) => setSortBy(value)}
+              options={[
+                { value: "username,asc", label: t("Name (A-Z)") },
+                { value: "username,desc", label: t("Name (Z-A)") },
+                { value: "attendancePoint,desc", label: t("Highest Attendance") },
+                { value: "contributionPoint,desc", label: t("Highest Contribution") },
+              ]}
+              suffixIcon={<ArrowUpDown size={14} />}
+            />
+
+            <div className="flex gap-2 w-full">
+              <Input
+                type="text"
+                placeholder={t("Find username or email")}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="rounded-md border border-gray-300 dark:border-gray-600 !h-[38px] w-full md:!w-[250px]"
+              />
+              <Button
+                variant="outlined"
+                className="h-[38px] flex items-center justify-center"
+              >
+                <Search className="text-gray-600 w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
           <div className="flex gap-2 w-full md:w-auto">
             <Input
               type="text"
@@ -105,7 +141,7 @@ export default function MemberPage() {
       </div>
 
       {/* Table */}
-      <ListMember searchTerm={searchTerm} reloadToggle={reloadToggle} />
+      <ListMember searchTerm={searchTerm} reloadToggle={reloadToggle} sortBy={sortBy}/>
     </div>
   );
 }
